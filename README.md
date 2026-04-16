@@ -1,0 +1,75 @@
+# Eidos — Legacy Code Intelligence Tool
+
+Explains legacy C# codebases, auto-generates documentation with citations, and reviews PRs for logic/behavior risks.
+
+## Quick Start
+
+```bash
+# 1. Start infrastructure
+docker compose -f infra/docker-compose.yml up -d
+
+# 2. Install backend
+cd backend
+pip install -e ".[dev]"
+
+# 3. Run API
+uvicorn app.main:app --reload
+
+# 4. Run tests
+pytest -v
+```
+
+## API Endpoints
+
+| Method | Path                                          | Description                     |
+|--------|-----------------------------------------------|---------------------------------|
+| GET    | `/health`                                     | Health check                    |
+| POST   | `/repos`                                      | Register a repo                 |
+| POST   | `/repos/{id}/ingest`                          | Trigger clone + analysis        |
+| GET    | `/repos/{id}/status`                          | Snapshots with status           |
+| GET    | `/repos/{id}/snapshots/{sid}`                 | Snapshot detail with files      |
+| GET    | `/repos/{id}/snapshots/{sid}/symbols`         | List symbols (filter by kind, file) |
+| GET    | `/repos/{id}/snapshots/{sid}/symbols/{fq}`    | Get symbol by fully-qualified name |
+| GET    | `/repos/{id}/snapshots/{sid}/edges`           | List edges (filter by type, source, target) |
+| GET    | `/repos/{id}/snapshots/{sid}/graph/{fq}`      | Call graph neighborhood         |
+| GET    | `/repos/{id}/snapshots/{sid}/overview`        | Analysis summary                |
+
+## Project Structure
+
+```
+backend/
+  app/
+    api/
+      repos.py          # Repo + snapshot endpoints
+      analysis.py       # Symbol, edge, graph, overview endpoints
+    core/
+      config.py         # Settings via pydantic-settings
+      ingestion.py      # Git clone, file scanning, hashing
+      tasks.py          # Background ingestion + analysis task
+    analysis/
+      models.py         # Data classes (SymbolInfo, EdgeInfo, etc.)
+      csharp_parser.py  # Tree-sitter C# parser
+      graph_builder.py  # Call graph + module graph construction
+      entry_points.py   # Controller, Main, Startup detection
+      metrics.py        # LOC, fan-in/out, hotspot detection
+      pipeline.py       # Analysis orchestrator + DB persistence
+    indexing/           # Summaries + vector embeddings [Phase 3]
+    reasoning/          # LLM Q&A engine [Phase 4]
+    reviews/            # PR review engine [Phase 5]
+    storage/
+      database.py       # SQLAlchemy async engine + session
+      models.py         # DB models (Repo, Snapshot, File, Symbol, Edge)
+      schemas.py        # Pydantic response schemas
+  tests/
+    conftest.py         # Shared test DB configuration
+    test_api.py         # Repo API tests (11 tests)
+    test_analysis_api.py # Analysis API tests (21 tests)
+    test_csharp_parser.py # C# parser tests (35 tests)
+    test_graph_builder.py # Graph builder tests (17 tests)
+    test_entry_points.py  # Entry point detection tests (13 tests)
+    test_metrics.py       # Metrics tests (9 tests)
+    test_ingestion.py     # File scanning tests (3 tests)
+    test_pipeline.py      # End-to-end pipeline tests (9 tests)
+infra/
+  docker-compose.yml   # Postgres + Redis + Qdrant
+```
