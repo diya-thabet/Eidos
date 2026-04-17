@@ -52,6 +52,16 @@ def _init_registry() -> None:
     except Exception:
         logger.info("Python parser unavailable (tree-sitter-python missing?)")
 
+    # TypeScript -- optional
+    try:
+        from app.analysis.typescript_parser import TSXParser, TypeScriptParser
+
+        _registry["typescript"] = TypeScriptParser()
+        _registry["tsx"] = TSXParser()
+        logger.debug("Registered parser: typescript, tsx")
+    except Exception:
+        logger.info("TypeScript parser unavailable (tree-sitter-typescript missing?)")
+
     # ----- Add future language parsers here -----
 
 

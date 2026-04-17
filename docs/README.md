@@ -16,5 +16,5 @@ This folder contains the technical documentation for the Eidos Legacy Code Intel
 | [KUBERNETES.md](KUBERNETES.md) | Kubernetes deployment guide (kind/minikube) |
 | [TESTING.md](TESTING.md) | Testing strategy, test inventory, how to run |
 | [HOW_TO_USE.md](HOW_TO_USE.md) | Practical guide: curl & Postman examples for every endpoint |
-| [MULTI_LANGUAGE_PARSERS.md](MULTI_LANGUAGE_PARSERS.md) | Multi-language parser architecture (C#, Java, Python) + how to add new languages |
+| [MULTI_LANGUAGE_PARSERS.md](MULTI_LANGUAGE_PARSERS.md) | Multi-language parser architecture (C#, Java, Python, TypeScript/TSX) + how to add new languages |
 | [FUTURE_ROADMAP.md](FUTURE_ROADMAP.md) | Future propositions, architecture evolution, integrations |

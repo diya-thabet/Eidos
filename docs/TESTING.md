@@ -156,8 +156,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 |------|-------|-------|
 | `test_java_parser.py` | 79 | Java packages, imports, classes, interfaces, enums, generics, Javadoc, nested, calls, registry, pipeline |
 | `test_python_parser.py` | 66 | Python imports, classes, functions, methods, decorators, async, docstrings, nested, calls, registry, pipeline |
+| `test_typescript_parser.py` | 83 | TypeScript/TSX imports, classes, interfaces, enums, methods, constructors, fields, generics, TSDoc, calls, new expressions, abstract, pipeline |
 
-### Total: 872 tests
+### Total: 955 tests
 
 ## Test Design Principles
 
@@ -167,7 +168,7 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 4. **Isolated** -- tests don't share state; DB reset between tests
 5. **Mirrors source** -- `test_X.py` tests `X.py`
 6. **Readable** -- test classes group by feature, names describe intent
-7. **Source fixtures as byte literals** -- no fixture files needed for C#, Java, Python parsing
+7. **Source fixtures as byte literals** -- no fixture files needed for C#, Java, Python, TypeScript parsing
 
 ## Adding New Tests
 

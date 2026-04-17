@@ -4,21 +4,21 @@
 
 Eidos uses a **plugin-based parser architecture** that makes adding new
 language support a matter of implementing one interface and registering it.
-The system currently supports **C#**, **Java**, and **Python**.
+The system currently supports **C#**, **Java**, **Python**, and **TypeScript/TSX**.
 
 ## Architecture
 
 ```
-                     parser_registry.py
-                     (lazy discovery)
-                           |
-           +---------------+---------------+
-           |               |               |
-    CSharpParser     JavaParser      PythonParser
-    (adapter)        (java_parser)   (python_parser)
-           |               |               |
-    tree-sitter-     tree-sitter-    tree-sitter-
-    c-sharp          java            python
+                       parser_registry.py
+                       (lazy discovery)
+                              |
+      +------------+----------+----------+--------------+
+      |            |          |          |              |
+ CSharpParser JavaParser PythonParser TSParser    TSXParser
+ (adapter)   (java)     (python)     (typescript) (tsx)
+      |            |          |          |              |
+ tree-sitter- tree-sitter tree-sitter  tree-sitter-typescript
+ c-sharp      -java       -python      (both TS + TSX grammars)
 ```
 
 All parsers implement the `LanguageParser` abstract base class:
@@ -40,6 +40,8 @@ class LanguageParser(ABC):
 | C# | `csharp_parser.py` | `tree-sitter-c-sharp` | `.cs`, `.csx` | classes, interfaces, structs, enums, records, delegates, methods, constructors, properties, fields |
 | Java | `java_parser.py` | `tree-sitter-java` | `.java` | classes, interfaces, enums, records, annotations, methods, constructors, fields |
 | Python | `python_parser.py` | `tree-sitter-python` | `.py`, `.pyi` | classes, functions, methods, constructors (__init__), nested classes |
+| TypeScript | `typescript_parser.py` | `tree-sitter-typescript` | `.ts` | classes, interfaces, enums, methods, constructors, fields, top-level functions |
+| TSX | `typescript_parser.py` | `tree-sitter-typescript` | `.tsx` | same as TypeScript (shared parser with TSX grammar) |
 
 ## Edges Extracted (All Languages)
 
@@ -112,6 +114,7 @@ Create `tests/test_<lang>_parser.py` following the patterns in
 | `test_csharp_parser.py` | 59 | C# symbols, edges, namespaces, generics, nested types |
 | `test_java_parser.py` | 79 | Java packages, imports, classes, enums, generics, Javadoc |
 | `test_python_parser.py` | 66 | Python imports, classes, functions, decorators, docstrings |
+| `test_typescript_parser.py` | 83 | TypeScript/TSX imports, classes, interfaces, enums, generics, TSDoc, calls, abstract, pipeline |
 | `test_pipeline.py` | existing | Pipeline dispatch to all parsers |
 
 ## Design Decisions

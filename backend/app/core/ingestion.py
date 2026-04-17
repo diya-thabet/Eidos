@@ -26,6 +26,9 @@ LANGUAGE_MAP: dict[str, str] = {
     # Python
     ".py": "python",
     ".pyi": "python",
+    # TypeScript
+    ".ts": "typescript",
+    ".tsx": "tsx",
     # Config / data
     ".json": "json",
     ".xml": "xml",
