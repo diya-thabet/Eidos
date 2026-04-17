@@ -1,6 +1,7 @@
 """
-Analysis pipeline: parses all C# files in a snapshot, builds graph,
-and persists symbols + edges to the database.
+Analysis pipeline: parses source files in a snapshot via the language
+parser registry, builds a unified code graph, and persists symbols +
+edges to the database.
 """
 
 from __future__ import annotations
@@ -11,9 +12,9 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.analysis.csharp_parser import parse_file
 from app.analysis.graph_builder import CodeGraph, build_graph
 from app.analysis.models import FileAnalysis
+from app.analysis.parser_registry import get_parser, supported_languages
 from app.storage.models import Edge, Symbol
 
 logger = logging.getLogger(__name__)
@@ -21,7 +22,10 @@ logger = logging.getLogger(__name__)
 
 def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -> CodeGraph:
     """
-    Run static analysis on all C# files in a snapshot directory.
+    Run static analysis on all parseable files in a snapshot directory.
+
+    Uses the parser registry so that any language with a registered
+    parser is automatically handled.
 
     Args:
         repo_dir: Path to the cloned repo on disk.
@@ -30,10 +34,18 @@ def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -
     Returns:
         A fully constructed CodeGraph.
     """
-    cs_files = [f for f in file_records if f.get("language") == "csharp"]
     analyses: list[FileAnalysis] = []
+    available = supported_languages()
 
-    for file_info in cs_files:
+    for file_info in file_records:
+        lang = file_info.get("language", "")
+        if lang not in available:
+            continue
+
+        parser = get_parser(lang)
+        if parser is None:
+            continue
+
         file_path = repo_dir / file_info["path"]
         if not file_path.exists():
             logger.warning("File not found on disk: %s", file_path)
@@ -41,7 +53,7 @@ def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -
 
         try:
             source = file_path.read_bytes()
-            analysis = parse_file(source, file_info["path"])
+            analysis = parser.parse_file(source, file_info["path"])
             analyses.append(analysis)
         except Exception:
             logger.exception("Failed to parse %s", file_info["path"])

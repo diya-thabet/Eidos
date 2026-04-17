@@ -14,12 +14,16 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# Extensions we index (MVP: C# focus + common config)
+# Extensions we index
 LANGUAGE_MAP: dict[str, str] = {
+    # C#
     ".cs": "csharp",
     ".csx": "csharp",
     ".csproj": "xml",
     ".sln": "solution",
+    # Java
+    ".java": "java",
+    # Config / data
     ".json": "json",
     ".xml": "xml",
     ".yaml": "yaml",

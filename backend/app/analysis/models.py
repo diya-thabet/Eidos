@@ -12,7 +12,7 @@ from dataclasses import dataclass, field
 
 
 class SymbolKind(enum.StrEnum):
-    """Kind of code symbol extracted from C# source."""
+    """Kind of code symbol extracted from source files."""
 
     CLASS = "class"
     INTERFACE = "interface"
