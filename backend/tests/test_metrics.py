@@ -5,12 +5,9 @@ Covers: lines of code, fan-in, fan-out, child count,
 modifier detection, hotspot identification.
 """
 
-import pytest
-
 from app.analysis.csharp_parser import parse_file
 from app.analysis.graph_builder import build_graph
 from app.analysis.metrics import compute_metrics, find_hotspots
-
 
 LARGE_SERVICE = b"""\
 namespace MyApp.Services

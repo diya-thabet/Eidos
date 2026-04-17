@@ -5,16 +5,16 @@ Covers: symbol listing/filtering, edge listing, graph neighborhood,
 analysis overview, and error handling.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import patch, AsyncMock
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.storage.models import Edge, Repo, RepoSnapshot, Symbol, SnapshotStatus
-from app.storage.database import get_db
 from app.main import app
-from tests.conftest import override_get_db, create_tables, drop_tables, test_sessionmaker
+from app.storage.database import get_db
+from app.storage.models import Edge, Repo, RepoSnapshot, SnapshotStatus, Symbol
+from tests.conftest import create_tables, drop_tables, override_get_db, test_sessionmaker
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -22,7 +22,9 @@ app.dependency_overrides[get_db] = override_get_db
 async def _seed_data() -> None:
     """Seed a repo, snapshot, symbols, and edges for testing."""
     async with test_sessionmaker() as db:
-        repo = Repo(id="repo-001", name="test", url="https://example.com/test", default_branch="main")
+        repo = Repo(
+            id="repo-001", name="test", url="https://example.com/test", default_branch="main"
+        )
         db.add(repo)
 
         snap = RepoSnapshot(
@@ -32,61 +34,114 @@ async def _seed_data() -> None:
         await db.flush()
 
         cls = Symbol(
-            snapshot_id="snap-001", kind="class", name="UserService",
-            fq_name="MyApp.UserService", file_path="UserService.cs",
-            start_line=5, end_line=30, namespace="MyApp", modifiers="public",
+            snapshot_id="snap-001",
+            kind="class",
+            name="UserService",
+            fq_name="MyApp.UserService",
+            file_path="UserService.cs",
+            start_line=5,
+            end_line=30,
+            namespace="MyApp",
+            modifiers="public",
         )
         db.add(cls)
         await db.flush()
 
         method1 = Symbol(
-            snapshot_id="snap-001", kind="method", name="GetById",
-            fq_name="MyApp.UserService.GetById", file_path="UserService.cs",
-            start_line=10, end_line=15, namespace="MyApp",
-            parent_fq_name="MyApp.UserService", modifiers="public",
-            return_type="User", signature="public User GetById(int id)",
+            snapshot_id="snap-001",
+            kind="method",
+            name="GetById",
+            fq_name="MyApp.UserService.GetById",
+            file_path="UserService.cs",
+            start_line=10,
+            end_line=15,
+            namespace="MyApp",
+            parent_fq_name="MyApp.UserService",
+            modifiers="public",
+            return_type="User",
+            signature="public User GetById(int id)",
         )
         db.add(method1)
         await db.flush()
 
         method2 = Symbol(
-            snapshot_id="snap-001", kind="method", name="Delete",
-            fq_name="MyApp.UserService.Delete", file_path="UserService.cs",
-            start_line=17, end_line=22, namespace="MyApp",
-            parent_fq_name="MyApp.UserService", modifiers="public",
+            snapshot_id="snap-001",
+            kind="method",
+            name="Delete",
+            fq_name="MyApp.UserService.Delete",
+            file_path="UserService.cs",
+            start_line=17,
+            end_line=22,
+            namespace="MyApp",
+            parent_fq_name="MyApp.UserService",
+            modifiers="public",
         )
         db.add(method2)
         await db.flush()
 
         iface = Symbol(
-            snapshot_id="snap-001", kind="interface", name="IUserService",
-            fq_name="MyApp.IUserService", file_path="IUserService.cs",
-            start_line=1, end_line=5, namespace="MyApp", modifiers="public",
+            snapshot_id="snap-001",
+            kind="interface",
+            name="IUserService",
+            fq_name="MyApp.IUserService",
+            file_path="IUserService.cs",
+            start_line=1,
+            end_line=5,
+            namespace="MyApp",
+            modifiers="public",
         )
         db.add(iface)
         await db.flush()
 
         # Edges
-        db.add(Edge(
-            snapshot_id="snap-001", source_symbol_id=cls.id, target_symbol_id=method1.id,
-            source_fq_name="MyApp.UserService", target_fq_name="MyApp.UserService.GetById",
-            edge_type="contains", file_path="UserService.cs", line=10,
-        ))
-        db.add(Edge(
-            snapshot_id="snap-001", source_symbol_id=cls.id, target_symbol_id=method2.id,
-            source_fq_name="MyApp.UserService", target_fq_name="MyApp.UserService.Delete",
-            edge_type="contains", file_path="UserService.cs", line=17,
-        ))
-        db.add(Edge(
-            snapshot_id="snap-001", source_symbol_id=method2.id, target_symbol_id=method1.id,
-            source_fq_name="MyApp.UserService.Delete", target_fq_name="MyApp.UserService.GetById",
-            edge_type="calls", file_path="UserService.cs", line=19,
-        ))
-        db.add(Edge(
-            snapshot_id="snap-001", source_symbol_id=cls.id, target_symbol_id=None,
-            source_fq_name="MyApp.UserService", target_fq_name="MyApp.IUserService",
-            edge_type="implements", file_path="UserService.cs", line=5,
-        ))
+        db.add(
+            Edge(
+                snapshot_id="snap-001",
+                source_symbol_id=cls.id,
+                target_symbol_id=method1.id,
+                source_fq_name="MyApp.UserService",
+                target_fq_name="MyApp.UserService.GetById",
+                edge_type="contains",
+                file_path="UserService.cs",
+                line=10,
+            )
+        )
+        db.add(
+            Edge(
+                snapshot_id="snap-001",
+                source_symbol_id=cls.id,
+                target_symbol_id=method2.id,
+                source_fq_name="MyApp.UserService",
+                target_fq_name="MyApp.UserService.Delete",
+                edge_type="contains",
+                file_path="UserService.cs",
+                line=17,
+            )
+        )
+        db.add(
+            Edge(
+                snapshot_id="snap-001",
+                source_symbol_id=method2.id,
+                target_symbol_id=method1.id,
+                source_fq_name="MyApp.UserService.Delete",
+                target_fq_name="MyApp.UserService.GetById",
+                edge_type="calls",
+                file_path="UserService.cs",
+                line=19,
+            )
+        )
+        db.add(
+            Edge(
+                snapshot_id="snap-001",
+                source_symbol_id=cls.id,
+                target_symbol_id=None,
+                source_fq_name="MyApp.UserService",
+                target_fq_name="MyApp.IUserService",
+                edge_type="implements",
+                file_path="UserService.cs",
+                line=5,
+            )
+        )
 
         await db.commit()
 
@@ -125,7 +180,9 @@ class TestListSymbols:
 
     @pytest.mark.asyncio
     async def test_filter_by_file(self, client):
-        resp = await client.get("/repos/repo-001/snapshots/snap-001/symbols?file_path=IUserService.cs")
+        resp = await client.get(
+            "/repos/repo-001/snapshots/snap-001/symbols?file_path=IUserService.cs"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert len(data) == 1
@@ -171,7 +228,9 @@ class TestGetSymbol:
 
     @pytest.mark.asyncio
     async def test_get_method_symbol(self, client):
-        resp = await client.get("/repos/repo-001/snapshots/snap-001/symbols/MyApp.UserService.GetById")
+        resp = await client.get(
+            "/repos/repo-001/snapshots/snap-001/symbols/MyApp.UserService.GetById"
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["return_type"] == "User"
@@ -229,7 +288,9 @@ class TestGraphNeighborhood:
 
     @pytest.mark.asyncio
     async def test_method_callers(self, client):
-        resp = await client.get("/repos/repo-001/snapshots/snap-001/graph/MyApp.UserService.GetById")
+        resp = await client.get(
+            "/repos/repo-001/snapshots/snap-001/graph/MyApp.UserService.GetById"
+        )
         assert resp.status_code == 200
         data = resp.json()
         callers = [c["fq_name"] for c in data["callers"]]

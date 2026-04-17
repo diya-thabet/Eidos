@@ -29,10 +29,11 @@ class CodeGraph:
     Provides lookup methods for navigating symbols, edges, modules,
     and computing graph neighborhoods.
     """
-    symbols: dict[str, SymbolInfo] = field(default_factory=dict)       # fq_name -> SymbolInfo
+
+    symbols: dict[str, SymbolInfo] = field(default_factory=dict)  # fq_name -> SymbolInfo
     edges: list[EdgeInfo] = field(default_factory=list)
-    modules: dict[str, ModuleInfo] = field(default_factory=dict)       # namespace -> ModuleInfo
-    files: dict[str, FileAnalysis] = field(default_factory=dict)       # path -> FileAnalysis
+    modules: dict[str, ModuleInfo] = field(default_factory=dict)  # namespace -> ModuleInfo
+    files: dict[str, FileAnalysis] = field(default_factory=dict)  # path -> FileAnalysis
 
     # Adjacency lists (built by finalize())
     _callers: dict[str, list[str]] = field(default_factory=lambda: defaultdict(list))
@@ -149,7 +150,9 @@ def build_graph(analyses: list[FileAnalysis]) -> CodeGraph:
     graph.finalize()
     logger.info(
         "Graph built: %d symbols, %d edges, %d modules",
-        len(graph.symbols), len(graph.edges), len(graph.modules),
+        len(graph.symbols),
+        len(graph.edges),
+        len(graph.modules),
     )
     return graph
 

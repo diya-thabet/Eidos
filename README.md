@@ -33,6 +33,12 @@ pytest -v
 | GET    | `/repos/{id}/snapshots/{sid}/edges`           | List edges (filter by type, source, target) |
 | GET    | `/repos/{id}/snapshots/{sid}/graph/{fq}`      | Call graph neighborhood         |
 | GET    | `/repos/{id}/snapshots/{sid}/overview`        | Analysis summary                |
+| GET    | `/repos/{id}/snapshots/{sid}/summaries`       | List summaries (filter by scope) |
+| GET    | `/repos/{id}/snapshots/{sid}/summaries/{type}/{id}` | Get specific summary      |
+| POST   | `/repos/{id}/snapshots/{sid}/ask`             | Ask a question (Q&A engine)     |
+| POST   | `/repos/{id}/snapshots/{sid}/classify`        | Classify a question (debug)     |
+| POST   | `/repos/{id}/snapshots/{sid}/review`          | Review a PR diff                |
+| GET    | `/repos/{id}/snapshots/{sid}/reviews`         | List past reviews               |
 
 ## Project Structure
 
@@ -42,10 +48,13 @@ backend/
     api/
       repos.py          # Repo + snapshot endpoints
       analysis.py       # Symbol, edge, graph, overview endpoints
+      indexing.py        # Summary listing + retrieval endpoints
+      reasoning.py       # Q&A ask + classify endpoints
+      reviews.py        # PR review + list endpoints
     core/
       config.py         # Settings via pydantic-settings
       ingestion.py      # Git clone, file scanning, hashing
-      tasks.py          # Background ingestion + analysis task
+      tasks.py          # Background ingestion + analysis + indexing
     analysis/
       models.py         # Data classes (SymbolInfo, EdgeInfo, etc.)
       csharp_parser.py  # Tree-sitter C# parser
@@ -53,23 +62,44 @@ backend/
       entry_points.py   # Controller, Main, Startup detection
       metrics.py        # LOC, fan-in/out, hotspot detection
       pipeline.py       # Analysis orchestrator + DB persistence
-    indexing/           # Summaries + vector embeddings [Phase 3]
-    reasoning/          # LLM Q&A engine [Phase 4]
+    indexing/
+      summary_schema.py # Summary data classes
+      facts_extractor.py # Deterministic facts from code graph
+      summarizer.py     # LLM interface + stub (no AI required)
+      embedder.py       # Embedding generation (hash + OpenAI stub)
+      vector_store.py   # Vector DB abstraction (in-memory + Qdrant)
+      indexer.py        # Pipeline orchestrator
+    reasoning/
+      models.py         # Question, Answer, Evidence, RetrievalContext
+      llm_client.py     # Universal LLM client (OpenAI/Ollama/vLLM/stub)
+      question_router.py # Question classification + symbol extraction
+      retriever.py      # Hybrid retrieval (vector + graph)
+      answer_builder.py  # Context assembly + answer generation
+    reviews/
+      models.py         # DiffHunk, ChangedSymbol, ReviewFinding, ReviewReport
+      diff_parser.py    # Unified diff parser + line-to-symbol mapping
+      heuristics.py     # 8 behavioural risk detectors
+      impact_analyzer.py # Call-graph blast radius analysis
+      reviewer.py       # Pipeline orchestrator
     reviews/            # PR review engine [Phase 5]
     storage/
       database.py       # SQLAlchemy async engine + session
-      models.py         # DB models (Repo, Snapshot, File, Symbol, Edge)
+      models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review)
       schemas.py        # Pydantic response schemas
-  tests/
-    conftest.py         # Shared test DB configuration
-    test_api.py         # Repo API tests (11 tests)
-    test_analysis_api.py # Analysis API tests (21 tests)
-    test_csharp_parser.py # C# parser tests (35 tests)
-    test_graph_builder.py # Graph builder tests (17 tests)
-    test_entry_points.py  # Entry point detection tests (13 tests)
-    test_metrics.py       # Metrics tests (9 tests)
-    test_ingestion.py     # File scanning tests (3 tests)
-    test_pipeline.py      # End-to-end pipeline tests (9 tests)
+  tests/                # 346 tests (see docs/TESTING.md)
+  Dockerfile            # Production container image
 infra/
-  docker-compose.yml   # Postgres + Redis + Qdrant
+  docker-compose.yml    # Postgres + Redis + Qdrant (local dev)
+k8s/
+  namespace.yaml        # Kubernetes namespace
+  configmap.yaml        # Non-secret config
+  secrets.yaml          # API keys, passwords
+  infrastructure.yaml   # Postgres, Redis, Qdrant deployments
+  api.yaml              # Eidos API deployment + NodePort
+  deploy-local.sh       # One-command deployment (kind/minikube)
+docs/
+  ARCHITECTURE.md       # Full technical documentation
+  PHASE3_INDEXING.md    # Summarisation & indexing details
+  KUBERNETES.md         # K8s deployment guide
+  TESTING.md            # Test strategy & inventory
 ```

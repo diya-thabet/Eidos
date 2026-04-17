@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eidos-config
+  namespace: eidos
+data:
+  EIDOS_DATABASE_URL: "postgresql+asyncpg://eidos:eidos@postgres:5432/eidos"
+  EIDOS_REDIS_URL: "redis://redis:6379/0"
+  EIDOS_QDRANT_URL: "http://qdrant:6333"
+  EIDOS_REPOS_DATA_DIR: "/data/repos"
+  # LLM provider (any OpenAI-compatible endpoint)
+  # For Ollama:  "http://ollama:11434/v1"
+  # For vLLM:    "http://vllm:8000/v1"
+  # For OpenAI:  "https://api.openai.com/v1"
+  EIDOS_LLM_BASE_URL: ""
+  EIDOS_LLM_MODEL: "gpt-4o-mini"
+  EIDOS_LLM_TEMPERATURE: "0.1"
+  EIDOS_LLM_MAX_TOKENS: "2048"
+  EIDOS_LLM_TIMEOUT: "60"

@@ -11,10 +11,8 @@ Identifies:
 
 from __future__ import annotations
 
-import re
-
-from app.analysis.models import EntryPoint, SymbolInfo, SymbolKind
 from app.analysis.graph_builder import CodeGraph
+from app.analysis.models import EntryPoint, SymbolInfo, SymbolKind
 
 # Controller base class names that indicate an ASP.NET controller
 _CONTROLLER_BASES = {"Controller", "ControllerBase", "ApiController", "ODataController"}
@@ -48,24 +46,28 @@ def _detect_controllers(graph: CodeGraph) -> list[EntryPoint]:
         if any(base in _CONTROLLER_BASES for base in sym.base_types):
             # Also find action methods inside this controller
             route = _infer_controller_route(sym)
-            results.append(EntryPoint(
-                symbol_fq_name=sym.fq_name,
-                kind="controller",
-                file_path=sym.file_path,
-                line=sym.start_line,
-                route=route,
-            ))
+            results.append(
+                EntryPoint(
+                    symbol_fq_name=sym.fq_name,
+                    kind="controller",
+                    file_path=sym.file_path,
+                    line=sym.start_line,
+                    route=route,
+                )
+            )
             # Add individual action methods
             for child_fq in graph.get_children(sym.fq_name):
                 child = graph.symbols.get(child_fq)
                 if child and child.kind == SymbolKind.METHOD and "public" in child.modifiers:
-                    results.append(EntryPoint(
-                        symbol_fq_name=child.fq_name,
-                        kind="controller_action",
-                        file_path=child.file_path,
-                        line=child.start_line,
-                        route=f"{route}/{child.name}",
-                    ))
+                    results.append(
+                        EntryPoint(
+                            symbol_fq_name=child.fq_name,
+                            kind="controller_action",
+                            file_path=child.file_path,
+                            line=child.start_line,
+                            route=f"{route}/{child.name}",
+                        )
+                    )
     return results
 
 
@@ -74,12 +76,14 @@ def _detect_main_methods(graph: CodeGraph) -> list[EntryPoint]:
     results: list[EntryPoint] = []
     for sym in graph.get_symbols_by_kind(SymbolKind.METHOD):
         if sym.name == "Main" and "static" in sym.modifiers:
-            results.append(EntryPoint(
-                symbol_fq_name=sym.fq_name,
-                kind="main",
-                file_path=sym.file_path,
-                line=sym.start_line,
-            ))
+            results.append(
+                EntryPoint(
+                    symbol_fq_name=sym.fq_name,
+                    kind="main",
+                    file_path=sym.file_path,
+                    line=sym.start_line,
+                )
+            )
     return results
 
 
@@ -88,12 +92,14 @@ def _detect_startup_classes(graph: CodeGraph) -> list[EntryPoint]:
     results: list[EntryPoint] = []
     for sym in graph.get_symbols_by_kind(SymbolKind.CLASS):
         if sym.name in _STARTUP_NAMES:
-            results.append(EntryPoint(
-                symbol_fq_name=sym.fq_name,
-                kind="startup",
-                file_path=sym.file_path,
-                line=sym.start_line,
-            ))
+            results.append(
+                EntryPoint(
+                    symbol_fq_name=sym.fq_name,
+                    kind="startup",
+                    file_path=sym.file_path,
+                    line=sym.start_line,
+                )
+            )
     return results
 
 
@@ -102,12 +108,14 @@ def _detect_workers(graph: CodeGraph) -> list[EntryPoint]:
     results: list[EntryPoint] = []
     for sym in graph.get_symbols_by_kind(SymbolKind.CLASS):
         if any(base in _WORKER_BASES for base in sym.base_types):
-            results.append(EntryPoint(
-                symbol_fq_name=sym.fq_name,
-                kind="worker",
-                file_path=sym.file_path,
-                line=sym.start_line,
-            ))
+            results.append(
+                EntryPoint(
+                    symbol_fq_name=sym.fq_name,
+                    kind="worker",
+                    file_path=sym.file_path,
+                    line=sym.start_line,
+                )
+            )
     return results
 
 

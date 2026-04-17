@@ -6,11 +6,8 @@ properties, fields, inheritance, using directives, nested types,
 method calls, and edge extraction.
 """
 
-import pytest
-
 from app.analysis.csharp_parser import parse_file
 from app.analysis.models import EdgeType, SymbolKind
-
 
 # ---------------------------------------------------------------------------
 # Fixtures: sample C# source files
@@ -183,6 +180,7 @@ namespace MyApp.Logic
 # Parser tests
 # ---------------------------------------------------------------------------
 
+
 class TestBasicParsing:
     """Tests for basic symbol extraction."""
 
@@ -349,7 +347,9 @@ class TestEdgeExtraction:
 
     def test_extracts_inheritance_edge(self):
         result = parse_file(SIMPLE_CLASS, "Services/UserService.cs")
-        inherits = [e for e in result.edges if e.edge_type in (EdgeType.IMPLEMENTS, EdgeType.INHERITS)]
+        inherits = [
+            e for e in result.edges if e.edge_type in (EdgeType.IMPLEMENTS, EdgeType.INHERITS)
+        ]
         assert any(e.target_fq_name == "IUserService" for e in inherits)
 
     def test_extracts_import_edges(self):
@@ -363,9 +363,7 @@ class TestEdgeExtraction:
         result = parse_file(MULTIPLE_METHODS_WITH_CALLS, "Logic/Calculator.cs")
         calls = [e for e in result.edges if e.edge_type == EdgeType.CALLS]
         # Multiply calls Add
-        multiply_calls = [
-            e for e in calls if e.source_fq_name == "MyApp.Logic.Calculator.Multiply"
-        ]
+        multiply_calls = [e for e in calls if e.source_fq_name == "MyApp.Logic.Calculator.Multiply"]
         assert any(e.target_fq_name == "Add" for e in multiply_calls)
 
     def test_object_creation_edge(self):

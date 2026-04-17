@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: repos-pvc
+  namespace: eidos
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 5Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eidos-api
+  namespace: eidos
+  labels:
+    app: eidos-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: eidos-api
+  template:
+    metadata:
+      labels:
+        app: eidos-api
+    spec:
+      initContainers:
+        # Wait for postgres to be ready before starting
+        - name: wait-for-postgres
+          image: busybox:1.36
+          command: ['sh', '-c', 'until nc -z postgres 5432; do echo "Waiting for postgres..."; sleep 2; done']
+      containers:
+        - name: api
+          image: eidos-api:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: eidos-config
+          env:
+            - name: EIDOS_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: eidos-secrets
+                  key: EIDOS_OPENAI_API_KEY
+          volumeMounts:
+            - name: repos-data
+              mountPath: /data/repos
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 20
+      volumes:
+        - name: repos-data
+          persistentVolumeClaim:
+            claimName: repos-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: eidos-api
+  namespace: eidos
+spec:
+  selector:
+    app: eidos-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+  type: ClusterIP
+---
+# NodePort for local access via minikube/kind
+apiVersion: v1
+kind: Service
+metadata:
+  name: eidos-api-nodeport
+  namespace: eidos
+spec:
+  selector:
+    app: eidos-api
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30080
+  type: NodePort

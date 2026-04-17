@@ -83,12 +83,14 @@ def scan_files(repo_dir: Path) -> list[dict]:
                 continue
             if size > MAX_FILE_SIZE or size == 0:
                 continue
-            results.append({
-                "path": rel_path,
-                "language": lang,
-                "hash": hash_file(filepath),
-                "size_bytes": size,
-            })
+            results.append(
+                {
+                    "path": rel_path,
+                    "language": lang,
+                    "hash": hash_file(filepath),
+                    "size_bytes": size,
+                }
+            )
     logger.info("Scanned %d indexable files in %s", len(results), repo_dir)
     return results
 

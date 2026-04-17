@@ -10,17 +10,17 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from app.analysis.graph_builder import CodeGraph
-from app.analysis.models import SymbolInfo, SymbolKind
 
 
 @dataclass
 class SymbolMetrics:
     """Computed metrics for a single symbol."""
+
     fq_name: str
     kind: str
     lines_of_code: int
-    fan_in: int    # how many callers
-    fan_out: int   # how many callees
+    fan_in: int  # how many callers
+    fan_out: int  # how many callees
     child_count: int  # members for classes, 0 for methods
     is_public: bool
     is_static: bool
@@ -60,7 +60,4 @@ def find_hotspots(graph: CodeGraph, min_fan_in: int = 3, min_loc: int = 50) -> l
     making them high-risk for regressions.
     """
     all_metrics = compute_metrics(graph)
-    return [
-        m for m in all_metrics
-        if m.fan_in >= min_fan_in and m.lines_of_code >= min_loc
-    ]
+    return [m for m in all_metrics if m.fan_in >= min_fan_in and m.lines_of_code >= min_loc]

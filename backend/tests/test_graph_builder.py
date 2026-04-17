@@ -5,12 +5,9 @@ Covers: graph construction, callers/callees lookup, neighborhood expansion,
 module building, fan-in/fan-out, and symbol filtering.
 """
 
-import pytest
-
 from app.analysis.csharp_parser import parse_file
-from app.analysis.graph_builder import build_graph, CodeGraph
-from app.analysis.models import EdgeType, SymbolKind
-
+from app.analysis.graph_builder import CodeGraph, build_graph
+from app.analysis.models import SymbolKind
 
 # ---------------------------------------------------------------------------
 # Fixtures

@@ -7,10 +7,8 @@ entry points, metrics, and modules for a given snapshot.
 
 from __future__ import annotations
 
-from collections import Counter
-
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.storage.database import get_db
@@ -18,10 +16,7 @@ from app.storage.models import Edge, RepoSnapshot, Symbol
 from app.storage.schemas import (
     AnalysisOverview,
     EdgeOut,
-    EntryPointOut,
     GraphNeighborhood,
-    MetricsOut,
-    ModuleOut,
     SymbolOut,
 )
 
@@ -124,9 +119,13 @@ async def get_graph_neighborhood(
         raise HTTPException(status_code=404, detail=f"Symbol not found: {fq_name}")
 
     # Get callers (edges where target = this symbol)
-    callers = await _resolve_edge_symbols(db, snapshot_id, Edge.target_fq_name, fq_name, Edge.source_fq_name)
+    callers = await _resolve_edge_symbols(
+        db, snapshot_id, Edge.target_fq_name, fq_name, Edge.source_fq_name
+    )
     # Get callees (edges where source = this symbol)
-    callees = await _resolve_edge_symbols(db, snapshot_id, Edge.source_fq_name, fq_name, Edge.target_fq_name)
+    callees = await _resolve_edge_symbols(
+        db, snapshot_id, Edge.source_fq_name, fq_name, Edge.target_fq_name
+    )
     # Get children (containment edges)
     children = await _resolve_edge_symbols(
         db, snapshot_id, Edge.source_fq_name, fq_name, Edge.target_fq_name, edge_type="contains"
@@ -149,15 +148,15 @@ async def get_analysis_overview(
 
     # Count symbols by kind
     result = await db.execute(
-        select(Symbol.kind, func.count()).where(Symbol.snapshot_id == snapshot_id).group_by(Symbol.kind)
+        select(Symbol.kind, func.count())
+        .where(Symbol.snapshot_id == snapshot_id)
+        .group_by(Symbol.kind)
     )
     kind_counts = {row[0]: row[1] for row in result.all()}
     total_symbols = sum(kind_counts.values())
 
     # Count edges
-    result = await db.execute(
-        select(func.count()).where(Edge.snapshot_id == snapshot_id)
-    )
+    result = await db.execute(select(func.count()).where(Edge.snapshot_id == snapshot_id))
     total_edges = result.scalar() or 0
 
     # Count distinct namespaces as modules
@@ -175,13 +174,14 @@ async def get_analysis_overview(
         total_modules=total_modules,
         symbols_by_kind=kind_counts,
         entry_points=[],  # Populated by the analysis task, queried separately
-        hotspots=[],       # Same
+        hotspots=[],  # Same
     )
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> RepoSnapshot:
     """Verify snapshot exists and belongs to the repo."""
@@ -207,11 +207,13 @@ async def _resolve_edge_symbols(
 ) -> list[Symbol]:
     """Find symbols connected via edges of a given type."""
     edge_result = await db.execute(
-        select(resolve_col).where(
+        select(resolve_col)
+        .where(
             Edge.snapshot_id == snapshot_id,
             filter_col == filter_val,
             Edge.edge_type == edge_type,
-        ).distinct()
+        )
+        .distinct()
     )
     fq_names = [row[0] for row in edge_result.all()]
     if not fq_names:

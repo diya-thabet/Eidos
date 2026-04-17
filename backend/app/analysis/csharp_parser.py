@@ -11,7 +11,7 @@ import logging
 from pathlib import Path
 
 import tree_sitter_c_sharp as tscsharp
-from tree_sitter import Language, Parser, Node
+from tree_sitter import Language, Node, Parser
 
 from app.analysis.models import (
     EdgeInfo,
@@ -66,16 +66,20 @@ def parse_file(source: bytes, file_path: str) -> FileAnalysis:
 
     analysis = FileAnalysis(path=file_path, namespace="")
     analysis.using_directives = _extract_using_directives(root, source)
-    _extract_namespace_and_types(root, source, file_path, analysis, parent_namespace="", parent_fq_name=None)
+    _extract_namespace_and_types(
+        root, source, file_path, analysis, parent_namespace="", parent_fq_name=None
+    )
 
     # Build import edges from using directives
     for directive in analysis.using_directives:
-        analysis.edges.append(EdgeInfo(
-            source_fq_name=analysis.namespace or file_path,
-            target_fq_name=directive,
-            edge_type=EdgeType.IMPORTS,
-            file_path=file_path,
-        ))
+        analysis.edges.append(
+            EdgeInfo(
+                source_fq_name=analysis.namespace or file_path,
+                target_fq_name=directive,
+                edge_type=EdgeType.IMPORTS,
+                file_path=file_path,
+            )
+        )
 
     return analysis
 
@@ -90,6 +94,7 @@ def parse_file_from_path(file_path: Path, repo_root: Path) -> FileAnalysis:
 # ---------------------------------------------------------------------------
 # Internal extraction helpers
 # ---------------------------------------------------------------------------
+
 
 def _extract_using_directives(root: Node, source: bytes) -> list[str]:
     """Extract all 'using Foo.Bar;' directives from file root."""
@@ -123,15 +128,21 @@ def _extract_namespace_and_types(
             full_ns = f"{parent_namespace}.{ns_name}" if parent_namespace else ns_name
             if not analysis.namespace:
                 analysis.namespace = full_ns
-            _extract_namespace_and_types(child, source, file_path, analysis, full_ns, parent_fq_name)
+            _extract_namespace_and_types(
+                child, source, file_path, analysis, full_ns, parent_fq_name
+            )
 
         # declaration_list inside namespace
         elif child.type == "declaration_list":
-            _extract_namespace_and_types(child, source, file_path, analysis, parent_namespace, parent_fq_name)
+            _extract_namespace_and_types(
+                child, source, file_path, analysis, parent_namespace, parent_fq_name
+            )
 
         # Type declarations (class, interface, struct, enum, record, delegate)
         elif child.type in _TYPE_DECLARATION_MAP:
-            _extract_type_declaration(child, source, file_path, analysis, parent_namespace, parent_fq_name)
+            _extract_type_declaration(
+                child, source, file_path, analysis, parent_namespace, parent_fq_name
+            )
 
 
 def _extract_type_declaration(
@@ -170,24 +181,28 @@ def _extract_type_declaration(
 
     # Add containment edge if nested
     if parent_fq_name:
-        analysis.edges.append(EdgeInfo(
-            source_fq_name=parent_fq_name,
-            target_fq_name=fq,
-            edge_type=EdgeType.CONTAINS,
-            file_path=file_path,
-            line=child.start_point[0] + 1,
-        ))
+        analysis.edges.append(
+            EdgeInfo(
+                source_fq_name=parent_fq_name,
+                target_fq_name=fq,
+                edge_type=EdgeType.CONTAINS,
+                file_path=file_path,
+                line=child.start_point[0] + 1,
+            )
+        )
 
     # Add inheritance / implements edges
     for base in symbol.base_types:
         edge_type = EdgeType.IMPLEMENTS if kind == SymbolKind.CLASS else EdgeType.INHERITS
-        analysis.edges.append(EdgeInfo(
-            source_fq_name=fq,
-            target_fq_name=base,
-            edge_type=edge_type,
-            file_path=file_path,
-            line=child.start_point[0] + 1,
-        ))
+        analysis.edges.append(
+            EdgeInfo(
+                source_fq_name=fq,
+                target_fq_name=base,
+                edge_type=edge_type,
+                file_path=file_path,
+                line=child.start_point[0] + 1,
+            )
+        )
 
     # Recurse into the type body for members and nested types
     body = _find_child_by_type(child, "declaration_list")
@@ -237,13 +252,15 @@ def _extract_members(
         analysis.symbols.append(symbol)
 
         # Containment edge
-        analysis.edges.append(EdgeInfo(
-            source_fq_name=parent_fq_name,
-            target_fq_name=fq,
-            edge_type=EdgeType.CONTAINS,
-            file_path=file_path,
-            line=child.start_point[0] + 1,
-        ))
+        analysis.edges.append(
+            EdgeInfo(
+                source_fq_name=parent_fq_name,
+                target_fq_name=fq,
+                edge_type=EdgeType.CONTAINS,
+                file_path=file_path,
+                line=child.start_point[0] + 1,
+            )
+        )
 
         # Extract call edges from method/constructor bodies
         if kind in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
@@ -262,29 +279,34 @@ def _extract_calls(
         if child.type == "invocation_expression":
             target = _extract_invocation_target(child, source)
             if target:
-                analysis.edges.append(EdgeInfo(
-                    source_fq_name=caller_fq_name,
-                    target_fq_name=target,
-                    edge_type=EdgeType.CALLS,
-                    file_path=file_path,
-                    line=child.start_point[0] + 1,
-                ))
+                analysis.edges.append(
+                    EdgeInfo(
+                        source_fq_name=caller_fq_name,
+                        target_fq_name=target,
+                        edge_type=EdgeType.CALLS,
+                        file_path=file_path,
+                        line=child.start_point[0] + 1,
+                    )
+                )
         elif child.type == "object_creation_expression":
             type_node = child.child_by_field_name("type")
             if type_node:
                 target = _node_text(type_node, source)
-                analysis.edges.append(EdgeInfo(
-                    source_fq_name=caller_fq_name,
-                    target_fq_name=target,
-                    edge_type=EdgeType.CALLS,
-                    file_path=file_path,
-                    line=child.start_point[0] + 1,
-                ))
+                analysis.edges.append(
+                    EdgeInfo(
+                        source_fq_name=caller_fq_name,
+                        target_fq_name=target,
+                        edge_type=EdgeType.CALLS,
+                        file_path=file_path,
+                        line=child.start_point[0] + 1,
+                    )
+                )
 
 
 # ---------------------------------------------------------------------------
 # AST utility helpers
 # ---------------------------------------------------------------------------
+
 
 def _walk(node: Node):
     """Iterate all descendant nodes depth-first."""
@@ -304,7 +326,7 @@ def _walk(node: Node):
 
 
 def _node_text(node: Node, source: bytes) -> str:
-    return source[node.start_byte:node.end_byte].decode("utf-8", errors="replace")
+    return source[node.start_byte : node.end_byte].decode("utf-8", errors="replace")
 
 
 def _find_child_by_type(node: Node, type_name: str) -> Node | None:

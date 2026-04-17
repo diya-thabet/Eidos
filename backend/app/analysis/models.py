@@ -11,8 +11,9 @@ import enum
 from dataclasses import dataclass, field
 
 
-class SymbolKind(str, enum.Enum):
+class SymbolKind(enum.StrEnum):
     """Kind of code symbol extracted from C# source."""
+
     CLASS = "class"
     INTERFACE = "interface"
     STRUCT = "struct"
@@ -26,28 +27,30 @@ class SymbolKind(str, enum.Enum):
     NAMESPACE = "namespace"
 
 
-class EdgeType(str, enum.Enum):
+class EdgeType(enum.StrEnum):
     """Type of relationship between two symbols."""
+
     CALLS = "calls"
     IMPLEMENTS = "implements"
     INHERITS = "inherits"
     USES = "uses"
     CONTAINS = "contains"  # parent-child (class -> method)
-    IMPORTS = "imports"     # using directive
+    IMPORTS = "imports"  # using directive
 
 
 @dataclass
 class SymbolInfo:
     """A single code symbol extracted from the AST."""
+
     name: str
     kind: SymbolKind
-    fq_name: str                    # fully-qualified: Namespace.Class.Method
+    fq_name: str  # fully-qualified: Namespace.Class.Method
     file_path: str
     start_line: int
     end_line: int
     namespace: str = ""
     parent_fq_name: str | None = None  # enclosing class/struct/interface
-    signature: str = ""              # method/property signature
+    signature: str = ""  # method/property signature
     modifiers: list[str] = field(default_factory=list)  # public, static, abstract, etc.
     parameters: list[str] = field(default_factory=list)  # method parameters
     return_type: str = ""
@@ -58,6 +61,7 @@ class SymbolInfo:
 @dataclass
 class EdgeInfo:
     """A directed relationship between two symbols."""
+
     source_fq_name: str
     target_fq_name: str
     edge_type: EdgeType
@@ -68,6 +72,7 @@ class EdgeInfo:
 @dataclass
 class FileAnalysis:
     """Complete analysis result for a single file."""
+
     path: str
     namespace: str
     using_directives: list[str] = field(default_factory=list)
@@ -78,6 +83,7 @@ class FileAnalysis:
 @dataclass
 class ModuleInfo:
     """A logical module (namespace or folder-based grouping)."""
+
     name: str
     file_count: int = 0
     symbol_count: int = 0
@@ -88,6 +94,7 @@ class ModuleInfo:
 @dataclass
 class EntryPoint:
     """An identified entry point in the codebase."""
+
     symbol_fq_name: str
     kind: str  # "controller", "main", "startup", "minimal_api", "worker"
     file_path: str

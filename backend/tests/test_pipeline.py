@@ -5,18 +5,13 @@ Covers: parsing files from disk, building graph, persisting to DB,
 and querying symbols/edges back.
 """
 
-import os
-import tempfile
-from pathlib import Path
-
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.analysis.pipeline import analyze_snapshot_files, persist_graph
 from app.storage.models import Base, Edge, Symbol
-
 
 TEST_DB_URL = "sqlite+aiosqlite://"
 
@@ -39,7 +34,8 @@ def sample_repo(tmp_path):
     # Service file
     svc = tmp_path / "Services" / "UserService.cs"
     svc.parent.mkdir(parents=True)
-    svc.write_text("""\
+    svc.write_text(
+        """\
 using System;
 
 namespace TestApp.Services
@@ -58,12 +54,15 @@ namespace TestApp.Services
         }
     }
 }
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     # Controller file
     ctrl = tmp_path / "Controllers" / "UserController.cs"
     ctrl.parent.mkdir(parents=True)
-    ctrl.write_text("""\
+    ctrl.write_text(
+        """\
 using Microsoft.AspNetCore.Mvc;
 
 namespace TestApp.Controllers
@@ -77,12 +76,15 @@ namespace TestApp.Controllers
         }
     }
 }
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     # Model file
     model = tmp_path / "Models" / "User.cs"
     model.parent.mkdir(parents=True)
-    model.write_text("""\
+    model.write_text(
+        """\
 namespace TestApp.Models
 {
     public class User
@@ -91,7 +93,9 @@ namespace TestApp.Models
         public string Name { get; set; }
     }
 }
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     # Non-C# file (should be ignored)
     cfg = tmp_path / "appsettings.json"

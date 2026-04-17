@@ -5,14 +5,15 @@ Covers: repo creation, ingestion trigger, snapshot status,
 error handling, and data validation.
 """
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import patch, AsyncMock
 from httpx import ASGITransport, AsyncClient
 
-from app.storage.database import get_db
 from app.main import app
-from tests.conftest import override_get_db, create_tables, drop_tables
+from app.storage.database import get_db
+from tests.conftest import create_tables, drop_tables, override_get_db
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -57,7 +58,11 @@ async def test_create_repo(client: AsyncClient):
 async def test_create_repo_custom_branch(client: AsyncClient):
     resp = await client.post(
         "/repos",
-        json={"name": "test", "url": "https://github.com/example/test", "default_branch": "develop"},
+        json={
+            "name": "test",
+            "url": "https://github.com/example/test",
+            "default_branch": "develop",
+        },
     )
     assert resp.status_code == 201
     assert resp.json()["default_branch"] == "develop"

@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.analysis.pipeline import analyze_snapshot_files, persist_graph
 from app.core.ingestion import clone_repo, repo_clone_path, scan_files
+from app.indexing.indexer import run_indexing
 from app.storage.database import async_session
 from app.storage.models import File, Repo, RepoSnapshot, SnapshotStatus
 
@@ -39,13 +40,15 @@ async def run_ingestion(snapshot_id: str) -> None:
             file_entries = await asyncio.to_thread(scan_files, dest)
 
             for entry in file_entries:
-                db.add(File(
-                    snapshot_id=snapshot_id,
-                    path=entry["path"],
-                    language=entry["language"],
-                    hash=entry["hash"],
-                    size_bytes=entry["size_bytes"],
-                ))
+                db.add(
+                    File(
+                        snapshot_id=snapshot_id,
+                        path=entry["path"],
+                        language=entry["language"],
+                        hash=entry["hash"],
+                        size_bytes=entry["size_bytes"],
+                    )
+                )
 
             snapshot.file_count = len(file_entries)
 
@@ -53,12 +56,23 @@ async def run_ingestion(snapshot_id: str) -> None:
             graph = await asyncio.to_thread(analyze_snapshot_files, dest, file_entries)
             await persist_graph(db, snapshot_id, graph)
 
+            # Phase 3: Summarisation & indexing
+            indexing_stats = await run_indexing(db, snapshot_id, graph)
+
             snapshot.status = SnapshotStatus.completed
-            repo.last_indexed_at = datetime.now(timezone.utc)
+            repo.last_indexed_at = datetime.now(UTC)
             await db.commit()
             logger.info(
-                "Ingestion + analysis complete: snapshot=%s, files=%d, symbols=%d, edges=%d, sha=%s",
-                snapshot_id, len(file_entries), len(graph.symbols), len(graph.edges), resolved_sha,
+                "Ingestion + analysis + indexing complete: snapshot=%s, files=%d, "
+                "symbols=%d, edges=%d, summaries=%d, sha=%s",
+                snapshot_id,
+                len(file_entries),
+                len(graph.symbols),
+                len(graph.edges),
+                indexing_stats.get("symbol_summaries", 0)
+                + indexing_stats.get("module_summaries", 0)
+                + indexing_stats.get("file_summaries", 0),
+                resolved_sha,
             )
 
         except Exception as e:

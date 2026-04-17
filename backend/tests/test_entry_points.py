@@ -5,12 +5,9 @@ Covers: ASP.NET controllers, Main methods, Startup classes,
 background workers, and controller action methods.
 """
 
-import pytest
-
 from app.analysis.csharp_parser import parse_file
 from app.analysis.entry_points import detect_entry_points
 from app.analysis.graph_builder import build_graph
-
 
 CONTROLLER = b"""\
 using Microsoft.AspNetCore.Mvc;

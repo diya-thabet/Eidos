@@ -11,9 +11,9 @@ from pathlib import Path
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.csharp_parser import parse_file
-from app.analysis.graph_builder import build_graph, CodeGraph
+from app.analysis.graph_builder import CodeGraph, build_graph
 from app.analysis.models import FileAnalysis
-from app.storage.models import Edge, File, Symbol
+from app.storage.models import Edge, Symbol
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,9 @@ def analyze_snapshot_files(repo_dir: Path, file_records: list[dict]) -> CodeGrap
     graph = build_graph(analyses)
     logger.info(
         "Analysis complete: %d files parsed, %d symbols, %d edges",
-        len(analyses), len(graph.symbols), len(graph.edges),
+        len(analyses),
+        len(graph.symbols),
+        len(graph.edges),
     )
     return graph
 
@@ -99,5 +101,7 @@ async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) ->
     await db.flush()
     logger.info(
         "Persisted %d symbols and %d edges for snapshot %s",
-        len(fq_to_symbol_id), len(graph.edges), snapshot_id,
+        len(fq_to_symbol_id),
+        len(graph.edges),
+        snapshot_id,
     )

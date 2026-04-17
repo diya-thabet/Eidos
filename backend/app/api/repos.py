@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
@@ -81,7 +80,9 @@ async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Repo not found")
 
     result = await db.execute(
-        select(RepoSnapshot).where(RepoSnapshot.repo_id == repo_id).order_by(RepoSnapshot.created_at.desc())
+        select(RepoSnapshot)
+        .where(RepoSnapshot.repo_id == repo_id)
+        .order_by(RepoSnapshot.created_at.desc())
     )
     snapshots = result.scalars().all()
 
@@ -122,7 +123,13 @@ async def snapshot_detail(repo_id: str, snapshot_id: str, db: AsyncSession = Dep
         file_count=snapshot.file_count,
         created_at=snapshot.created_at.isoformat(),
         files=[
-            {"id": f.id, "path": f.path, "language": f.language, "hash": f.hash, "size_bytes": f.size_bytes}
+            {
+                "id": f.id,
+                "path": f.path,
+                "language": f.language,
+                "hash": f.hash,
+                "size_bytes": f.size_bytes,
+            }
             for f in snapshot.files
         ],
     )
