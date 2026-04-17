@@ -5,6 +5,7 @@ import logging
 from datetime import UTC, datetime
 
 from app.analysis.pipeline import analyze_snapshot_files, persist_graph
+from app.auth.crypto import decrypt
 from app.core.ingestion import clone_repo, repo_clone_path, scan_files
 from app.core.retention import cleanup_clone
 from app.indexing.indexer import run_indexing
@@ -31,10 +32,23 @@ async def run_ingestion(snapshot_id: str) -> None:
         await db.commit()
 
         try:
+            # Decrypt Git token for private repos
+            git_token = ""
+            if repo.git_token_enc:
+                try:
+                    git_token = decrypt(repo.git_token_enc)
+                except ValueError:
+                    logger.warning("Could not decrypt Git token for repo %s", repo.id)
+
             # Phase 1: Clone and scan files
             dest = repo_clone_path(repo.id, snapshot_id)
             resolved_sha = await asyncio.to_thread(
-                clone_repo, repo.url, repo.default_branch, dest, snapshot.commit_sha
+                clone_repo,
+                repo.url,
+                repo.default_branch,
+                dest,
+                snapshot.commit_sha,
+                git_token,
             )
             snapshot.commit_sha = resolved_sha
 

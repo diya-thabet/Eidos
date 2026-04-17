@@ -8,6 +8,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.auth.crypto import encrypt
 from app.auth.dependencies import get_current_user
 from app.core.tasks import run_ingestion
 from app.storage.database import get_db
@@ -38,6 +39,8 @@ async def create_repo(
         name=body.name,
         url=str(body.url),
         default_branch=body.default_branch,
+        git_provider=body.git_provider,
+        git_token_enc=encrypt(body.git_token) if body.git_token else "",
     )
     db.add(repo)
     await db.commit()

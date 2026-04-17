@@ -15,3 +15,5 @@ This folder contains the technical documentation for the Eidos Legacy Code Intel
 | [PHASE8_SECURITY.md](PHASE8_SECURITY.md) | Phase 8: Security & Multi-tenant |
 | [KUBERNETES.md](KUBERNETES.md) | Kubernetes deployment guide (kind/minikube) |
 | [TESTING.md](TESTING.md) | Testing strategy, test inventory, how to run |
+| [HOW_TO_USE.md](HOW_TO_USE.md) | Practical guide: curl & Postman examples for every endpoint |
+| [FUTURE_ROADMAP.md](FUTURE_ROADMAP.md) | Future propositions, architecture evolution, integrations |

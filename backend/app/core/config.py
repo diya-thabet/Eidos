@@ -8,6 +8,11 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     repos_data_dir: str = "/data/repos"
 
+    # Database pool tuning
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_echo: bool = False
+
     # LLM provider (any OpenAI-compatible endpoint)
     llm_base_url: str = ""
     llm_api_key: str = ""
@@ -33,6 +38,11 @@ class Settings(BaseSettings):
     delete_clones_after_indexing: bool = True
 
     model_config = {"env_prefix": "EIDOS_", "env_file": ".env"}
+
+    @property
+    def db_driver(self) -> str:
+        """Extract the dialect+driver from the database URL (e.g. 'postgresql+asyncpg')."""
+        return self.database_url.split("://")[0] if "://" in self.database_url else ""
 
 
 settings = Settings()

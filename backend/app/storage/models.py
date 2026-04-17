@@ -50,6 +50,12 @@ class Repo(Base):
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     url: Mapped[str] = mapped_column(Text, nullable=False)
     default_branch: Mapped[str] = mapped_column(String(128), default="main")
+    git_provider: Mapped[str] = mapped_column(
+        String(32), default="github"
+    )  # github | gitlab | azure_devops | bitbucket | other
+    git_token_enc: Mapped[str] = mapped_column(
+        Text, default=""
+    )  # Fernet-encrypted PAT / token for private repos
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

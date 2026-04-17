@@ -6,6 +6,7 @@ import os
 import shutil
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse, urlunparse
 
 import git
 
@@ -37,14 +38,55 @@ SKIP_DIRS = {".git", "bin", "obj", "node_modules", ".vs", "packages", "TestResul
 MAX_FILE_SIZE = 1_048_576
 
 
-def clone_repo(url: str, branch: str, dest: Path, commit_sha: str | None = None) -> str:
+def _inject_token(url: str, token: str) -> str:
+    """
+    Inject an access token into a Git HTTPS URL.
+
+    Supports:
+      - GitHub:       https://TOKEN@github.com/org/repo.git
+      - GitLab:       https://oauth2:TOKEN@gitlab.com/org/repo.git
+      - Azure DevOps: https://TOKEN@dev.azure.com/org/project/_git/repo
+      - Bitbucket:    https://x-token-auth:TOKEN@bitbucket.org/org/repo.git
+      - Generic:      https://TOKEN@host/path
+    """
+    if not token or not url.startswith("http"):
+        return url
+
+    parsed = urlparse(url)
+    host = parsed.hostname or ""
+
+    if "gitlab" in host:
+        userinfo = f"oauth2:{token}"
+    elif "bitbucket" in host:
+        userinfo = f"x-token-auth:{token}"
+    else:
+        # GitHub, Azure DevOps, generic
+        userinfo = token
+
+    authed = parsed._replace(
+        netloc=f"{userinfo}@{parsed.hostname}" + (f":{parsed.port}" if parsed.port else "")
+    )
+    return urlunparse(authed)
+
+
+def clone_repo(
+    url: str,
+    branch: str,
+    dest: Path,
+    commit_sha: str | None = None,
+    token: str = "",
+) -> str:
     """Clone a repo and checkout the requested commit. Returns the resolved SHA."""
     if dest.exists():
         shutil.rmtree(dest)
     dest.mkdir(parents=True, exist_ok=True)
 
+    clone_url = _inject_token(url, token)
+
     logger.info("Cloning %s (branch=%s) -> %s", url, branch, dest)
-    repo = git.Repo.clone_from(url, str(dest), branch=branch, depth=1 if not commit_sha else 0)
+    repo = git.Repo.clone_from(
+        clone_url, str(dest), branch=branch, depth=1 if not commit_sha else 0
+    )
 
     if commit_sha:
         repo.git.checkout(commit_sha)

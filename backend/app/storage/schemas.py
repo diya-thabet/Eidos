@@ -11,6 +11,8 @@ class RepoCreate(BaseModel):
     name: str
     url: HttpUrl
     default_branch: str = "main"
+    git_provider: str = "github"  # github | gitlab | azure_devops | bitbucket | other
+    git_token: str = ""  # PAT for private repos (stored encrypted, never returned)
 
 
 class RepoOut(BaseModel):
