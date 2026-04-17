@@ -23,6 +23,9 @@ LANGUAGE_MAP: dict[str, str] = {
     ".sln": "solution",
     # Java
     ".java": "java",
+    # Python
+    ".py": "python",
+    ".pyi": "python",
     # Config / data
     ".json": "json",
     ".xml": "xml",

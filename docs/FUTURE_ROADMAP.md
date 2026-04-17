@@ -199,9 +199,9 @@ Currently only C# is parsed via tree-sitter.  Extension plan:
 
 | Language | tree-sitter grammar | Priority |
 |----------|-------------------|----------|
-| Java | `tree-sitter-java` | High |
+| Java | `tree-sitter-java` | **Done** |
+| Python | `tree-sitter-python` | **Done** |
 | TypeScript | `tree-sitter-typescript` | High |
-| Python | `tree-sitter-python` | Medium |
 | Go | `tree-sitter-go` | Medium |
 | Rust | `tree-sitter-rust` | Low |
 | C/C++ | `tree-sitter-c` / `tree-sitter-cpp` | Low |

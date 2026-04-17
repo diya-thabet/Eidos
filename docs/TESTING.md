@@ -150,7 +150,14 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_edge_cases.py` | 37 | Empty snapshots, invalid inputs, graph edges, sanitizer, data integrity |
 | `test_schemas_comprehensive.py` | 39 | All Pydantic schemas, DB models, OAuth dataclasses |
 
-### Total: 727 tests
+### Multi-Language Parsers
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_java_parser.py` | 79 | Java packages, imports, classes, interfaces, enums, generics, Javadoc, nested, calls, registry, pipeline |
+| `test_python_parser.py` | 66 | Python imports, classes, functions, methods, decorators, async, docstrings, nested, calls, registry, pipeline |
+
+### Total: 872 tests
 
 ## Test Design Principles
 
@@ -160,7 +167,7 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 4. **Isolated** -- tests don't share state; DB reset between tests
 5. **Mirrors source** -- `test_X.py` tests `X.py`
 6. **Readable** -- test classes group by feature, names describe intent
-7. **C# fixtures as byte literals** -- no fixture files needed
+7. **Source fixtures as byte literals** -- no fixture files needed for C#, Java, Python parsing
 
 ## Adding New Tests
 

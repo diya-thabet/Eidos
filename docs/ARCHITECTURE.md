@@ -125,6 +125,8 @@ Eidos follows a **modular monolith** architecture. All components live in a sing
 | **GitPython** | Git repo cloning (any provider) | >=3.1 |
 | **tree-sitter** | Incremental parsing framework | >=0.23 |
 | **tree-sitter-c-sharp** | C# grammar for tree-sitter | >=0.23 |
+| **tree-sitter-java** | Java grammar for tree-sitter | >=0.23 |
+| **tree-sitter-python** | Python grammar for tree-sitter | >=0.23 |
 | **Pydantic** | Data validation & schemas | >=2.0 |
 | **pydantic-settings** | Configuration management | >=2.0 |
 | **PyJWT** | JWT session tokens | >=2.8 |

@@ -43,6 +43,15 @@ def _init_registry() -> None:
     except Exception:
         logger.info("Java parser unavailable (tree-sitter-java missing?)")
 
+    # Python -- optional
+    try:
+        from app.analysis.python_parser import PythonParser
+
+        _registry["python"] = PythonParser()
+        logger.debug("Registered parser: python")
+    except Exception:
+        logger.info("Python parser unavailable (tree-sitter-python missing?)")
+
     # ----- Add future language parsers here -----
 
 
