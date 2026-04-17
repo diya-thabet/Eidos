@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,10 @@ class VectorRecord:
     snapshot_id: str
     scope_type: str  # symbol_summary | module_summary | file_summary
     text: str  # the text that was embedded
-    refs: list[dict] = field(default_factory=list)  # [{path, start_line, end_line, symbol_fq_name}]
-    metadata: dict = field(default_factory=dict)
+    refs: list[dict[str, Any]] = field(
+        default_factory=list
+    )  # [{path, start_line, end_line, symbol_fq_name}]
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -66,7 +69,7 @@ class VectorStore(ABC):
         collection: str,
         query_vector: list[float],
         limit: int = 10,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
         """Search for similar records. Returns sorted by score descending."""
         ...
@@ -90,7 +93,7 @@ class InMemoryVectorStore(VectorStore):
     but provides the same interface for integration tests.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._collections: dict[str, dict[str, tuple[VectorRecord, list[float]]]] = {}
 
     async def ensure_collection(self, name: str, vector_size: int) -> None:
@@ -110,7 +113,7 @@ class InMemoryVectorStore(VectorStore):
         collection: str,
         query_vector: list[float],
         limit: int = 10,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
         coll = self._collections.get(collection, {})
         scored: list[tuple[float, VectorRecord]] = []
@@ -152,9 +155,9 @@ class QdrantVectorStore(VectorStore):
 
     def __init__(self, url: str = "http://localhost:6333"):
         self._url = url
-        self._client = None
+        self._client: Any = None
 
-    def _get_client(self):
+    def _get_client(self) -> Any:
         if self._client is None:
             try:
                 from qdrant_client import QdrantClient
@@ -204,7 +207,7 @@ class QdrantVectorStore(VectorStore):
         collection: str,
         query_vector: list[float],
         limit: int = 10,
-        filters: dict | None = None,
+        filters: dict[str, Any] | None = None,
     ) -> list[SearchResult]:
         from qdrant_client.models import FieldCondition, Filter, MatchValue
 
@@ -215,7 +218,7 @@ class QdrantVectorStore(VectorStore):
             conditions = []
             for key, val in filters.items():
                 conditions.append(FieldCondition(key=key, match=MatchValue(value=val)))
-            qdrant_filter = Filter(must=conditions)
+            qdrant_filter = Filter(must=conditions)  # type: ignore[arg-type]
 
         results = client.search(
             collection_name=collection,
@@ -260,4 +263,4 @@ def _cosine_similarity(a: list[float], b: list[float]) -> float:
     norm_b = sum(x * x for x in b) ** 0.5
     if norm_a == 0 or norm_b == 0:
         return 0.0
-    return dot / (norm_a * norm_b)
+    return float(dot / (norm_a * norm_b))

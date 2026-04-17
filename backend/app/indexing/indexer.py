@@ -14,6 +14,7 @@ import json
 import logging
 import uuid
 from dataclasses import asdict
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -45,7 +46,7 @@ async def run_indexing(
     summariser: Summariser | None = None,
     embedder: Embedder | None = None,
     vector_store: VectorStore | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """
     Run the full indexing pipeline for a snapshot.
 
@@ -163,7 +164,7 @@ async def run_indexing(
 # ---------------------------------------------------------------------------
 
 
-def _to_db_summary(snapshot_id: str, scope_type: str, scope_id: str, summary) -> Summary:
+def _to_db_summary(snapshot_id: str, scope_type: str, scope_id: str, summary: Any) -> Summary:
     """Convert a summary dataclass to a DB model."""
     return Summary(
         snapshot_id=snapshot_id,
@@ -173,7 +174,7 @@ def _to_db_summary(snapshot_id: str, scope_type: str, scope_id: str, summary) ->
     )
 
 
-def _summary_to_text(summary) -> str:
+def _summary_to_text(summary: Any) -> str:
     """Convert a summary to a single text string for embedding."""
     parts: list[str] = []
 

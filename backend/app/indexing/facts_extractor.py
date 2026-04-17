@@ -9,6 +9,7 @@ AI) can later narrate.
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from app.analysis.graph_builder import CodeGraph
 from app.analysis.models import SymbolKind
@@ -157,7 +158,7 @@ def extract_file_facts(graph: CodeGraph) -> list[FileSummary]:
 # ---------------------------------------------------------------------------
 
 
-def _build_purpose(sym, graph: CodeGraph) -> str:
+def _build_purpose(sym: Any, graph: CodeGraph) -> str:
     """Synthesise a purpose string from structural facts."""
     kind = sym.kind.value
     name = sym.name
@@ -201,7 +202,7 @@ def _build_purpose(sym, graph: CodeGraph) -> str:
     return f"{kind.title()} '{name}'."
 
 
-def _infer_side_effects(sym, graph: CodeGraph) -> list[str]:
+def _infer_side_effects(sym: Any, graph: CodeGraph) -> list[str]:
     """Flag potential side effects from callees."""
     effects: list[str] = []
     if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
@@ -220,7 +221,7 @@ def _infer_side_effects(sym, graph: CodeGraph) -> list[str]:
     return effects
 
 
-def _infer_assumptions(sym, graph: CodeGraph) -> list[str]:
+def _infer_assumptions(sym: Any, graph: CodeGraph) -> list[str]:
     """Flag implicit assumptions."""
     assumptions: list[str] = []
     if sym.kind == SymbolKind.METHOD:
@@ -231,7 +232,7 @@ def _infer_assumptions(sym, graph: CodeGraph) -> list[str]:
     return assumptions
 
 
-def _infer_risks(sym, graph: CodeGraph) -> list[str]:
+def _infer_risks(sym: Any, graph: CodeGraph) -> list[str]:
     """Flag potential risks from graph structure."""
     risks: list[str] = []
     fan_in = graph.fan_in(sym.fq_name)
@@ -247,7 +248,7 @@ def _infer_risks(sym, graph: CodeGraph) -> list[str]:
     return risks
 
 
-def _assess_confidence(sym, graph: CodeGraph) -> Confidence:
+def _assess_confidence(sym: Any, graph: CodeGraph) -> Confidence:
     """Assess confidence based on available information."""
     score = 0
     if sym.signature:

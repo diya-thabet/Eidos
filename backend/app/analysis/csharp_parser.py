@@ -308,7 +308,7 @@ def _extract_calls(
 # ---------------------------------------------------------------------------
 
 
-def _walk(node: Node):
+def _walk(node: Node):  # type: ignore[no-untyped-def]
     """Iterate all descendant nodes depth-first."""
     cursor = node.walk()
     visited = False

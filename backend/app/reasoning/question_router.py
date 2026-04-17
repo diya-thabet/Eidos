@@ -109,18 +109,18 @@ def extract_target_symbol(text: str) -> str:
     # Backtick-quoted
     backtick = re.findall(r"`([A-Za-z_][\w.]*)`", text)
     if backtick:
-        return backtick[0]
+        return str(backtick[0])
 
     # Dotted identifier (at least two parts)
     dotted = re.findall(r"\b([A-Z][a-zA-Z0-9]*(?:\.[A-Z][a-zA-Z0-9]*)+)\b", text)
     if dotted:
         # Return the longest match
-        return max(dotted, key=len)
+        return str(max(dotted, key=len))
 
     # PascalCase (at least 2 capital letters)
     pascal = re.findall(r"\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b", text)
     if pascal:
-        return pascal[0]
+        return str(pascal[0])
 
     return ""
 

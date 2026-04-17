@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +19,7 @@ from app.storage.models import Edge, Symbol
 logger = logging.getLogger(__name__)
 
 
-def analyze_snapshot_files(repo_dir: Path, file_records: list[dict]) -> CodeGraph:
+def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -> CodeGraph:
     """
     Run static analysis on all C# files in a snapshot directory.
 

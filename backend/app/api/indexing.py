@@ -8,6 +8,7 @@ and vector-based similarity search.
 from __future__ import annotations
 
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
@@ -35,7 +36,7 @@ async def list_summaries(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
 
     stmt = select(Summary).where(Summary.snapshot_id == snapshot_id)
@@ -71,7 +72,7 @@ async def get_summary(
     scope_type: str,
     scope_id: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
 
     result = await db.execute(

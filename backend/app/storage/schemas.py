@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import BaseModel, HttpUrl
 
 from app.storage.models import SnapshotStatus
@@ -183,7 +185,7 @@ class SummaryOut(BaseModel):
     snapshot_id: str
     scope_type: str
     scope_id: str
-    summary: dict  # parsed JSON payload
+    summary: dict[str, Any]  # parsed JSON payload
     created_at: str
 
     model_config = {"from_attributes": True}
@@ -204,8 +206,8 @@ class SearchResultOut(BaseModel):
     scope_type: str
     text: str
     score: float
-    refs: list[dict]
-    metadata: dict = {}
+    refs: list[dict[str, Any]]
+    metadata: dict[str, Any] = {}
 
 
 # ---------------------------------------------------------------------------
@@ -264,3 +266,34 @@ class ReviewReportOut(BaseModel):
     risk_score: int
     risk_level: str
     llm_summary: str = ""
+
+
+# ---------------------------------------------------------------------------
+# Documentation schemas (Phase 6)
+# ---------------------------------------------------------------------------
+
+
+class GenerateDocsRequest(BaseModel):
+    """Request body for doc generation."""
+
+    doc_type: str | None = None  # None = generate all
+    scope_id: str = ""
+
+
+class GeneratedDocOut(BaseModel):
+    """A single generated document."""
+
+    id: int | None = None
+    doc_type: str
+    title: str
+    scope_id: str = ""
+    markdown: str
+    llm_narrative: str = ""
+
+
+class GenerateDocsResponse(BaseModel):
+    """Response from doc generation."""
+
+    snapshot_id: str
+    documents: list[GeneratedDocOut]
+    total: int

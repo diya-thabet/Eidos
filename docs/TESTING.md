@@ -100,7 +100,17 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_reviewer.py` | 12 | End-to-end pipeline, LLM mock, graceful failures, multi-file |
 | `test_reviews_api.py` | 12 | Review + list endpoints, persistence, response structure |
 
-### Total: 346 tests
+### Phase 6 -- Auto Documentation
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_templates.py` | 9 | All doc types have templates, section keys valid |
+| `test_generator.py` | 28 | README/architecture/module/flow/runbook generation, citations, empty data |
+| `test_renderer.py` | 14 | Markdown rendering, sections, citations appendix, dedup, symbol links |
+| `test_orchestrator.py` | 14 | Full pipeline with DB, persistence, LLM mock, empty snapshot |
+| `test_docgen_api.py` | 15 | Generate/list/get endpoints, filtering, error handling, persistence |
+
+### Total: 423 tests
 
 ## Test Design Principles
 

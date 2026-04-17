@@ -7,6 +7,8 @@ entry points, metrics, and modules for a given snapshot.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -36,7 +38,7 @@ async def list_symbols(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
     stmt = select(Symbol).where(Symbol.snapshot_id == snapshot_id)
     if kind:
@@ -58,7 +60,7 @@ async def get_symbol(
     snapshot_id: str,
     fq_name: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
     result = await db.execute(
         select(Symbol).where(Symbol.snapshot_id == snapshot_id, Symbol.fq_name == fq_name)
@@ -83,7 +85,7 @@ async def list_edges(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
     stmt = select(Edge).where(Edge.snapshot_id == snapshot_id)
     if edge_type:
@@ -107,7 +109,7 @@ async def get_graph_neighborhood(
     snapshot_id: str,
     fq_name: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Get the symbol itself
@@ -131,7 +133,12 @@ async def get_graph_neighborhood(
         db, snapshot_id, Edge.source_fq_name, fq_name, Edge.target_fq_name, edge_type="contains"
     )
 
-    return GraphNeighborhood(symbol=sym, callers=callers, callees=callees, children=children)
+    return GraphNeighborhood(
+        symbol=sym,  # type: ignore[arg-type]
+        callers=callers,  # type: ignore[arg-type]
+        callees=callees,  # type: ignore[arg-type]
+        children=children,  # type: ignore[arg-type]
+    )
 
 
 @router.get(
@@ -143,7 +150,7 @@ async def get_analysis_overview(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Count symbols by kind
@@ -197,7 +204,7 @@ async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> 
     return snap
 
 
-async def _resolve_edge_symbols(
+async def _resolve_edge_symbols(  # type: ignore[no-untyped-def]
     db: AsyncSession,
     snapshot_id: str,
     filter_col,

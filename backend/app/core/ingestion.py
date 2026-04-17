@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 from pathlib import Path
+from typing import Any
 
 import git
 
@@ -65,9 +66,9 @@ def hash_file(filepath: Path) -> str:
     return h.hexdigest()
 
 
-def scan_files(repo_dir: Path) -> list[dict]:
+def scan_files(repo_dir: Path) -> list[dict[str, Any]]:
     """Walk the repo and return file metadata for indexable files."""
-    results: list[dict] = []
+    results: list[dict[str, Any]] = []
     for root, dirs, files in os.walk(repo_dir):
         # Prune skipped directories in-place
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]

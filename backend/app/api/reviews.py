@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import asdict
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -40,7 +41,7 @@ async def review_pr(
     snapshot_id: str,
     body: ReviewRequest,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     """
     Submit a unified diff for review.
 
@@ -104,7 +105,7 @@ async def list_reviews(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
     result = await db.execute(
         select(Review).where(Review.snapshot_id == snapshot_id).order_by(Review.id.desc())
@@ -131,7 +132,7 @@ async def list_reviews(
     return reviews
 
 
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str):
+async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> Any:
     result = await db.execute(
         select(RepoSnapshot).where(
             RepoSnapshot.id == snapshot_id,

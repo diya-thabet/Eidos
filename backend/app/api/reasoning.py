@@ -7,6 +7,8 @@ with evidence, confidence, and verification checklists.
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy import select
@@ -85,7 +87,7 @@ async def ask_question(
     snapshot_id: str,
     body: AskRequest,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     """
     Ask a natural-language question about a snapshot of the codebase.
 
@@ -149,7 +151,7 @@ async def classify_question_endpoint(
     snapshot_id: str,
     body: AskRequest,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     """Debug endpoint: see how a question is classified without generating an answer."""
     await _verify_snapshot(db, repo_id, snapshot_id)
     question = build_question(body.question, snapshot_id)
@@ -167,7 +169,7 @@ async def classify_question_endpoint(
 # ---------------------------------------------------------------------------
 
 
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str):
+async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> Any:
     result = await db.execute(
         select(RepoSnapshot).where(
             RepoSnapshot.id == snapshot_id,

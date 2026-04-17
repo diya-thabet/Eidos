@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import logging
+from typing import Any
 
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,7 +112,7 @@ async def _vector_search(
     question: Question,
     embedder: Embedder | None,
     vector_store: VectorStore | None,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """Search vector store for summaries relevant to the question."""
     if embedder is None or vector_store is None:
         return []
@@ -138,7 +139,7 @@ async def _vector_search(
         return []
 
 
-async def _lookup_symbol(db: AsyncSession, snapshot_id: str, target: str) -> list[dict]:
+async def _lookup_symbol(db: AsyncSession, snapshot_id: str, target: str) -> list[dict[str, Any]]:
     """Look up symbols matching the target (exact or partial match)."""
     # Try exact match first
     result = await db.execute(
@@ -169,13 +170,13 @@ async def _get_call_edges(
     target: str,
     direction: str = "both",
     max_hops: int = 2,
-) -> list[dict]:
+) -> list[dict[str, Any]]:
     """
     BFS traversal of call edges from a target symbol.
 
     direction: "in" (callers), "out" (callees), "both"
     """
-    visited_edges: list[dict] = []
+    visited_edges: list[dict[str, Any]] = []
     frontier = {target}
     visited_nodes: set[str] = {target}
 
@@ -215,7 +216,7 @@ async def _get_call_edges(
     return visited_edges[:MAX_EDGES]
 
 
-async def _get_module_summaries(db: AsyncSession, snapshot_id: str) -> list[dict]:
+async def _get_module_summaries(db: AsyncSession, snapshot_id: str) -> list[dict[str, Any]]:
     """Retrieve all module-level summaries for architecture questions."""
     result = await db.execute(
         select(Summary).where(
@@ -240,7 +241,7 @@ async def _get_module_summaries(db: AsyncSession, snapshot_id: str) -> list[dict
     return summaries
 
 
-def _symbol_to_dict(sym: Symbol) -> dict:
+def _symbol_to_dict(sym: Symbol) -> dict[str, Any]:
     return {
         "fq_name": sym.fq_name,
         "kind": sym.kind,

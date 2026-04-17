@@ -39,6 +39,9 @@ pytest -v
 | POST   | `/repos/{id}/snapshots/{sid}/classify`        | Classify a question (debug)     |
 | POST   | `/repos/{id}/snapshots/{sid}/review`          | Review a PR diff                |
 | GET    | `/repos/{id}/snapshots/{sid}/reviews`         | List past reviews               |
+| POST   | `/repos/{id}/snapshots/{sid}/docs`            | Generate documentation          |
+| GET    | `/repos/{id}/snapshots/{sid}/docs`            | List generated docs             |
+| GET    | `/repos/{id}/snapshots/{sid}/docs/{doc_id}`   | Get a specific generated doc    |
 
 ## Project Structure
 
@@ -51,6 +54,7 @@ backend/
       indexing.py        # Summary listing + retrieval endpoints
       reasoning.py       # Q&A ask + classify endpoints
       reviews.py        # PR review + list endpoints
+      docgen.py         # Doc generation + list + get endpoints
     core/
       config.py         # Settings via pydantic-settings
       ingestion.py      # Git clone, file scanning, hashing
@@ -81,12 +85,17 @@ backend/
       heuristics.py     # 8 behavioural risk detectors
       impact_analyzer.py # Call-graph blast radius analysis
       reviewer.py       # Pipeline orchestrator
-    reviews/            # PR review engine [Phase 5]
+    docgen/
+      models.py         # DocSection, Citation, GeneratedDocument
+      templates.py      # Section templates per document type
+      generator.py      # Deterministic doc generation from graph + summaries
+      renderer.py       # Markdown rendering with citation appendix
+      orchestrator.py   # Pipeline: fetch -> generate -> persist
     storage/
       database.py       # SQLAlchemy async engine + session
-      models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review)
+      models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review, GeneratedDoc)
       schemas.py        # Pydantic response schemas
-  tests/                # 346 tests (see docs/TESTING.md)
+  tests/                # 423 tests (see docs/TESTING.md)
   Dockerfile            # Production container image
 infra/
   docker-compose.yml    # Postgres + Redis + Qdrant (local dev)

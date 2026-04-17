@@ -173,3 +173,34 @@ class Review(Base):
     )
 
     __table_args__ = (Index("ix_reviews_snapshot", "snapshot_id"),)
+
+
+class GeneratedDoc(Base):
+    """An auto-generated documentation artifact."""
+
+    __tablename__ = "generated_docs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    doc_type: Mapped[str] = mapped_column(
+        String(32), nullable=False
+    )  # readme | architecture | module | flow | runbook
+    scope_id: Mapped[str] = mapped_column(Text, default="")  # module name, entry fq_name, etc.
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    markdown: Mapped[str] = mapped_column(Text, nullable=False)
+    llm_narrative: Mapped[str] = mapped_column(Text, default="")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (
+        Index("ix_generated_docs_snapshot", "snapshot_id"),
+        Index(
+            "ix_generated_docs_snapshot_type",
+            "snapshot_id",
+            "doc_type",
+        ),
+    )

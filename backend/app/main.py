@@ -1,9 +1,11 @@
 import logging
 from contextlib import asynccontextmanager
+from typing import Any
 
 from fastapi import FastAPI
 
 from app.api import analysis as analysis_api
+from app.api import docgen as docgen_api
 from app.api import indexing as indexing_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
@@ -15,7 +17,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI) -> Any:
     # Create tables on startup (replaced by Alembic migrations in production)
     try:
         async with engine.begin() as conn:
@@ -43,8 +45,9 @@ app.include_router(analysis_api.router, prefix="/repos", tags=["analysis"])
 app.include_router(indexing_api.router, prefix="/repos", tags=["indexing"])
 app.include_router(reasoning_api.router, prefix="/repos", tags=["reasoning"])
 app.include_router(reviews_api.router, prefix="/repos", tags=["reviews"])
+app.include_router(docgen_api.router, prefix="/repos", tags=["docs"])
 
 
 @app.get("/health")
-async def health():
+async def health() -> Any:
     return {"status": "ok"}

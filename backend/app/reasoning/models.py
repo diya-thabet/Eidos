@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import enum
 from dataclasses import dataclass, field
+from typing import Any
 
 
 class QuestionType(enum.StrEnum):
@@ -76,8 +77,8 @@ class Answer:
 class RetrievalContext:
     """Bundle of retrieved information used to build an answer."""
 
-    summaries: list[dict] = field(default_factory=list)
-    symbols: list[dict] = field(default_factory=list)
-    edges: list[dict] = field(default_factory=list)
-    code_snippets: list[dict] = field(default_factory=list)
+    summaries: list[dict[str, Any]] = field(default_factory=list)
+    symbols: list[dict[str, Any]] = field(default_factory=list)
+    edges: list[dict[str, Any]] = field(default_factory=list)
+    code_snippets: list[dict[str, Any]] = field(default_factory=list)
     graph_neighborhood: list[str] = field(default_factory=list)

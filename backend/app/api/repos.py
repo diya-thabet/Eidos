@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import uuid
+from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy import select
@@ -11,6 +12,7 @@ from app.core.tasks import run_ingestion
 from app.storage.database import get_db
 from app.storage.models import Repo, RepoSnapshot, SnapshotStatus
 from app.storage.schemas import (
+    FileOut,
     IngestOut,
     IngestRequest,
     RepoCreate,
@@ -24,7 +26,7 @@ router = APIRouter()
 
 
 @router.post("", response_model=RepoOut, status_code=201)
-async def create_repo(body: RepoCreate, db: AsyncSession = Depends(get_db)):
+async def create_repo(body: RepoCreate, db: AsyncSession = Depends(get_db)) -> Any:
     repo = Repo(
         id=uuid.uuid4().hex[:12],
         name=body.name,
@@ -50,7 +52,7 @@ async def ingest_repo(
     background: BackgroundTasks,
     body: IngestRequest | None = None,
     db: AsyncSession = Depends(get_db),
-):
+) -> Any:
     repo = await db.get(Repo, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="Repo not found")
@@ -74,7 +76,7 @@ async def _run_ingestion_wrapper(snapshot_id: str) -> None:
 
 
 @router.get("/{repo_id}/status", response_model=RepoStatus)
-async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)):
+async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)) -> Any:
     repo = await db.get(Repo, repo_id)
     if repo is None:
         raise HTTPException(status_code=404, detail="Repo not found")
@@ -105,7 +107,9 @@ async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{repo_id}/snapshots/{snapshot_id}", response_model=SnapshotDetail)
-async def snapshot_detail(repo_id: str, snapshot_id: str, db: AsyncSession = Depends(get_db)):
+async def snapshot_detail(
+    repo_id: str, snapshot_id: str, db: AsyncSession = Depends(get_db)
+) -> Any:
     result = await db.execute(
         select(RepoSnapshot)
         .options(selectinload(RepoSnapshot.files))
@@ -123,13 +127,13 @@ async def snapshot_detail(repo_id: str, snapshot_id: str, db: AsyncSession = Dep
         file_count=snapshot.file_count,
         created_at=snapshot.created_at.isoformat(),
         files=[
-            {
-                "id": f.id,
-                "path": f.path,
-                "language": f.language,
-                "hash": f.hash,
-                "size_bytes": f.size_bytes,
-            }
+            FileOut(
+                id=f.id,
+                path=f.path,
+                language=f.language,
+                hash=f.hash,
+                size_bytes=f.size_bytes,
+            )
             for f in snapshot.files
         ],
     )

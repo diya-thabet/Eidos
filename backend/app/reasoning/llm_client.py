@@ -18,6 +18,7 @@ import json
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from typing import Any
 
 import httpx
 
@@ -48,7 +49,7 @@ class LLMClient(ABC):
         ...
 
     @abstractmethod
-    async def chat_json(self, system_prompt: str, user_message: str) -> dict:
+    async def chat_json(self, system_prompt: str, user_message: str) -> dict[str, Any]:
         """Send a chat message and parse the response as JSON."""
         ...
 
@@ -70,19 +71,19 @@ class OpenAICompatibleClient(LLMClient):
         data = await self._call_api(payload)
         return self._extract_content(data)
 
-    async def chat_json(self, system_prompt: str, user_message: str) -> dict:
+    async def chat_json(self, system_prompt: str, user_message: str) -> dict[str, Any]:
         payload = self._build_payload(system_prompt, user_message)
         # Request JSON response format if supported
         payload["response_format"] = {"type": "json_object"}
         data = await self._call_api(payload)
         content = self._extract_content(data)
         try:
-            return json.loads(content)
+            return json.loads(content)  # type: ignore[no-any-return]
         except json.JSONDecodeError:
             logger.warning("LLM response was not valid JSON, attempting extraction")
             return self._extract_json_from_text(content)
 
-    def _build_payload(self, system_prompt: str, user_message: str) -> dict:
+    def _build_payload(self, system_prompt: str, user_message: str) -> dict[str, Any]:
         return {
             "model": self._config.model,
             "messages": [
@@ -93,7 +94,7 @@ class OpenAICompatibleClient(LLMClient):
             "max_tokens": self._config.max_tokens,
         }
 
-    async def _call_api(self, payload: dict) -> dict:
+    async def _call_api(self, payload: dict[str, Any]) -> dict[str, Any]:
         headers = {"Content-Type": "application/json"}
         if self._config.api_key:
             headers["Authorization"] = f"Bearer {self._config.api_key}"
@@ -102,16 +103,16 @@ class OpenAICompatibleClient(LLMClient):
         async with httpx.AsyncClient(timeout=self._config.timeout) as client:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
-            return response.json()
+            return response.json()  # type: ignore[no-any-return]
 
-    def _extract_content(self, data: dict) -> str:
+    def _extract_content(self, data: dict[str, Any]) -> str:
         try:
-            return data["choices"][0]["message"]["content"]
+            return str(data["choices"][0]["message"]["content"])
         except (KeyError, IndexError) as e:
             logger.error("Unexpected LLM response structure: %s", e)
             return ""
 
-    def _extract_json_from_text(self, text: str) -> dict:
+    def _extract_json_from_text(self, text: str) -> dict[str, Any]:
         """Attempt to extract JSON from text that may have markdown fences."""
         # Try to find JSON block in markdown
         for start_marker in ("```json", "```"):
@@ -119,12 +120,12 @@ class OpenAICompatibleClient(LLMClient):
                 start = text.index(start_marker) + len(start_marker)
                 end = text.index("```", start) if "```" in text[start:] else len(text)
                 try:
-                    return json.loads(text[start:end].strip())
+                    return json.loads(text[start:end].strip())  # type: ignore[no-any-return]
                 except json.JSONDecodeError:
                     continue
         # Try the whole text
         try:
-            return json.loads(text)
+            return json.loads(text)  # type: ignore[no-any-return]
         except json.JSONDecodeError:
             return {"raw_response": text, "parse_error": True}
 
@@ -144,7 +145,7 @@ class StubLLMClient(LLMClient):
             "Configure an LLM provider for richer natural-language explanations."
         )
 
-    async def chat_json(self, system_prompt: str, user_message: str) -> dict:
+    async def chat_json(self, system_prompt: str, user_message: str) -> dict[str, Any]:
         return {
             "answer": await self.chat(system_prompt, user_message),
             "llm_available": False,

@@ -14,6 +14,7 @@ Coordinates the full PR review pipeline:
 from __future__ import annotations
 
 import logging
+from typing import Any
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,7 +93,7 @@ async def review_diff(
         all_findings.extend(run_all_heuristics(fd))
 
     # Deduplicate findings by (category, file, line)
-    seen_findings: set[tuple] = set()
+    seen_findings: set[tuple[str, str, int]] = set()
     unique_findings: list[ReviewFinding] = []
     for f in all_findings:
         key = (f.category.value, f.file_path, f.line)
@@ -169,7 +170,9 @@ async def review_diff(
     return report
 
 
-async def _get_file_symbols(db: AsyncSession, snapshot_id: str, file_path: str) -> list[dict]:
+async def _get_file_symbols(
+    db: AsyncSession, snapshot_id: str, file_path: str
+) -> list[dict[str, Any]]:
     """Look up all symbols in a file from the database."""
     result = await db.execute(
         select(Symbol).where(

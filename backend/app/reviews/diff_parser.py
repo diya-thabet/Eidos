@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import re
+from typing import Any
 
 from app.reviews.models import DiffHunk, DiffLine, FileDiff
 
@@ -162,8 +163,8 @@ def parse_unified_diff(diff_text: str) -> list[FileDiff]:
 
 def map_lines_to_symbols(
     file_diff: FileDiff,
-    symbols: list[dict],
-) -> list[dict]:
+    symbols: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
     """
     Map changed lines in a file diff to symbols that overlap those lines.
 
@@ -178,7 +179,7 @@ def map_lines_to_symbols(
     changed_lines = file_diff.changed_line_numbers
     removed_line_numbers = {ln.old_number for ln in file_diff.removed_lines if ln.old_number > 0}
 
-    matched: list[dict] = []
+    matched: list[dict[str, Any]] = []
     seen: set[str] = set()
 
     for sym in symbols:
