@@ -6,6 +6,7 @@ from fastapi import FastAPI
 
 from app.api import analysis as analysis_api
 from app.api import docgen as docgen_api
+from app.api import evaluations as eval_api
 from app.api import indexing as indexing_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
@@ -46,6 +47,7 @@ app.include_router(indexing_api.router, prefix="/repos", tags=["indexing"])
 app.include_router(reasoning_api.router, prefix="/repos", tags=["reasoning"])
 app.include_router(reviews_api.router, prefix="/repos", tags=["reviews"])
 app.include_router(docgen_api.router, prefix="/repos", tags=["docs"])
+app.include_router(eval_api.router, prefix="/repos", tags=["evaluations"])
 
 
 @app.get("/health")

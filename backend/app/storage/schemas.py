@@ -297,3 +297,32 @@ class GenerateDocsResponse(BaseModel):
     snapshot_id: str
     documents: list[GeneratedDocOut]
     total: int
+
+
+# ---------------------------------------------------------------------------
+# Evaluation schemas (Phase 7)
+# ---------------------------------------------------------------------------
+
+
+class EvalCheckOut(BaseModel):
+    """A single evaluation check result."""
+
+    category: str
+    name: str
+    passed: bool
+    severity: str
+    score: float
+    message: str
+    details: dict[str, Any] = {}
+
+
+class EvalReportOut(BaseModel):
+    """Complete evaluation report."""
+
+    id: int | None = None
+    snapshot_id: str
+    scope: str
+    overall_score: float
+    overall_severity: str
+    checks: list[EvalCheckOut]
+    summary: str

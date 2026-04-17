@@ -204,3 +204,26 @@ class GeneratedDoc(Base):
             "doc_type",
         ),
     )
+
+
+class Evaluation(Base):
+    """An evaluation / guardrails report for a snapshot or artifact."""
+
+    __tablename__ = "evaluations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    scope: Mapped[str] = mapped_column(
+        String(64), default="snapshot"
+    )  # snapshot | answer | doc | review
+    overall_score: Mapped[float] = mapped_column(default=0.0)
+    overall_severity: Mapped[str] = mapped_column(String(16), default="pass")
+    checks_json: Mapped[str] = mapped_column(Text, nullable=False)
+    summary: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (Index("ix_evaluations_snapshot", "snapshot_id"),)

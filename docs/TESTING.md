@@ -112,6 +112,21 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 
 ### Total: 423 tests
 
+### Phase 7 -- Evaluation & Guardrails
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_guardrails_models.py` | 5 | EvalReport scoring, severity computation |
+| `test_hallucination_detector.py` | 14 | Symbol/relationship verification, partial match |
+| `test_answer_evaluator.py` | 13 | Citation coverage, grounding, completeness |
+| `test_doc_evaluator.py` | 13 | Completeness, accuracy, staleness, coverage |
+| `test_review_evaluator.py` | 12 | Precision, severity distribution, coverage |
+| `test_sanitizer.py` | 16 | Injection detection, PII redaction, I/O sanitization |
+| `test_eval_runner.py` | 10 | Full pipeline, persistence, empty snapshot, answer eval |
+| `test_eval_api.py` | 8 | Endpoints, response structure, error handling |
+
+### Total: 525 tests
+
 ## Test Design Principles
 
 1. **No external dependencies** -- every test runs offline
