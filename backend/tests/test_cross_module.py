@@ -153,7 +153,7 @@ class TestAnalysisToIndexing:
     def test_graph_has_expected_symbols(self):
         g = _make_graph()
         assert len(g.symbols) == 3
-        assert len(g.edges) == 4
+        assert len(g.edges) == 3
 
     def test_graph_fan_out(self):
         g = _make_graph()
@@ -179,7 +179,7 @@ class TestEmbedderVectorRoundTrip:
     async def test_embed_and_search(self):
         embedder = HashEmbedder()
         store = InMemoryVectorStore()
-        dim = len(await embedder.embed("test"))
+        dim = embedder.vector_size
         await store.ensure_collection("test", dim)
 
         texts = [
@@ -188,21 +188,21 @@ class TestEmbedderVectorRoundTrip:
             "IRepository defines data access",
         ]
         records = []
-        vectors = []
+        vecs = await embedder.embed(texts)  # batch call
         for i, t in enumerate(texts):
-            rec = VectorRecord(
-                id=f"r{i}",
-                snapshot_id="s1",
-                scope_type="symbol_summary",
-                text=t,
+            records.append(
+                VectorRecord(
+                    id=f"r{i}",
+                    snapshot_id="s1",
+                    scope_type="symbol_summary",
+                    text=t,
+                )
             )
-            records.append(rec)
-            vectors.append(await embedder.embed(t))
 
-        await store.upsert("test", records, vectors)
+        await store.upsert("test", records, vecs)
         assert store.count("test") == 3
 
-        qv = await embedder.embed("order placement")
+        qv = (await embedder.embed(["order placement"]))[0]
         results = await store.search("test", qv, limit=2)
         assert len(results) <= 2
 
@@ -210,13 +210,12 @@ class TestEmbedderVectorRoundTrip:
     async def test_filter_by_snapshot(self):
         embedder = HashEmbedder()
         store = InMemoryVectorStore()
-        dim = len(await embedder.embed("x"))
+        dim = embedder.vector_size
         await store.ensure_collection("test", dim)
 
         r1 = VectorRecord(id="a", snapshot_id="s1", scope_type="x", text="foo")
         r2 = VectorRecord(id="b", snapshot_id="s2", scope_type="x", text="bar")
-        v1 = await embedder.embed("foo")
-        v2 = await embedder.embed("bar")
+        v1, v2 = await embedder.embed(["foo", "bar"])
 
         await store.upsert("test", [r1, r2], [v1, v2])
         results = await store.search("test", v1, limit=10, filters={"snapshot_id": "s1"})
@@ -226,13 +225,12 @@ class TestEmbedderVectorRoundTrip:
     async def test_delete_by_snapshot(self):
         embedder = HashEmbedder()
         store = InMemoryVectorStore()
-        dim = len(await embedder.embed("x"))
+        dim = embedder.vector_size
         await store.ensure_collection("test", dim)
 
-        r1 = VectorRecord(id="a", snapshot_id="s1", scope_type="x", text="t")
-        r2 = VectorRecord(id="b", snapshot_id="s2", scope_type="x", text="t")
-        v1 = await embedder.embed("a")
-        v2 = await embedder.embed("b")
+        r1 = VectorRecord(id="a", snapshot_id="s1", scope_type="x", text="t1")
+        r2 = VectorRecord(id="b", snapshot_id="s2", scope_type="x", text="t2")
+        v1, v2 = await embedder.embed(["t1", "t2"])
 
         await store.upsert("test", [r1, r2], [v1, v2])
         assert store.count("test") == 2

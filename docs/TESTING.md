@@ -134,12 +134,23 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_crypto.py` | 6 | Encrypt/decrypt round-trip, invalid data |
 | `test_token_service.py` | 10 | JWT create/decode, expiry, tampering |
 | `test_github_oauth.py` | 5 | Authorize URL, code exchange, user fetch |
-| `test_auth_api.py` | 9 | Login, callback, me, logout endpoints |
+| `test_google_oauth.py` | 7 | Google OAuth authorize, exchange, fetch |
+| `test_auth_api.py` | 9 | GitHub login, callback, me, logout |
+| `test_google_auth_api.py` | 7 | Google login, callback, user create/update |
 | `test_auth_dependencies.py` | 7 | Anonymous mode, JWT validation, isolation |
 | `test_retention.py` | 5 | Clone cleanup, disabled mode |
 | `test_security_scenarios.py` | 7 | Cross-user isolation, ownership, anonymous |
 
-### Total: 574 tests
+### Cross-module & Scenario Tests
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_integration_e2e.py` | 36 | Full pipeline: symbols, edges, overview, docs, eval, lifecycle |
+| `test_cross_module.py` | 37 | Analysis?indexing, embedder+vector store, guardrails, diff, router |
+| `test_edge_cases.py` | 37 | Empty snapshots, invalid inputs, graph edges, sanitizer, data integrity |
+| `test_schemas_comprehensive.py` | 39 | All Pydantic schemas, DB models, OAuth dataclasses |
+
+### Total: 727 tests
 
 ## Test Design Principles
 

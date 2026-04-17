@@ -48,6 +48,8 @@ pytest -v
 | GET    | `/auth/callback`                              | OAuth callback (issue JWT)      |
 | GET    | `/auth/me`                                    | Current user info               |
 | POST   | `/auth/logout`                                | Logout hint                     |
+| GET    | `/auth/google/login`                          | Start Google OAuth flow         |
+| GET    | `/auth/google/callback`                       | Google OAuth callback (JWT)     |
 
 ## Project Structure
 
@@ -101,7 +103,7 @@ backend/
       database.py       # SQLAlchemy async engine + session
       models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review, GeneratedDoc)
       schemas.py        # Pydantic response schemas
-  tests/                # 574 tests (see docs/TESTING.md)
+  tests/                # 727 tests (see docs/TESTING.md)
   Dockerfile            # Production container image
 infra/
   docker-compose.yml    # Postgres + Redis + Qdrant (local dev)
