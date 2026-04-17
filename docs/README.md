@@ -12,5 +12,6 @@ This folder contains the technical documentation for the Eidos Legacy Code Intel
 | [PHASE5_REVIEWS.md](PHASE5_REVIEWS.md) | Phase 5: PR Review engine |
 | [PHASE6_DOCGEN.md](PHASE6_DOCGEN.md) | Phase 6: Auto Documentation engine |
 | [PHASE7_GUARDRAILS.md](PHASE7_GUARDRAILS.md) | Phase 7: Evaluation & Guardrails |
+| [PHASE8_SECURITY.md](PHASE8_SECURITY.md) | Phase 8: Security & Multi-tenant |
 | [KUBERNETES.md](KUBERNETES.md) | Kubernetes deployment guide (kind/minikube) |
 | [TESTING.md](TESTING.md) | Testing strategy, test inventory, how to run |

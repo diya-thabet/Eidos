@@ -8,9 +8,10 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.auth.dependencies import get_current_user
 from app.core.tasks import run_ingestion
 from app.storage.database import get_db
-from app.storage.models import Repo, RepoSnapshot, SnapshotStatus
+from app.storage.models import Repo, RepoSnapshot, SnapshotStatus, User
 from app.storage.schemas import (
     FileOut,
     IngestOut,
@@ -26,9 +27,14 @@ router = APIRouter()
 
 
 @router.post("", response_model=RepoOut, status_code=201)
-async def create_repo(body: RepoCreate, db: AsyncSession = Depends(get_db)) -> Any:
+async def create_repo(
+    body: RepoCreate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Any:
     repo = Repo(
         id=uuid.uuid4().hex[:12],
+        owner_id=user.id if user.id != "anonymous" else None,
         name=body.name,
         url=str(body.url),
         default_branch=body.default_branch,

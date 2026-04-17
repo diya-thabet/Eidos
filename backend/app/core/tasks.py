@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 
 from app.analysis.pipeline import analyze_snapshot_files, persist_graph
 from app.core.ingestion import clone_repo, repo_clone_path, scan_files
+from app.core.retention import cleanup_clone
 from app.indexing.indexer import run_indexing
 from app.storage.database import async_session
 from app.storage.models import File, Repo, RepoSnapshot, SnapshotStatus
@@ -74,6 +75,9 @@ async def run_ingestion(snapshot_id: str) -> None:
                 + indexing_stats.get("file_summaries", 0),
                 resolved_sha,
             )
+
+            # Phase 8: cleanup clone after indexing
+            cleanup_clone(repo.id, snapshot_id)
 
         except Exception as e:
             logger.exception("Ingestion failed for snapshot %s", snapshot_id)

@@ -127,6 +127,20 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 
 ### Total: 525 tests
 
+### Phase 8 -- Security & Multi-tenant
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_crypto.py` | 6 | Encrypt/decrypt round-trip, invalid data |
+| `test_token_service.py` | 10 | JWT create/decode, expiry, tampering |
+| `test_github_oauth.py` | 5 | Authorize URL, code exchange, user fetch |
+| `test_auth_api.py` | 9 | Login, callback, me, logout endpoints |
+| `test_auth_dependencies.py` | 7 | Anonymous mode, JWT validation, isolation |
+| `test_retention.py` | 5 | Clone cleanup, disabled mode |
+| `test_security_scenarios.py` | 7 | Cross-user isolation, ownership, anonymous |
+
+### Total: 574 tests
+
 ## Test Design Principles
 
 1. **No external dependencies** -- every test runs offline

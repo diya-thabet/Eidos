@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import FastAPI
 
 from app.api import analysis as analysis_api
+from app.api import auth as auth_api
 from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
 from app.api import indexing as indexing_api
@@ -41,6 +42,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+app.include_router(auth_api.router, prefix="/auth", tags=["auth"])
 app.include_router(repos.router, prefix="/repos", tags=["repos"])
 app.include_router(analysis_api.router, prefix="/repos", tags=["analysis"])
 app.include_router(indexing_api.router, prefix="/repos", tags=["indexing"])

@@ -18,10 +18,34 @@ class SnapshotStatus(enum.StrEnum):
     failed = "failed"
 
 
+class User(Base):
+    """An authenticated user (via GitHub OAuth or local)."""
+
+    __tablename__ = "users"
+
+    id: Mapped[str] = mapped_column(String(48), primary_key=True)
+    github_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
+    github_login: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
+    name: Mapped[str] = mapped_column(String(512), default="")
+    email: Mapped[str] = mapped_column(String(512), default="")
+    avatar_url: Mapped[str] = mapped_column(Text, default="")
+    github_token_enc: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    repos: Mapped[list[Repo]] = relationship(back_populates="owner")
+
+    __table_args__ = (Index("ix_users_github_login", "github_login"),)
+
+
 class Repo(Base):
     __tablename__ = "repos"
 
     id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    owner_id: Mapped[str | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     url: Mapped[str] = mapped_column(Text, nullable=False)
     default_branch: Mapped[str] = mapped_column(String(128), default="main")
@@ -30,6 +54,7 @@ class Repo(Base):
     )
     last_indexed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    owner: Mapped[User | None] = relationship(back_populates="repos")
     snapshots: Mapped[list[RepoSnapshot]] = relationship(
         back_populates="repo", cascade="all, delete-orphan"
     )

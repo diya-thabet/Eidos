@@ -44,6 +44,10 @@ pytest -v
 | GET    | `/repos/{id}/snapshots/{sid}/docs/{doc_id}`   | Get a specific generated doc    |
 | POST   | `/repos/{id}/snapshots/{sid}/evaluate`        | Run evaluation & guardrails     |
 | GET    | `/repos/{id}/snapshots/{sid}/evaluations`     | List past evaluations           |
+| GET    | `/auth/login`                                 | Start GitHub OAuth flow         |
+| GET    | `/auth/callback`                              | OAuth callback (issue JWT)      |
+| GET    | `/auth/me`                                    | Current user info               |
+| POST   | `/auth/logout`                                | Logout hint                     |
 
 ## Project Structure
 
@@ -97,7 +101,7 @@ backend/
       database.py       # SQLAlchemy async engine + session
       models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review, GeneratedDoc)
       schemas.py        # Pydantic response schemas
-  tests/                # 525 tests (see docs/TESTING.md)
+  tests/                # 574 tests (see docs/TESTING.md)
   Dockerfile            # Production container image
 infra/
   docker-compose.yml    # Postgres + Redis + Qdrant (local dev)
