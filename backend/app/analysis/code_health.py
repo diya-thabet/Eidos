@@ -843,6 +843,859 @@ class UnusedImportRule(HealthRule):
 
 
 # ==================================================================
+# CODE SMELL rules (Martin Fowler catalogue)
+# ==================================================================
+
+
+class DeadMethodRule(HealthRule):
+    rule_id = "SM001"
+    rule_name = "dead_method"
+    category = RuleCategory.DESIGN
+    severity = Severity.WARNING
+    description = "Method is never called (zero fan-in, not a constructor or entry point)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        _entry_names = {"main", "run", "start", "execute", "handle", "Main"}
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.METHOD:
+                continue
+            if sym.name in _entry_names or sym.name.startswith("test"):
+                continue
+            if graph.fan_in(sym.fq_name) == 0:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message="Method is never called (dead code)",
+                        suggestion="Remove if unused, or add tests that exercise it",
+                    )
+                )
+        return findings
+
+
+class FeatureEnvyRule(HealthRule):
+    rule_id = "SM002"
+    rule_name = "feature_envy"
+    category = RuleCategory.DESIGN
+    severity = Severity.WARNING
+    description = "Method calls more methods from another class than from its own"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.METHOD or not sym.parent_fq_name:
+                continue
+            callees = graph.get_callees(sym.fq_name)
+            if len(callees) < 3:
+                continue
+            own_count = 0
+            foreign_counts: dict[str, int] = {}
+            for callee in callees:
+                callee_sym = graph.symbols.get(callee)
+                if callee_sym and callee_sym.parent_fq_name:
+                    if callee_sym.parent_fq_name == sym.parent_fq_name:
+                        own_count += 1
+                    else:
+                        p = callee_sym.parent_fq_name
+                        foreign_counts[p] = foreign_counts.get(p, 0) + 1
+            for foreign_class, count in foreign_counts.items():
+                if count > own_count and count >= 3:
+                    findings.append(
+                        HealthFinding(
+                            rule_id=self.rule_id,
+                            rule_name=self.rule_name,
+                            category=self.category,
+                            severity=self.severity,
+                            symbol_fq_name=sym.fq_name,
+                            file_path=sym.file_path,
+                            line=sym.start_line,
+                            message=(
+                                f"Method calls {count} methods on {foreign_class} "
+                                f"but only {own_count} on its own class"
+                            ),
+                            suggestion="Move this method to the class it envies",
+                        )
+                    )
+                    break
+        return findings
+
+
+class DataClassSmellRule(HealthRule):
+    rule_id = "SM003"
+    rule_name = "data_class"
+    category = RuleCategory.DESIGN
+    severity = Severity.INFO
+    description = "Class is mostly fields with no behavior (anemic domain model)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            if len(children) < 3:
+                continue
+            fields = 0
+            methods = 0
+            for c in children:
+                cs = graph.symbols.get(c)
+                if not cs:
+                    continue
+                if cs.kind == SymbolKind.FIELD:
+                    fields += 1
+                elif cs.kind in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                    methods += 1
+            total = fields + methods
+            if total > 0 and fields / total >= 0.8 and fields >= 4:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Class has {fields} fields but only {methods} methods (anemic)",
+                        suggestion="Add behavior methods or use a plain DTO/record type",
+                    )
+                )
+        return findings
+
+
+class ShotgunSurgeryRule(HealthRule):
+    rule_id = "SM004"
+    rule_name = "shotgun_surgery"
+    category = RuleCategory.DESIGN
+    severity = Severity.ERROR
+    description = "Symbol is called from many different classes (changes ripple widely)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.METHOD:
+                continue
+            callers = graph.get_callers(sym.fq_name)
+            if len(callers) < 5:
+                continue
+            caller_classes: set[str] = set()
+            for caller_fq in callers:
+                cs = graph.symbols.get(caller_fq)
+                if cs and cs.parent_fq_name:
+                    caller_classes.add(cs.parent_fq_name)
+            if len(caller_classes) >= 5:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=(
+                            f"Called from {len(caller_classes)} different classes -- "
+                            f"changes here cause shotgun surgery"
+                        ),
+                        suggestion="Reduce coupling; introduce an abstraction layer",
+                    )
+                )
+        return findings
+
+
+class MiddleManRule(HealthRule):
+    rule_id = "SM005"
+    rule_name = "middle_man"
+    category = RuleCategory.DESIGN
+    severity = Severity.INFO
+    description = "Class delegates everything (all methods just call one other class)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            methods = [
+                c
+                for c in children
+                if c in graph.symbols and graph.symbols[c].kind == SymbolKind.METHOD
+            ]
+            if len(methods) < 3:
+                continue
+            delegate_targets: set[str] = set()
+            all_delegate = True
+            for m in methods:
+                callees = graph.get_callees(m)
+                if len(callees) != 1:
+                    all_delegate = False
+                    break
+                callee_sym = graph.symbols.get(callees[0])
+                if callee_sym and callee_sym.parent_fq_name:
+                    delegate_targets.add(callee_sym.parent_fq_name)
+            if all_delegate and len(delegate_targets) == 1:
+                target = next(iter(delegate_targets))
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"All methods delegate to {target} (middle man)",
+                        suggestion="Remove the middle man; let callers use the target directly",
+                    )
+                )
+        return findings
+
+
+class SpeculativeGeneralityRule(HealthRule):
+    rule_id = "SM006"
+    rule_name = "speculative_generality"
+    category = RuleCategory.DESIGN
+    severity = Severity.INFO
+    description = "Interface has zero or one implementor"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        impl_count: dict[str, int] = {}
+        for edge in graph.edges:
+            if edge.edge_type == EdgeType.IMPLEMENTS:
+                impl_count[edge.target_fq_name] = impl_count.get(edge.target_fq_name, 0) + 1
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.INTERFACE:
+                continue
+            count = impl_count.get(sym.fq_name, 0)
+            if count <= 1:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=(
+                            f"Interface has {count} implementor(s) -- may be speculative generality"
+                        ),
+                        suggestion="Remove if premature; add when a second implementation exists",
+                    )
+                )
+        return findings
+
+
+class LazyClassRule(HealthRule):
+    rule_id = "SM007"
+    rule_name = "lazy_class"
+    category = RuleCategory.DESIGN
+    severity = Severity.INFO
+    description = "Class has only one method (too little behavior to justify a class)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            method_count = sum(
+                1
+                for c in children
+                if c in graph.symbols
+                and graph.symbols[c].kind in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR)
+            )
+            if method_count == 1 and len(children) <= 2:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message="Class has only 1 method (lazy class)",
+                        suggestion="Merge into caller or promote to a function",
+                    )
+                )
+        return findings
+
+
+# ==================================================================
+# COUPLING & COHESION rules (OO metrics)
+# ==================================================================
+
+
+class CouplingBetweenObjectsRule(HealthRule):
+    rule_id = "MT001"
+    rule_name = "high_coupling"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Class depends on too many other classes (CBO metric)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        threshold = config.max_fan_out  # reuse
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            deps: set[str] = set()
+            for child_fq in graph.get_children(sym.fq_name):
+                for callee in graph.get_callees(child_fq):
+                    cs = graph.symbols.get(callee)
+                    if cs and cs.parent_fq_name and cs.parent_fq_name != sym.fq_name:
+                        deps.add(cs.parent_fq_name)
+            if len(deps) > threshold:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Coupled to {len(deps)} classes (CBO > {threshold})",
+                        suggestion="Reduce dependencies; apply dependency inversion",
+                    )
+                )
+        return findings
+
+
+class LackOfCohesionRule(HealthRule):
+    rule_id = "MT002"
+    rule_name = "low_cohesion"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Class methods operate on disjoint sets of dependencies (LCOM-like)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            methods = [
+                c
+                for c in children
+                if c in graph.symbols and graph.symbols[c].kind == SymbolKind.METHOD
+            ]
+            if len(methods) < 4:
+                continue
+            callsets: list[set[str]] = []
+            for m in methods:
+                callsets.append(set(graph.get_callees(m)))
+            if not callsets:
+                continue
+            pairs_sharing = 0
+            total_pairs = 0
+            for i in range(len(callsets)):
+                for j in range(i + 1, len(callsets)):
+                    total_pairs += 1
+                    if callsets[i] & callsets[j]:
+                        pairs_sharing += 1
+            if total_pairs > 0:
+                cohesion = pairs_sharing / total_pairs
+                if cohesion < 0.2:
+                    findings.append(
+                        HealthFinding(
+                            rule_id=self.rule_id,
+                            rule_name=self.rule_name,
+                            category=self.category,
+                            severity=self.severity,
+                            symbol_fq_name=sym.fq_name,
+                            file_path=sym.file_path,
+                            line=sym.start_line,
+                            message=(
+                                f"Low cohesion ({cohesion:.0%}) -- methods share few dependencies"
+                            ),
+                            suggestion="Split into focused classes with shared state",
+                        )
+                    )
+        return findings
+
+
+class ComplexityDensityRule(HealthRule):
+    rule_id = "MT003"
+    rule_name = "complexity_density"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Method has high fan-out relative to its size (too much in too few lines)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.METHOD:
+                continue
+            loc = sym.end_line - sym.start_line + 1
+            if loc < 5:
+                continue
+            fan_out = graph.fan_out(sym.fq_name)
+            density = fan_out / loc
+            if density > 0.5 and fan_out >= 5:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=(
+                            f"Complexity density {density:.2f} ({fan_out} calls in {loc} lines)"
+                        ),
+                        suggestion="Extract helper methods to reduce density",
+                    )
+                )
+        return findings
+
+
+# ==================================================================
+# ARCHITECTURE rules
+# ==================================================================
+
+
+class ModuleTangleRule(HealthRule):
+    rule_id = "AR001"
+    rule_name = "module_tangle"
+    category = RuleCategory.DESIGN
+    severity = Severity.ERROR
+    description = "Namespace has circular dependencies with other namespaces"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        ns_deps: dict[str, set[str]] = {}
+        for edge in graph.edges:
+            if edge.edge_type not in (EdgeType.CALLS, EdgeType.USES, EdgeType.IMPORTS):
+                continue
+            src_sym = graph.symbols.get(edge.source_fq_name)
+            tgt_sym = graph.symbols.get(edge.target_fq_name)
+            src_ns = src_sym.namespace if src_sym else ""
+            tgt_ns = tgt_sym.namespace if tgt_sym else ""
+            if src_ns and tgt_ns and src_ns != tgt_ns:
+                ns_deps.setdefault(src_ns, set()).add(tgt_ns)
+        seen: set[tuple[str, str]] = set()
+        for ns_a, deps in ns_deps.items():
+            for ns_b in deps:
+                if ns_a in ns_deps.get(ns_b, set()):
+                    pair = (min(ns_a, ns_b), max(ns_a, ns_b))
+                    if pair not in seen:
+                        seen.add(pair)
+                        findings.append(
+                            HealthFinding(
+                                rule_id=self.rule_id,
+                                rule_name=self.rule_name,
+                                category=self.category,
+                                severity=self.severity,
+                                symbol_fq_name=ns_a,
+                                file_path="",
+                                line=0,
+                                message=f"Module tangle: {ns_a} <-> {ns_b}",
+                                suggestion="Break cycle with dependency inversion or facade",
+                            )
+                        )
+        return findings
+
+
+class DeepNamespaceRule(HealthRule):
+    rule_id = "AR002"
+    rule_name = "deep_namespace"
+    category = RuleCategory.BEST_PRACTICES
+    severity = Severity.INFO
+    description = "Namespace nesting is too deep (>5 levels)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        seen_ns: set[str] = set()
+        for sym in graph.symbols.values():
+            ns = sym.namespace
+            if ns and ns not in seen_ns:
+                seen_ns.add(ns)
+                depth = ns.count(".") + 1
+                if depth > 5:
+                    findings.append(
+                        HealthFinding(
+                            rule_id=self.rule_id,
+                            rule_name=self.rule_name,
+                            category=self.category,
+                            severity=self.severity,
+                            symbol_fq_name=ns,
+                            file_path=sym.file_path,
+                            line=1,
+                            message=f"Namespace depth is {depth} (max 5)",
+                            suggestion="Flatten namespace hierarchy",
+                        )
+                    )
+        return findings
+
+
+class SwissArmyKnifeRule(HealthRule):
+    rule_id = "AR003"
+    rule_name = "swiss_army_knife"
+    category = RuleCategory.SOLID
+    severity = Severity.WARNING
+    description = "Class implements too many interfaces"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        impl_counts: dict[str, list[str]] = {}
+        for edge in graph.edges:
+            if edge.edge_type == EdgeType.IMPLEMENTS:
+                impl_counts.setdefault(edge.source_fq_name, []).append(edge.target_fq_name)
+        for fq, ifaces in impl_counts.items():
+            if len(ifaces) > 3:
+                sym = graph.symbols.get(fq)
+                if sym:
+                    findings.append(
+                        HealthFinding(
+                            rule_id=self.rule_id,
+                            rule_name=self.rule_name,
+                            category=self.category,
+                            severity=self.severity,
+                            symbol_fq_name=fq,
+                            file_path=sym.file_path,
+                            line=sym.start_line,
+                            message=f"Implements {len(ifaces)} interfaces",
+                            suggestion="Split responsibilities; each class should have one role",
+                        )
+                    )
+        return findings
+
+
+# ==================================================================
+# ADDITIONAL CLEAN CODE rules
+# ==================================================================
+
+
+class ConstructorOverInjectionRule(HealthRule):
+    rule_id = "CC005"
+    rule_name = "constructor_over_injection"
+    category = RuleCategory.CLEAN_CODE
+    severity = Severity.WARNING
+    description = "Constructor has too many parameters (dependency over-injection)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.CONSTRUCTOR:
+                continue
+            count = len(sym.parameters)
+            if count > 4:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Constructor has {count} parameters (max 4)",
+                        suggestion="Use a builder pattern or split into focused services",
+                    )
+                )
+        return findings
+
+
+class VoidAbuseRule(HealthRule):
+    rule_id = "CC006"
+    rule_name = "void_abuse"
+    category = RuleCategory.CLEAN_CODE
+    severity = Severity.INFO
+    description = "Class has >70% void methods (side-effect heavy, hard to test)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        void_types = {"void", "", "None", "unit", "()", "Unit"}
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            methods = [
+                c
+                for c in children
+                if c in graph.symbols and graph.symbols[c].kind == SymbolKind.METHOD
+            ]
+            if len(methods) < 4:
+                continue
+            void_count = sum(1 for m in methods if graph.symbols[m].return_type in void_types)
+            ratio = void_count / len(methods)
+            if ratio > 0.7:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=(f"{void_count}/{len(methods)} methods return void ({ratio:.0%})"),
+                        suggestion="Return results instead of mutating state; improves testability",
+                    )
+                )
+        return findings
+
+
+class StaticAbuseRule(HealthRule):
+    rule_id = "CC007"
+    rule_name = "static_abuse"
+    category = RuleCategory.CLEAN_CODE
+    severity = Severity.INFO
+    description = "Class has >50% static methods (may indicate missing OOP design)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            methods = [
+                c
+                for c in children
+                if c in graph.symbols and graph.symbols[c].kind == SymbolKind.METHOD
+            ]
+            if len(methods) < 4:
+                continue
+            static_count = sum(1 for m in methods if "static" in graph.symbols[m].modifiers)
+            ratio = static_count / len(methods)
+            if ratio > 0.5:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"{static_count}/{len(methods)} methods are static ({ratio:.0%})",
+                        suggestion="Consider instance methods with dependency injection",
+                    )
+                )
+        return findings
+
+
+class MutablePublicStateRule(HealthRule):
+    rule_id = "CC008"
+    rule_name = "mutable_public_state"
+    category = RuleCategory.CLEAN_CODE
+    severity = Severity.WARNING
+    description = "Class exposes many public mutable fields (encapsulation violation)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            public_fields = 0
+            for c in children:
+                cs = graph.symbols.get(c)
+                if cs and cs.kind == SymbolKind.FIELD:
+                    if "public" in cs.modifiers or "pub" in cs.modifiers:
+                        public_fields += 1
+            if public_fields >= 5:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Class has {public_fields} public fields",
+                        suggestion="Use private fields with accessor methods (encapsulation)",
+                    )
+                )
+        return findings
+
+
+# ==================================================================
+# ADDITIONAL NAMING rules
+# ==================================================================
+
+
+class InconsistentNamingRule(HealthRule):
+    rule_id = "NM003"
+    rule_name = "inconsistent_naming"
+    category = RuleCategory.NAMING
+    severity = Severity.INFO
+    description = "Class mixes naming conventions (camelCase + snake_case)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.CLASS, SymbolKind.STRUCT):
+                continue
+            children = graph.get_children(sym.fq_name)
+            snake = 0
+            camel = 0
+            for c in children:
+                cs = graph.symbols.get(c)
+                if not cs:
+                    continue
+                name = cs.name
+                if "_" in name and name != name.upper():
+                    snake += 1
+                elif name and name[0].islower() and any(ch.isupper() for ch in name):
+                    camel += 1
+            if snake >= 2 and camel >= 2:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Mixes naming: {snake} snake_case + {camel} camelCase",
+                        suggestion="Pick one naming convention and apply consistently",
+                    )
+                )
+        return findings
+
+
+class PrefixedNameRule(HealthRule):
+    rule_id = "NM004"
+    rule_name = "hungarian_notation"
+    category = RuleCategory.NAMING
+    severity = Severity.INFO
+    description = "Symbol uses Hungarian notation prefixes (strName, bIsValid)"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        prefixes = (
+            "str",
+            "int",
+            "bln",
+            "dbl",
+            "arr",
+            "lst",
+            "obj",
+            "b_",
+            "i_",
+            "s_",
+            "n_",
+            "m_",
+        )
+        for sym in graph.symbols.values():
+            if sym.kind == SymbolKind.NAMESPACE:
+                continue
+            lower = sym.name.lower()
+            for pfx in prefixes:
+                if lower.startswith(pfx) and len(sym.name) > len(pfx):
+                    next_char = sym.name[len(pfx)]
+                    if next_char.isupper() or next_char == "_":
+                        findings.append(
+                            HealthFinding(
+                                rule_id=self.rule_id,
+                                rule_name=self.rule_name,
+                                category=self.category,
+                                severity=self.severity,
+                                symbol_fq_name=sym.fq_name,
+                                file_path=sym.file_path,
+                                line=sym.start_line,
+                                message=f"Name '{sym.name}' appears to use Hungarian notation",
+                                suggestion="Use descriptive names without type prefixes",
+                            )
+                        )
+                        break
+        return findings
+
+
+# ==================================================================
+# ADDITIONAL SECURITY rules
+# ==================================================================
+
+
+class SqlInjectionRiskRule(HealthRule):
+    rule_id = "SEC002"
+    rule_name = "sql_injection_risk"
+    category = RuleCategory.SECURITY
+    severity = Severity.CRITICAL
+    description = "Method name suggests raw SQL usage"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        suspect_names = {
+            "execute_raw",
+            "raw_sql",
+            "executeRaw",
+            "rawSql",
+            "rawQuery",
+            "raw_query",
+            "execute_sql",
+            "executeSql",
+        }
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.METHOD:
+                continue
+            if sym.name in suspect_names:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Method '{sym.name}' suggests raw SQL execution",
+                        suggestion="Use parameterized queries to prevent SQL injection",
+                    )
+                )
+        return findings
+
+
+class InsecureFieldRule(HealthRule):
+    rule_id = "SEC003"
+    rule_name = "insecure_field"
+    category = RuleCategory.SECURITY
+    severity = Severity.WARNING
+    description = "Publicly exposed field with sensitive name"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        sensitive = {"password", "secret", "token", "key", "credential"}
+        for sym in graph.symbols.values():
+            if sym.kind != SymbolKind.FIELD:
+                continue
+            is_public = "public" in sym.modifiers or "pub" in sym.modifiers
+            if not is_public:
+                continue
+            lower = sym.name.lower()
+            for s in sensitive:
+                if s in lower:
+                    findings.append(
+                        HealthFinding(
+                            rule_id=self.rule_id,
+                            rule_name=self.rule_name,
+                            category=self.category,
+                            severity=self.severity,
+                            symbol_fq_name=sym.fq_name,
+                            file_path=sym.file_path,
+                            line=sym.start_line,
+                            message=f"Public field '{sym.name}' contains sensitive data",
+                            suggestion="Make private; expose through controlled accessors",
+                        )
+                    )
+                    break
+        return findings
+
+
+# ==================================================================
 # Registry
 # ==================================================================
 
@@ -852,25 +1705,47 @@ ALL_RULES: list[HealthRule] = [
     LongClassRule(),
     TooManyParametersRule(),
     EmptyMethodRule(),
+    ConstructorOverInjectionRule(),
+    VoidAbuseRule(),
+    StaticAbuseRule(),
+    MutablePublicStateRule(),
     # SOLID
     GodClassRule(),
     DeepInheritanceRule(),
     FatInterfaceRule(),
     NoAbstractionDependencyRule(),
-    # Complexity
+    SwissArmyKnifeRule(),
+    # Complexity / Metrics
     HighFanOutRule(),
     HighFanInRule(),
     TooManyChildrenRule(),
+    CouplingBetweenObjectsRule(),
+    LackOfCohesionRule(),
+    ComplexityDensityRule(),
     # Documentation
     MissingDocRule(),
     # Naming
     ShortNameRule(),
     BooleanNameRule(),
-    # Design
+    InconsistentNamingRule(),
+    PrefixedNameRule(),
+    # Design / Code Smells
     CircularDependencyRule(),
     OrphanClassRule(),
+    DeadMethodRule(),
+    FeatureEnvyRule(),
+    DataClassSmellRule(),
+    ShotgunSurgeryRule(),
+    MiddleManRule(),
+    SpeculativeGeneralityRule(),
+    LazyClassRule(),
+    # Architecture
+    ModuleTangleRule(),
+    DeepNamespaceRule(),
     # Security
     HardcodedSecretRule(),
+    SqlInjectionRiskRule(),
+    InsecureFieldRule(),
     # Best Practices
     LargeFileRule(),
     UnusedImportRule(),

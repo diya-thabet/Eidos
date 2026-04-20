@@ -1,21 +1,15 @@
 # Code Health Analysis
 
-> Static analysis engine that checks code for clean code principles, SOLID violations,
-> complexity issues, naming conventions, security concerns, and design anti-patterns.
-> Optional LLM integration for deeper semantic analysis.
+> Static analysis engine with **40 rules** across **8 categories** that checks
+> code for clean code principles, SOLID violations, coupling/cohesion metrics,
+> code smells (Fowler catalogue), architectural patterns, naming conventions,
+> and security concerns. Optional LLM integration for deeper semantic analysis.
 
 ---
 
-## Overview
+## Rule Catalog (40 rules)
 
-The code health engine runs **19 rules** across **8 categories** against the parsed code graph.
-Users control which rules to enable, thresholds for each rule, and whether to use LLM-powered analysis.
-
----
-
-## Rule Catalog
-
-### Clean Code (CC)
+### Clean Code (CC) -- 8 rules
 
 | ID | Rule | Default | Description |
 |----|------|---------|-------------|
@@ -23,8 +17,12 @@ Users control which rules to enable, thresholds for each rule, and whether to us
 | CC002 | `long_class` | >300 lines | Class exceeds max line count |
 | CC003 | `too_many_parameters` | >5 params | Method has too many parameters |
 | CC004 | `empty_method` | <=2 lines | Method body appears empty |
+| CC005 | `constructor_over_injection` | >4 params | Constructor has too many dependencies |
+| CC006 | `void_abuse` | >70% void | Class has too many void methods (side-effect heavy) |
+| CC007 | `static_abuse` | >50% static | Class has too many static methods |
+| CC008 | `mutable_public_state` | >=5 fields | Class exposes many public mutable fields |
 
-### SOLID Principles
+### SOLID Principles -- 5 rules
 
 | ID | Rule | Description |
 |----|------|-------------|
@@ -32,42 +30,64 @@ Users control which rules to enable, thresholds for each rule, and whether to us
 | SOLID002 | `deep_inheritance` | Inheritance chain too deep (prefer composition) |
 | SOLID003 | `fat_interface` | Interface has too many methods (ISP violation) |
 | SOLID004 | `concrete_dependency` | Class depends only on concrete types (DIP violation) |
+| AR003 | `swiss_army_knife` | Class implements too many interfaces (>3) |
 
-### Complexity (CX)
+### Complexity and Metrics -- 6 rules
 
 | ID | Rule | Default | Description |
 |----|------|---------|-------------|
 | CX001 | `high_fan_out` | >10 | Method calls too many others |
 | CX002 | `high_fan_in` | >15 | Symbol called by too many others |
 | CX003 | `too_many_members` | >20 | Class has too many direct members |
+| MT001 | `high_coupling` | CBO > threshold | Class depends on too many other classes |
+| MT002 | `low_cohesion` | LCOM < 20% | Class methods share few dependencies |
+| MT003 | `complexity_density` | >0.5 calls/line | High fan-out relative to method size |
 
-### Documentation (DOC)
+### Documentation -- 1 rule
 
 | ID | Rule | Description |
 |----|------|-------------|
 | DOC001 | `missing_doc` | Public symbol lacks documentation |
 
-### Naming (NM)
+### Naming -- 4 rules
 
 | ID | Rule | Description |
 |----|------|-------------|
 | NM001 | `short_name` | Symbol name too short to be descriptive |
 | NM002 | `non_boolean_bool_name` | Boolean method lacks is/has/can prefix |
+| NM003 | `inconsistent_naming` | Class mixes camelCase and snake_case |
+| NM004 | `hungarian_notation` | Symbol uses type prefixes (strName, bIsValid) |
 
-### Design (DS)
+### Design and Code Smells (Fowler catalogue) -- 10 rules
+
+| ID | Rule | Severity | Description |
+|----|------|----------|-------------|
+| DS001 | `circular_dependency` | ERROR | Classes have circular dependencies |
+| DS002 | `orphan_class` | INFO | Class is never referenced |
+| SM001 | `dead_method` | WARNING | Method with zero fan-in (never called) |
+| SM002 | `feature_envy` | WARNING | Method uses another class more than its own |
+| SM003 | `data_class` | INFO | Class with >80% fields, little behavior (anemic) |
+| SM004 | `shotgun_surgery` | ERROR | Called from 5+ different classes |
+| SM005 | `middle_man` | INFO | Class delegates all methods to one target |
+| SM006 | `speculative_generality` | INFO | Interface with 0-1 implementors |
+| SM007 | `lazy_class` | INFO | Class with only 1 method |
+
+### Architecture -- 2 rules
 
 | ID | Rule | Description |
 |----|------|-------------|
-| DS001 | `circular_dependency` | Classes have circular dependencies |
-| DS002 | `orphan_class` | Class is never referenced |
+| AR001 | `module_tangle` | Namespaces have circular dependencies |
+| AR002 | `deep_namespace` | Namespace depth > 5 levels |
 
-### Security (SEC)
+### Security -- 3 rules
 
 | ID | Rule | Severity | Description |
 |----|------|----------|-------------|
 | SEC001 | `hardcoded_secret` | CRITICAL | Field name suggests hardcoded secret |
+| SEC002 | `sql_injection_risk` | CRITICAL | Method name suggests raw SQL execution |
+| SEC003 | `insecure_field` | WARNING | Public field with sensitive name |
 
-### Best Practices (BP)
+### Best Practices -- 2 rules
 
 | ID | Rule | Description |
 |----|------|-------------|
@@ -84,7 +104,7 @@ Users control which rules to enable, thresholds for each rule, and whether to us
 GET /repos/{repo_id}/snapshots/{snapshot_id}/health/rules
 ```
 
-Returns metadata for all 19 rules.
+Returns metadata for all 40 rules.
 
 ### Run health check
 
@@ -92,7 +112,7 @@ Returns metadata for all 19 rules.
 POST /repos/{repo_id}/snapshots/{snapshot_id}/health
 ```
 
-**Request body** (all fields optional — defaults shown):
+**Request body** (all fields optional -- defaults shown):
 
 ```json
 {
@@ -110,64 +130,21 @@ POST /repos/{repo_id}/snapshots/{snapshot_id}/health
 }
 ```
 
-**Response:**
-
-```json
-{
-    "total_symbols": 142,
-    "total_files": 12,
-    "findings_count": 7,
-    "findings": [
-        {
-            "rule_id": "SEC001",
-            "rule_name": "hardcoded_secret",
-            "category": "security",
-            "severity": "critical",
-            "symbol": "Config.api_key",
-            "file": "src/config.rs",
-            "line": 15,
-            "message": "Field 'api_key' may contain a hardcoded secret",
-            "suggestion": "Use environment variables or a secrets manager"
-        }
-    ],
-    "summary": {
-        "critical": 1,
-        "warning": 4,
-        "info": 2
-    },
-    "category_scores": {
-        "security": 99.3,
-        "clean_code": 97.2,
-        "solid": 100.0
-    },
-    "overall_score": 92.5,
-    "llm_insights": []
-}
-```
-
 ### Category filtering
 
 Only run SOLID and security checks:
 
 ```json
-{
-    "categories": ["solid", "security"]
-}
+{ "categories": ["solid", "security"] }
 ```
 
 ### Disable specific rules
 
-Run everything except short-name and empty-method checks:
-
 ```json
-{
-    "disabled_rules": ["NM001", "CC004"]
-}
+{ "disabled_rules": ["NM001", "CC004", "SM001"] }
 ```
 
-### Custom thresholds
-
-Strict mode:
+### Custom thresholds (strict mode)
 
 ```json
 {
@@ -178,54 +155,12 @@ Strict mode:
 }
 ```
 
-Relaxed mode:
-
-```json
-{
-    "max_method_lines": 60,
-    "max_class_lines": 500,
-    "max_parameters": 8
-}
-```
-
 ---
 
 ## LLM Integration
 
-Set `"use_llm": true` to get AI-powered insights on top of the rule-based findings.
-
-The LLM receives:
-- The health score and top findings
-- Key symbol metrics (size, fan-in, fan-out)
-
-It returns:
-- Naming quality assessment
-- Design pattern suggestions
-- Refactoring recommendations
-- Architecture improvement advice
-
-**Requires** `EIDOS_LLM_BASE_URL` to be configured (see [DOCKER_GUIDE.md](DOCKER_GUIDE.md)).
-
-```json
-{
-    "use_llm": true,
-    "categories": ["solid", "design"]
-}
-```
-
-Response includes `llm_insights`:
-
-```json
-{
-    "llm_insights": [
-        {
-            "category": "refactoring",
-            "title": "Extract UserService responsibilities",
-            "recommendation": "The UserService class has 18 methods spanning authentication, profile management, and notification. Split into AuthService, ProfileService, and NotificationService."
-        }
-    ]
-}
-```
+Set `"use_llm": true` for AI-powered insights on top of rule-based findings.
+Requires `EIDOS_LLM_BASE_URL` configured (see [DOCKER_GUIDE.md](DOCKER_GUIDE.md)).
 
 ---
 
@@ -233,9 +168,5 @@ Response includes `llm_insights`:
 
 - **Category scores**: `100 - (findings / symbols * 100)` per category
 - **Overall score**: `100 - (weighted_penalty / symbols * 10)`
-  - Critical finding = 10 points
-  - Error finding = 5 points
-  - Warning finding = 2 points
-  - Info finding = 1 point
-
-Findings are sorted by severity (critical first), then by file and line.
+  - Critical = 10 points, Error = 5, Warning = 2, Info = 1
+- Findings sorted by severity (critical first)
