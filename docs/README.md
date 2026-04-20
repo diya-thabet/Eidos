@@ -17,6 +17,7 @@ This folder contains the technical documentation for the Eidos Legacy Code Intel
 | [TESTING.md](TESTING.md) | Testing strategy, test inventory, how to run |
 | [HOW_TO_USE.md](HOW_TO_USE.md) | Practical guide: curl & Postman examples for every endpoint |
 | [MULTI_LANGUAGE_PARSERS.md](MULTI_LANGUAGE_PARSERS.md) | Multi-language parser architecture (C#, Java, Python, TypeScript/TSX, Go, Rust, C, C++) + how to add new languages |
+| [CODE_HEALTH.md](CODE_HEALTH.md) | Code health analysis: 19 rules, SOLID/clean code/complexity/security checks, LLM integration, API usage |
 | [HARDENING.md](HARDENING.md) | System hardening: input validation, path traversal protection, security, parser enhancements |
 | [SYSTEM_STATE_ANALYSIS.md](SYSTEM_STATE_ANALYSIS.md) | Full system audit: RBAC proposal, usage metering, dual-version strategy, Docker build plan, implementation roadmap |
 | [DOCKER_GUIDE.md](DOCKER_GUIDE.md) | Complete Docker guide: building images, client vs internal editions, connecting local LLMs, debugging, volumes, troubleshooting |

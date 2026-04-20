@@ -2,7 +2,7 @@
 API endpoints for static analysis results.
 
 Provides access to symbols, edges, call graph neighborhoods,
-entry points, metrics, and modules for a given snapshot.
+entry points, metrics, modules, and code health checks for a given snapshot.
 """
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -183,6 +184,128 @@ async def get_analysis_overview(
         entry_points=[],  # Populated by the analysis task, queried separately
         hotspots=[],  # Same
     )
+
+
+# ---------------------------------------------------------------------------
+# Code Health
+# ---------------------------------------------------------------------------
+
+
+class HealthCheckRequest(BaseModel):
+    """Request body for code health analysis."""
+
+    categories: list[str] = []
+    disabled_rules: list[str] = []
+    max_method_lines: int = 30
+    max_class_lines: int = 300
+    max_parameters: int = 5
+    max_fan_out: int = 10
+    max_fan_in: int = 15
+    max_children: int = 20
+    max_inheritance_depth: int = 4
+    max_god_class_methods: int = 15
+    use_llm: bool = False
+
+
+@router.get(
+    "/{repo_id}/snapshots/{snapshot_id}/health/rules",
+    summary="List all available code health rules",
+)
+async def list_health_rules() -> Any:
+    from app.analysis.code_health import HealthConfig
+
+    return HealthConfig.all_rules()
+
+
+@router.post(
+    "/{repo_id}/snapshots/{snapshot_id}/health",
+    summary="Run code health analysis on a snapshot",
+)
+async def run_health_analysis(
+    repo_id: str,
+    snapshot_id: str,
+    body: HealthCheckRequest | None = None,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    await _verify_snapshot(db, repo_id, snapshot_id)
+
+    from app.analysis.code_health import HealthConfig, run_health_check, run_llm_health_analysis
+    from app.analysis.graph_builder import CodeGraph
+    from app.analysis.models import EdgeInfo, EdgeType, SymbolInfo, SymbolKind
+
+    # Rebuild graph from DB
+    graph = CodeGraph()
+
+    sym_result = await db.execute(select(Symbol).where(Symbol.snapshot_id == snapshot_id))
+    for s in sym_result.scalars().all():
+        si = SymbolInfo(
+            name=s.name,
+            kind=SymbolKind(s.kind),
+            fq_name=s.fq_name,
+            file_path=s.file_path,
+            start_line=s.start_line,
+            end_line=s.end_line,
+            namespace=s.namespace or "",
+            parent_fq_name=s.parent_fq_name,
+            signature=s.signature or "",
+            modifiers=s.modifiers.split(",") if s.modifiers else [],
+            return_type=s.return_type or "",
+        )
+        graph.symbols[si.fq_name] = si
+
+    edge_result = await db.execute(select(Edge).where(Edge.snapshot_id == snapshot_id))
+    for e in edge_result.scalars().all():
+        graph.edges.append(
+            EdgeInfo(
+                source_fq_name=e.source_fq_name,
+                target_fq_name=e.target_fq_name,
+                edge_type=EdgeType(e.edge_type),
+                file_path=e.file_path or "",
+                line=e.line or 0,
+            )
+        )
+
+    graph.finalize()
+
+    # Build config from request
+    if body:
+        config = HealthConfig(
+            categories=body.categories,
+            disabled_rules=body.disabled_rules,
+            max_method_lines=body.max_method_lines,
+            max_class_lines=body.max_class_lines,
+            max_parameters=body.max_parameters,
+            max_fan_out=body.max_fan_out,
+            max_fan_in=body.max_fan_in,
+            max_children=body.max_children,
+            max_inheritance_depth=body.max_inheritance_depth,
+            max_god_class_methods=body.max_god_class_methods,
+            use_llm=body.use_llm,
+        )
+    else:
+        config = HealthConfig()
+
+    report = run_health_check(graph, config)
+
+    # Optional LLM enrichment
+    if config.use_llm:
+        from app.core.config import settings
+        from app.reasoning.llm_client import LLMConfig, OpenAICompatibleClient
+
+        if settings.llm_base_url:
+            llm = OpenAICompatibleClient(
+                LLMConfig(
+                    base_url=settings.llm_base_url,
+                    api_key=settings.llm_api_key,
+                    model=settings.llm_model,
+                    temperature=settings.llm_temperature,
+                    max_tokens=settings.llm_max_tokens,
+                    timeout=settings.llm_timeout,
+                )
+            )
+            report.llm_insights = await run_llm_health_analysis(graph, report, llm)
+
+    return report.to_dict()
 
 
 # ---------------------------------------------------------------------------

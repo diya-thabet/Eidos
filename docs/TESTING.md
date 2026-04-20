@@ -168,8 +168,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_c_parser.py` | 42 | C includes, structs, enums, functions, typedefs, fields, calls, doc comments, static functions, registry, pipeline |
 | `test_cpp_parser.py` | 45 | C++ includes, namespaces, classes, structs, enums, inheritance, constructors, destructors, methods, fields, free functions, new expressions, scoped calls, registry, pipeline |
 | `test_rbac_metering.py` | 39 | RBAC roles, role hierarchy, metering engine (time/token/scan/combo/unlimited), plan limits JSONB, usage recording, edition config, dependencies |
+| `test_code_health.py` | 43 | All 19 rules (clean code, SOLID, complexity, naming, design, security, best practices), config, scoring, category filtering, rule disabling, report format, edge cases |
 
-### Total: 1284 tests
+### Total: 1327 tests
 
 ## Test Design Principles
 
