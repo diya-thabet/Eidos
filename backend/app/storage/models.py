@@ -3,7 +3,16 @@ from __future__ import annotations
 import enum
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import (
+    Boolean,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -16,6 +25,14 @@ class SnapshotStatus(enum.StrEnum):
     running = "running"
     completed = "completed"
     failed = "failed"
+
+
+class UserRole(enum.StrEnum):
+    superadmin = "superadmin"
+    admin = "admin"
+    employee = "employee"
+    support = "support"
+    user = "user"
 
 
 class User(Base):
@@ -31,11 +48,13 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(512), default="")
     avatar_url: Mapped[str] = mapped_column(Text, default="")
     github_token_enc: Mapped[str] = mapped_column(Text, default="")
+    role: Mapped[str] = mapped_column(String(32), default=UserRole.user)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
 
     repos: Mapped[list[Repo]] = relationship(back_populates="owner")
+    subscriptions: Mapped[list[UserSubscription]] = relationship(back_populates="user")
 
     __table_args__ = (Index("ix_users_github_login", "github_login"),)
 
@@ -103,6 +122,61 @@ class File(Base):
     snapshot: Mapped[RepoSnapshot] = relationship(back_populates="files")
 
     __table_args__ = (Index("ix_files_snapshot_path", "snapshot_id", "path"),)
+
+
+# -------------------------------------------------------------------
+# Plans & Metering
+# -------------------------------------------------------------------
+
+
+class Plan(Base):
+    """A subscription plan with flexible JSONB limits."""
+
+    __tablename__ = "plans"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    description: Mapped[str] = mapped_column(Text, default="")
+    limits: Mapped[str] = mapped_column(Text, nullable=False, default="{}")  # JSON string
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+
+class UserSubscription(Base):
+    """Links a user to a plan with optional expiry."""
+
+    __tablename__ = "user_subscriptions"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    plan_id: Mapped[str] = mapped_column(ForeignKey("plans.id", ondelete="CASCADE"), nullable=False)
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    user: Mapped[User] = relationship(back_populates="subscriptions")
+    plan: Mapped[Plan] = relationship()
+
+
+class UsageRecord(Base):
+    """Tracks individual usage events for metering."""
+
+    __tablename__ = "usage_records"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), nullable=False)
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    resource_id: Mapped[str] = mapped_column(String(64), default="")
+    tokens_used: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (Index("ix_usage_user_date", "user_id", "created_at"),)
 
 
 class Symbol(Base):

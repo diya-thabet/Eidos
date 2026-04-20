@@ -5,6 +5,7 @@ Provides a single in-memory SQLite engine and session factory
 used by all API tests. Ensures consistent DB state across test modules.
 """
 
+import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.storage.models import Base
@@ -28,3 +29,17 @@ async def create_tables():
 async def drop_tables():
     async with test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+
+
+@pytest.fixture
+async def db_session():
+    """Provide a clean async DB session per test (fresh tables)."""
+    engine = create_async_engine("sqlite+aiosqlite://", echo=False)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    session_factory = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    async with session_factory() as session:
+        yield session
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    await engine.dispose()

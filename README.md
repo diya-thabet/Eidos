@@ -103,7 +103,7 @@ backend/
       database.py       # SQLAlchemy async engine + session
       models.py         # DB models (Repo, Snapshot, File, Symbol, Edge, Summary, Review, GeneratedDoc)
       schemas.py        # Pydantic response schemas
-  tests/                # 1245 tests (see docs/TESTING.md)
+  tests/                # 1284 tests (see docs/TESTING.md)
   Dockerfile            # Production container image
 infra/
   docker-compose.yml    # Postgres + Redis + Qdrant (local dev)

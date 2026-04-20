@@ -8,6 +8,10 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     repos_data_dir: str = "/data/repos"
 
+    # Edition: "internal" (no limits, debug) or "client" (quotas enforced)
+    edition: str = "internal"
+    version: str = "0.2.0"
+
     # Database pool tuning
     db_pool_size: int = 5
     db_max_overflow: int = 10
@@ -33,6 +37,9 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     google_client_secret: str = ""
     google_redirect_uri: str = "http://localhost:8000/auth/google/callback"
+
+    # Default superadmin (seeded on first startup)
+    superadmin_email: str = ""
 
     # Data retention
     delete_clones_after_indexing: bool = True

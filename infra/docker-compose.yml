@@ -37,6 +37,7 @@ services:
     build:
       context: ../backend
       dockerfile: Dockerfile
+      target: client
     ports:
       - "8000:8000"
     env_file:
@@ -46,6 +47,8 @@ services:
       EIDOS_REDIS_URL: redis://redis:6379/0
       EIDOS_QDRANT_URL: http://qdrant:6333
       EIDOS_REPOS_DATA_DIR: /data/repos
+      EIDOS_EDITION: client
+      EIDOS_AUTH_ENABLED: "true"
     volumes:
       - repos_data:/data/repos
     depends_on:
@@ -55,6 +58,37 @@ services:
         condition: service_healthy
       qdrant:
         condition: service_started
+    profiles:
+      - client
+      - default
+
+  api-internal:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+      target: internal
+    ports:
+      - "8000:8000"
+      - "5678:5678"
+    environment:
+      EIDOS_DATABASE_URL: postgresql+asyncpg://eidos:eidos@postgres:5432/eidos
+      EIDOS_REDIS_URL: redis://redis:6379/0
+      EIDOS_QDRANT_URL: http://qdrant:6333
+      EIDOS_REPOS_DATA_DIR: /data/repos
+      EIDOS_EDITION: internal
+      EIDOS_AUTH_ENABLED: "false"
+    volumes:
+      - repos_data:/data/repos
+      - ../backend/app:/app/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    profiles:
+      - internal
 
 volumes:
   pgdata:

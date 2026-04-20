@@ -4,6 +4,7 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from app.api import admin as admin_api
 from app.api import analysis as analysis_api
 from app.api import auth as auth_api
 from app.api import docgen as docgen_api
@@ -12,6 +13,7 @@ from app.api import indexing as indexing_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
 from app.api import reviews as reviews_api
+from app.core.config import settings
 from app.storage.database import engine
 from app.storage.models import Base
 
@@ -37,7 +39,7 @@ async def lifespan(app: FastAPI) -> Any:
 
 app = FastAPI(
     title="Eidos - Legacy Code Intelligence",
-    version="0.1.0",
+    version=settings.version,
     description="Explains legacy codebases, generates docs, and reviews PRs.",
     lifespan=lifespan,
 )
@@ -50,8 +52,17 @@ app.include_router(reasoning_api.router, prefix="/repos", tags=["reasoning"])
 app.include_router(reviews_api.router, prefix="/repos", tags=["reviews"])
 app.include_router(docgen_api.router, prefix="/repos", tags=["docs"])
 app.include_router(eval_api.router, prefix="/repos", tags=["evaluations"])
+app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 
 
 @app.get("/health")
 async def health() -> Any:
     return {"status": "ok"}
+
+
+@app.get("/version")
+async def version() -> Any:
+    return {
+        "version": settings.version,
+        "edition": settings.edition,
+    }
