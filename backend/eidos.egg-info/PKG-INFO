@@ -15,9 +15,27 @@ Requires-Dist: openai>=1.30
 Requires-Dist: httpx>=0.27
 Requires-Dist: redis>=5.0
 Requires-Dist: gitpython>=3.1
+Requires-Dist: tree-sitter>=0.23
+Requires-Dist: tree-sitter-c-sharp>=0.23
+Requires-Dist: tree-sitter-java>=0.23
+Requires-Dist: tree-sitter-python>=0.23
+Requires-Dist: tree-sitter-typescript>=0.23
+Requires-Dist: tree-sitter-go>=0.23
+Requires-Dist: tree-sitter-rust>=0.23
+Requires-Dist: tree-sitter-c>=0.23
+Requires-Dist: tree-sitter-cpp>=0.23
+Requires-Dist: PyJWT>=2.8
+Requires-Dist: cryptography>=42.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
 Requires-Dist: httpx>=0.27; extra == "dev"
+Requires-Dist: aiosqlite>=0.20; extra == "dev"
 Requires-Dist: ruff>=0.4; extra == "dev"
 Requires-Dist: mypy>=1.10; extra == "dev"
+Provides-Extra: mysql
+Requires-Dist: aiomysql>=0.2; extra == "mysql"
+Provides-Extra: oracle
+Requires-Dist: oracledb>=2.0; extra == "oracle"
+Provides-Extra: mssql
+Requires-Dist: aioodbc>=0.5; extra == "mssql"
