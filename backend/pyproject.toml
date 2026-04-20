@@ -21,6 +21,10 @@ dependencies = [
     "tree-sitter-java>=0.23",
     "tree-sitter-python>=0.23",
     "tree-sitter-typescript>=0.23",
+    "tree-sitter-go>=0.23",
+    "tree-sitter-rust>=0.23",
+    "tree-sitter-c>=0.23",
+    "tree-sitter-cpp>=0.23",
     "PyJWT>=2.8",
     "cryptography>=42.0",
 ]

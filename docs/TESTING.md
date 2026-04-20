@@ -158,7 +158,17 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_python_parser.py` | 66 | Python imports, classes, functions, methods, decorators, async, docstrings, nested, calls, registry, pipeline |
 | `test_typescript_parser.py` | 83 | TypeScript/TSX imports, classes, interfaces, enums, methods, constructors, fields, generics, TSDoc, calls, new expressions, abstract, pipeline |
 
-### Total: 955 tests
+### System Hardening
+
+| File | Tests | Scope |
+|------|-------|-------|
+| `test_hardening.py` | 82 | Input validation (RepoCreate), path traversal, sanitizer PII/injection, parser enhancements, cross-language pipeline, token injection, registry robustness, language detection, crypto, JWT |
+| `test_go_parser.py` | 58 | Go packages, imports, structs, interfaces, functions, methods, receivers, fields, calls, doc comments, type aliases, registry, pipeline |
+| `test_rust_parser.py` | 63 | Rust use declarations, structs, traits, enums, impl blocks, trait impl, constructors, fields, calls, doc comments, modules, type aliases, registry, pipeline |
+| `test_c_parser.py` | 42 | C includes, structs, enums, functions, typedefs, fields, calls, doc comments, static functions, registry, pipeline |
+| `test_cpp_parser.py` | 45 | C++ includes, namespaces, classes, structs, enums, inheritance, constructors, destructors, methods, fields, free functions, new expressions, scoped calls, registry, pipeline |
+
+### Total: 1245 tests
 
 ## Test Design Principles
 

@@ -202,9 +202,9 @@ Currently only C# is parsed via tree-sitter.  Extension plan:
 | Java | `tree-sitter-java` | **Done** |
 | Python | `tree-sitter-python` | **Done** |
 | TypeScript | `tree-sitter-typescript` | **Done** |
-| Go | `tree-sitter-go` | Medium |
-| Rust | `tree-sitter-rust` | Low |
-| C/C++ | `tree-sitter-c` / `tree-sitter-cpp` | Low |
+| Go | `tree-sitter-go` | **Done** |
+| Rust | `tree-sitter-rust` | **Done** |
+| C/C++ | `tree-sitter-c` / `tree-sitter-cpp` | **Done** |
 
 Each language needs:
 1. A parser module (like `csharp_parser.py`)

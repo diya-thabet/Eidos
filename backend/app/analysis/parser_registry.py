@@ -62,6 +62,42 @@ def _init_registry() -> None:
     except Exception:
         logger.info("TypeScript parser unavailable (tree-sitter-typescript missing?)")
 
+    # Go -- optional
+    try:
+        from app.analysis.go_parser import GoParser
+
+        _registry["go"] = GoParser()
+        logger.debug("Registered parser: go")
+    except Exception:
+        logger.info("Go parser unavailable (tree-sitter-go missing?)")
+
+    # Rust -- optional
+    try:
+        from app.analysis.rust_parser import RustParser
+
+        _registry["rust"] = RustParser()
+        logger.debug("Registered parser: rust")
+    except Exception:
+        logger.info("Rust parser unavailable (tree-sitter-rust missing?)")
+
+    # C -- optional
+    try:
+        from app.analysis.c_parser import CParser
+
+        _registry["c"] = CParser()
+        logger.debug("Registered parser: c")
+    except Exception:
+        logger.info("C parser unavailable (tree-sitter-c missing?)")
+
+    # C++ -- optional
+    try:
+        from app.analysis.cpp_parser import CppParser
+
+        _registry["cpp"] = CppParser()
+        logger.debug("Registered parser: cpp")
+    except Exception:
+        logger.info("C++ parser unavailable (tree-sitter-cpp missing?)")
+
     # ----- Add future language parsers here -----
 
 

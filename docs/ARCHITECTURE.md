@@ -128,6 +128,10 @@ Eidos follows a **modular monolith** architecture. All components live in a sing
 | **tree-sitter-java** | Java grammar for tree-sitter | >=0.23 |
 | **tree-sitter-python** | Python grammar for tree-sitter | >=0.23 |
 | **tree-sitter-typescript** | TypeScript/TSX grammar for tree-sitter | >=0.23 |
+| **tree-sitter-go** | Go grammar for tree-sitter | >=0.23 |
+| **tree-sitter-rust** | Rust grammar for tree-sitter | >=0.23 |
+| **tree-sitter-c** | C grammar for tree-sitter | >=0.23 |
+| **tree-sitter-cpp** | C++ grammar for tree-sitter | >=0.23 |
 | **Pydantic** | Data validation & schemas | >=2.0 |
 | **pydantic-settings** | Configuration management | >=2.0 |
 | **PyJWT** | JWT session tokens | >=2.8 |
@@ -174,7 +178,9 @@ Eidos follows a **modular monolith** architecture. All components live in a sing
    - PostgreSQL 16 (Alpine) on port 5432
    - Redis 7 (Alpine) on port 6379
    - Qdrant v1.9.7 on ports 6333/6334
-   - Persistent volumes for data
+   - Backend API service (auto-built from Dockerfile)
+   - Health checks on postgres and redis
+   - Persistent volumes for data and cloned repos
 
 3. **CI Pipeline** (`.github/workflows/ci.yml`):
    - Triggers on push/PR to main
@@ -886,19 +892,32 @@ docker compose -f infra/docker-compose.yml up -d
 
 # 2. Install the backend with dev dependencies
 cd backend
+cp .env.example .env   # then edit .env with your settings
 pip install -e ".[dev]"
 
-# 3. Run the API server
+# 3. Run database migrations
+alembic upgrade head
+
+# 4. Run the API server
 uvicorn app.main:app --reload --port 8000
 
-# 4. Run the test suite
+# 5. Run the test suite
 pytest -v
 
-# 5. Run linting
+# 6. Run linting
 ruff check .
 
-# 6. Run type checking
+# 7. Run type checking
 mypy app --ignore-missing-imports
+```
+
+### One-command Docker Start
+
+```bash
+# Start everything (postgres, redis, qdrant, api) in one command:
+docker compose -f infra/docker-compose.yml up -d --build
+# API available at http://localhost:8000
+# Swagger docs at http://localhost:8000/docs
 ```
 
 ### Quick Smoke Test

@@ -147,6 +147,7 @@ def _get_exported_declaration(node: Node) -> Node | None:
             "enum_declaration",
             "function_declaration",
             "type_alias_declaration",
+            "lexical_declaration",
         ):
             return child
     return None
@@ -168,6 +169,10 @@ def _dispatch_declaration(
         _extract_enum(node, source, file_path, analysis, module, parent_fq)
     elif node.type == "function_declaration":
         _extract_function(node, source, file_path, analysis, module, parent_fq)
+    elif node.type == "type_alias_declaration":
+        _extract_type_alias(node, source, file_path, analysis, module, parent_fq)
+    elif node.type == "lexical_declaration":
+        _extract_arrow_functions(node, source, file_path, analysis, module, parent_fq)
 
 
 # ------------------------------------------------------------------
@@ -396,6 +401,85 @@ def _extract_function(
     body = node.child_by_field_name("body")
     if body:
         _extract_calls(body, source, file_path, analysis, fq)
+
+
+# ------------------------------------------------------------------
+# Type alias (export type Foo = ...)
+# ------------------------------------------------------------------
+
+
+def _extract_type_alias(
+    node: Node,
+    source: bytes,
+    file_path: str,
+    analysis: FileAnalysis,
+    module: str,
+    parent_fq: str | None,
+) -> None:
+    name = _get_name(node, source)
+    fq = _make_fq(module, parent_fq, name)
+    analysis.symbols.append(
+        SymbolInfo(
+            name=name,
+            kind=SymbolKind.INTERFACE,  # type aliases are structurally similar
+            fq_name=fq,
+            file_path=file_path,
+            start_line=node.start_point[0] + 1,
+            end_line=node.end_point[0] + 1,
+            namespace=module,
+            parent_fq_name=parent_fq,
+        )
+    )
+
+
+# ------------------------------------------------------------------
+# Arrow function (const fn = () => { ... })
+# ------------------------------------------------------------------
+
+
+def _extract_arrow_functions(
+    node: Node,
+    source: bytes,
+    file_path: str,
+    analysis: FileAnalysis,
+    module: str,
+    parent_fq: str | None,
+) -> None:
+    """Extract const/let declarations that bind arrow functions."""
+    for child in node.children:
+        if child.type != "variable_declarator":
+            continue
+        name_node = child.child_by_field_name("name")
+        value_node = child.child_by_field_name("value")
+        if not name_node or not value_node:
+            continue
+        if value_node.type != "arrow_function":
+            continue
+
+        name = _node_text(name_node, source)
+        fq = _make_fq(module, parent_fq, name)
+        params = _extract_parameters(value_node, source)
+        ret = _extract_return_type(value_node, source)
+
+        analysis.symbols.append(
+            SymbolInfo(
+                name=name,
+                kind=SymbolKind.METHOD,
+                fq_name=fq,
+                file_path=file_path,
+                start_line=child.start_point[0] + 1,
+                end_line=child.end_point[0] + 1,
+                namespace=module,
+                parent_fq_name=parent_fq,
+                parameters=params,
+                return_type=ret,
+                signature=_extract_signature(child, source),
+            )
+        )
+
+        body = value_node.child_by_field_name("body")
+        if body:
+            _extract_calls(body, source, file_path, analysis, fq)
 
 
 # ------------------------------------------------------------------

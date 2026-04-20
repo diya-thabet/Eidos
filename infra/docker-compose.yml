@@ -9,11 +9,21 @@ services:
       - "5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U eidos"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   redis:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
 
   qdrant:
     image: qdrant/qdrant:v1.9.7
@@ -23,6 +33,30 @@ services:
     volumes:
       - qdrant_data:/qdrant/storage
 
+  api:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../backend/.env
+    environment:
+      EIDOS_DATABASE_URL: postgresql+asyncpg://eidos:eidos@postgres:5432/eidos
+      EIDOS_REDIS_URL: redis://redis:6379/0
+      EIDOS_QDRANT_URL: http://qdrant:6333
+      EIDOS_REPOS_DATA_DIR: /data/repos
+    volumes:
+      - repos_data:/data/repos
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+
 volumes:
   pgdata:
   qdrant_data:
+  repos_data:

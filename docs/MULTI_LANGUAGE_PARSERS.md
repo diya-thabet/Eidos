@@ -4,21 +4,19 @@
 
 Eidos uses a **plugin-based parser architecture** that makes adding new
 language support a matter of implementing one interface and registering it.
-The system currently supports **C#**, **Java**, **Python**, and **TypeScript/TSX**.
+The system currently supports **C#**, **Java**, **Python**, **TypeScript/TSX**, **Go**, **Rust**, **C**, and **C++**.
 
 ## Architecture
 
 ```
-                       parser_registry.py
-                       (lazy discovery)
-                              |
-      +------------+----------+----------+--------------+
-      |            |          |          |              |
- CSharpParser JavaParser PythonParser TSParser    TSXParser
- (adapter)   (java)     (python)     (typescript) (tsx)
-      |            |          |          |              |
- tree-sitter- tree-sitter tree-sitter  tree-sitter-typescript
- c-sharp      -java       -python      (both TS + TSX grammars)
+                            parser_registry.py
+                            (lazy discovery)
+                                   |
+   +------+------+--------+---------+---------+------+-------+-----+-----+
+   |      |      |        |         |         |      |       |     |     |
+  C#    Java   Python  TypeScript  TSX      Go    Rust     C    C++   ...
+   |      |      |        |         |         |      |       |     |
+ ts-c#  ts-java ts-py  ts-typescript        ts-go  ts-rust ts-c  ts-cpp
 ```
 
 All parsers implement the `LanguageParser` abstract base class:
@@ -39,9 +37,13 @@ class LanguageParser(ABC):
 |----------|------------|---------|------------|-------------------|
 | C# | `csharp_parser.py` | `tree-sitter-c-sharp` | `.cs`, `.csx` | classes, interfaces, structs, enums, records, delegates, methods, constructors, properties, fields |
 | Java | `java_parser.py` | `tree-sitter-java` | `.java` | classes, interfaces, enums, records, annotations, methods, constructors, fields |
-| Python | `python_parser.py` | `tree-sitter-python` | `.py`, `.pyi` | classes, functions, methods, constructors (__init__), nested classes |
-| TypeScript | `typescript_parser.py` | `tree-sitter-typescript` | `.ts` | classes, interfaces, enums, methods, constructors, fields, top-level functions |
+| Python | `python_parser.py` | `tree-sitter-python` | `.py`, `.pyi` | classes, functions, methods, constructors (__init__), properties (@property), nested classes, decorators (@staticmethod, @classmethod) |
+| TypeScript | `typescript_parser.py` | `tree-sitter-typescript` | `.ts` | classes, interfaces, enums, type aliases, methods, constructors, fields, top-level functions, arrow functions (const fn = () => {}) |
 | TSX | `typescript_parser.py` | `tree-sitter-typescript` | `.tsx` | same as TypeScript (shared parser with TSX grammar) |
+| Go | `go_parser.py` | `tree-sitter-go` | `.go` | structs, interfaces, functions, methods (with receiver), fields, type aliases |
+| Rust | `rust_parser.py` | `tree-sitter-rust` | `.rs` | structs, traits, enums, impl methods, constructors (fn new), fields, type aliases, inline modules |
+| C | `c_parser.py` | `tree-sitter-c` | `.c`, `.h` | structs, enums, functions, typedefs, fields, static functions |
+| C++ | `cpp_parser.py` | `tree-sitter-cpp` | `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `.h` | classes, structs, enums, namespaces, constructors, destructors, methods, fields, templates, free functions, inheritance |
 
 ## Edges Extracted (All Languages)
 
@@ -115,6 +117,11 @@ Create `tests/test_<lang>_parser.py` following the patterns in
 | `test_java_parser.py` | 79 | Java packages, imports, classes, enums, generics, Javadoc |
 | `test_python_parser.py` | 66 | Python imports, classes, functions, decorators, docstrings |
 | `test_typescript_parser.py` | 83 | TypeScript/TSX imports, classes, interfaces, enums, generics, TSDoc, calls, abstract, pipeline |
+| `test_hardening.py` | 82 | Parser enhancements, cross-language pipeline, binary input, input validation, security |
+| `test_go_parser.py` | 58 | Go packages, imports, structs, interfaces, functions, methods, receivers, fields, calls, pipeline |
+| `test_rust_parser.py` | 63 | Rust use decls, structs, traits, enums, impl blocks, trait impl, constructors, fields, calls, modules, pipeline |
+| `test_c_parser.py` | 42 | C includes, structs, enums, functions, typedefs, fields, calls, static, pipeline |
+| `test_cpp_parser.py` | 45 | C++ namespaces, classes, inheritance, constructors, destructors, new expressions, scoped calls, pipeline |
 | `test_pipeline.py` | existing | Pipeline dispatch to all parsers |
 
 ## Design Decisions

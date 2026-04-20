@@ -29,6 +29,19 @@ LANGUAGE_MAP: dict[str, str] = {
     # TypeScript
     ".ts": "typescript",
     ".tsx": "tsx",
+    # Go
+    ".go": "go",
+    # Rust
+    ".rs": "rust",
+    # C
+    ".c": "c",
+    ".h": "c",
+    # C++
+    ".cpp": "cpp",
+    ".cc": "cpp",
+    ".cxx": "cpp",
+    ".hpp": "cpp",
+    ".hxx": "cpp",
     # Config / data
     ".json": "json",
     ".xml": "xml",
@@ -121,12 +134,22 @@ def hash_file(filepath: Path) -> str:
 def scan_files(repo_dir: Path) -> list[dict[str, Any]]:
     """Walk the repo and return file metadata for indexable files."""
     results: list[dict[str, Any]] = []
+    resolved_root = repo_dir.resolve()
     for root, dirs, files in os.walk(repo_dir):
         # Prune skipped directories in-place
         dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
         for name in files:
             filepath = Path(root) / name
+            # Path traversal protection: ensure file is inside repo_dir
+            try:
+                filepath.resolve().relative_to(resolved_root)
+            except ValueError:
+                logger.warning("Skipping path-traversal attempt: %s", filepath)
+                continue
             rel_path = filepath.relative_to(repo_dir).as_posix()
+            if ".." in rel_path:
+                logger.warning("Skipping suspicious relative path: %s", rel_path)
+                continue
             lang = detect_language(name)
             if lang is None:
                 continue

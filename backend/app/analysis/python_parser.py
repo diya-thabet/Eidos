@@ -115,19 +115,15 @@ def _extract_definitions(
     for child in node.children:
         if child.type == "class_definition":
             _extract_class(child, source, file_path, analysis, module, parent_fq)
-        elif child.type in ("function_definition", "decorated_definition"):
-            actual: Node = child
-            if child.type == "decorated_definition":
-                found = _find_child_by_type(child, "function_definition") or _find_child_by_type(
-                    child, "class_definition"
-                )
-                if found is None:
-                    continue
-                if found.type == "class_definition":
-                    _extract_class(found, source, file_path, analysis, module, parent_fq)
-                    continue
-                actual = found
-            _extract_function(actual, source, file_path, analysis, module, parent_fq)
+        elif child.type == "function_definition":
+            _extract_function(child, source, file_path, analysis, module, parent_fq)
+        elif child.type == "decorated_definition":
+            inner_fn = _find_child_by_type(child, "function_definition")
+            inner_cls = _find_child_by_type(child, "class_definition")
+            if inner_cls is not None:
+                _extract_class(inner_cls, source, file_path, analysis, module, parent_fq)
+            elif inner_fn is not None:
+                _extract_function(inner_fn, source, file_path, analysis, module, parent_fq)
 
 
 def _extract_class(
@@ -195,14 +191,6 @@ def _extract_function(
     name = _get_name(node, source)
     fq = f"{parent_fq}.{name}" if parent_fq else f"{module}.{name}" if module else name
 
-    # Determine kind: constructor if __init__, method if inside class, else function
-    if name == "__init__":
-        kind = SymbolKind.CONSTRUCTOR
-    elif parent_fq:
-        kind = SymbolKind.METHOD
-    else:
-        kind = SymbolKind.METHOD  # top-level functions as METHOD
-
     params = _extract_parameters(node, source)
     ret = _extract_return_type(node, source)
     mods = _extract_decorators(node, source)
@@ -211,6 +199,17 @@ def _extract_function(
     prev = node.prev_sibling
     if prev and _node_text(prev, source).strip() == "async":
         mods = ["async"] + mods
+
+    # Determine kind: constructor if __init__, property if @property,
+    # method if inside class, else top-level function
+    if name == "__init__":
+        kind = SymbolKind.CONSTRUCTOR
+    elif parent_fq and "property" in mods:
+        kind = SymbolKind.PROPERTY
+    elif parent_fq:
+        kind = SymbolKind.METHOD
+    else:
+        kind = SymbolKind.METHOD  # top-level functions as METHOD
 
     symbol = SymbolInfo(
         name=name,

@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, HttpUrl, field_validator
 
 from app.storage.models import SnapshotStatus
+
+# Blocked hosts that should never appear in repo URLs
+_BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "metadata.google.internal"}
+_VALID_PROVIDERS = {"github", "gitlab", "azure_devops", "bitbucket", "other"}
 
 
 class RepoCreate(BaseModel):
@@ -13,6 +17,54 @@ class RepoCreate(BaseModel):
     default_branch: str = "main"
     git_provider: str = "github"  # github | gitlab | azure_devops | bitbucket | other
     git_token: str = ""  # PAT for private repos (stored encrypted, never returned)
+
+    @field_validator("name")
+    @classmethod
+    def name_not_empty(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Repository name must not be empty")
+        if len(v) > 256:
+            raise ValueError("Repository name must be 256 characters or fewer")
+        return v
+
+    @field_validator("url")
+    @classmethod
+    def url_must_be_safe(cls, v: HttpUrl) -> HttpUrl:
+        host = str(v.host or "").lower()
+        if host in _BLOCKED_HOSTS:
+            raise ValueError(f"URL host '{host}' is not allowed")
+        scheme = str(v.scheme).lower()
+        if scheme not in ("http", "https"):
+            raise ValueError("Only http/https URLs are allowed")
+        return v
+
+    @field_validator("default_branch")
+    @classmethod
+    def branch_safe(cls, v: str) -> str:
+        v = v.strip()
+        if not v:
+            raise ValueError("Branch must not be empty")
+        if ".." in v or v.startswith("/"):
+            raise ValueError("Invalid branch name")
+        if len(v) > 128:
+            raise ValueError("Branch name too long")
+        return v
+
+    @field_validator("git_provider")
+    @classmethod
+    def provider_valid(cls, v: str) -> str:
+        v = v.strip().lower()
+        if v not in _VALID_PROVIDERS:
+            raise ValueError(f"git_provider must be one of: {', '.join(sorted(_VALID_PROVIDERS))}")
+        return v
+
+    @field_validator("git_token")
+    @classmethod
+    def token_length(cls, v: str) -> str:
+        if len(v) > 1024:
+            raise ValueError("Git token too long (max 1024)")
+        return v
 
 
 class RepoOut(BaseModel):

@@ -27,13 +27,25 @@ server runs at `http://localhost:8000`.
 
 ## 1. Start the Server
 
-```bash
-# Start infrastructure
-cd infra && docker compose up -d
+### Option A: Docker (one command)
 
-# Start the API
+```bash
+# Start everything: postgres, redis, qdrant, and the API
+cd infra && docker compose up -d --build
+# API at http://localhost:8000 | Swagger at http://localhost:8000/docs
+```
+
+### Option B: Local development
+
+```bash
+# Start infrastructure only
+cd infra && docker compose up -d postgres redis qdrant
+
+# Configure & start the API
 cd backend
+cp .env.example .env   # edit .env with your settings
 pip install -e ".[dev]"
+alembic upgrade head    # run database migrations
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
