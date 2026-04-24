@@ -13,7 +13,6 @@ from __future__ import annotations
 
 import hashlib
 import hmac
-import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -22,7 +21,7 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.storage.database import get_db
-from app.storage.models import Repo, RepoSnapshot, SnapshotStatus
+from app.storage.models import Repo
 from tests.conftest import create_tables, drop_tables, override_get_db, test_sessionmaker
 
 app.dependency_overrides[get_db] = override_get_db
@@ -63,7 +62,8 @@ async def setup_db():
 @pytest_asyncio.fixture
 async def client():
     with patch("app.api.repos.run_ingestion", new_callable=AsyncMock):
-        with patch("app.api.webhooks._trigger_ingestion", new_callable=AsyncMock, return_value="mock-snap-id"):
+        mock_trigger = AsyncMock(return_value="mock-snap-id")
+        with patch("app.api.webhooks._trigger_ingestion", mock_trigger):
             transport = ASGITransport(app=app)
             async with AsyncClient(transport=transport, base_url="http://test") as ac:
                 yield ac

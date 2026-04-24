@@ -17,12 +17,11 @@ import logging
 import uuid
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Header, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.storage.database import get_db
 from app.storage.models import Repo, RepoSnapshot
 
@@ -67,7 +66,9 @@ async def github_webhook(
     body = await request.body()
 
     # Verify signature if webhook secret is configured
-    webhook_secret = getattr(settings, "webhook_secret", "")
+    from app.core.config import settings
+
+    webhook_secret = settings.webhook_secret
     if webhook_secret:
         if not x_hub_signature_256:
             raise HTTPException(status_code=401, detail="Missing signature header")
@@ -104,7 +105,9 @@ async def gitlab_webhook(
     Verifies shared secret token if ``EIDOS_WEBHOOK_SECRET`` is set.
     Only processes ``Push Hook`` events.
     """
-    webhook_secret = getattr(settings, "webhook_secret", "")
+    from app.core.config import settings
+
+    webhook_secret = settings.webhook_secret
     if webhook_secret:
         if x_gitlab_token != webhook_secret:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -232,8 +235,6 @@ async def _trigger_ingestion(
     db: AsyncSession, repo: Repo, commit_sha: str | None
 ) -> str:
     """Create a snapshot and trigger background ingestion."""
-    from fastapi import BackgroundTasks
-
     from app.core.tasks import run_ingestion
 
     snapshot = RepoSnapshot(

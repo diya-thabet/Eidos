@@ -14,8 +14,9 @@ import logging
 import time
 import uuid
 from collections import defaultdict
+from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Any, Callable
+from typing import Any
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
@@ -180,10 +181,11 @@ def install_middleware(app: FastAPI) -> None:
     Order matters -- middleware is applied in reverse order of addition
     (last added = outermost).
     """
+    from starlette.middleware.cors import CORSMiddleware
+
     from app.core.config import settings
 
     # CORS -- always added so frontend can talk to the API
-    from starlette.middleware.cors import CORSMiddleware
 
     app.add_middleware(
         CORSMiddleware,

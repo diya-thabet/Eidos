@@ -14,7 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
-from sqlalchemy import func, or_, select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.storage.database import get_db
@@ -236,8 +236,8 @@ async def compare_snapshots(
     A symbol is considered modified if it exists in both snapshots
     but its signature, line range, or file path changed.
     """
-    base_snap = await _verify_snapshot(db, repo_id, snapshot_id)
-    head_snap = await _verify_snapshot(db, repo_id, other_snapshot_id)
+    await _verify_snapshot(db, repo_id, snapshot_id)
+    await _verify_snapshot(db, repo_id, other_snapshot_id)
 
     # Fetch symbols for both snapshots
     base_syms = await _get_symbol_map(db, snapshot_id)

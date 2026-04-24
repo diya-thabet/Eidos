@@ -13,7 +13,7 @@ Covers:
 
 from __future__ import annotations
 
-import asyncio
+import time
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -22,7 +22,8 @@ from httpx import ASGITransport, AsyncClient
 
 from app.main import app
 from app.storage.database import get_db
-from tests.conftest import create_tables, drop_tables, override_get_db
+from app.storage.models import RepoSnapshot, SnapshotStatus
+from tests.conftest import create_tables, drop_tables, override_get_db, test_sessionmaker
 
 app.dependency_overrides[get_db] = override_get_db
 
@@ -236,9 +237,6 @@ class TestPagination:
         repo_id, snap_id = await self._create_repo_and_snapshot(client)
 
         # Mark snapshot completed so endpoint works
-        from tests.conftest import test_sessionmaker
-        from app.storage.models import RepoSnapshot, SnapshotStatus
-
         async with test_sessionmaker() as session:
             snap = await session.get(RepoSnapshot, snap_id)
             if snap:
@@ -261,9 +259,6 @@ class TestPagination:
     async def test_edges_returns_paginated_envelope(self, client: AsyncClient):
         repo_id, snap_id = await self._create_repo_and_snapshot(client)
 
-        from tests.conftest import test_sessionmaker
-        from app.storage.models import RepoSnapshot, SnapshotStatus
-
         async with test_sessionmaker() as session:
             snap = await session.get(RepoSnapshot, snap_id)
             if snap:
@@ -283,9 +278,6 @@ class TestPagination:
     async def test_summaries_returns_paginated_envelope(self, client: AsyncClient):
         repo_id, snap_id = await self._create_repo_and_snapshot(client)
 
-        from tests.conftest import test_sessionmaker
-        from app.storage.models import RepoSnapshot, SnapshotStatus
-
         async with test_sessionmaker() as session:
             snap = await session.get(RepoSnapshot, snap_id)
             if snap:
@@ -301,9 +293,6 @@ class TestPagination:
     @pytest.mark.asyncio
     async def test_pagination_limit_param(self, client: AsyncClient):
         repo_id, snap_id = await self._create_repo_and_snapshot(client)
-
-        from tests.conftest import test_sessionmaker
-        from app.storage.models import RepoSnapshot, SnapshotStatus
 
         async with test_sessionmaker() as session:
             snap = await session.get(RepoSnapshot, snap_id)
@@ -322,9 +311,6 @@ class TestPagination:
     @pytest.mark.asyncio
     async def test_pagination_offset_param(self, client: AsyncClient):
         repo_id, snap_id = await self._create_repo_and_snapshot(client)
-
-        from tests.conftest import test_sessionmaker
-        from app.storage.models import RepoSnapshot, SnapshotStatus
 
         async with test_sessionmaker() as session:
             snap = await session.get(RepoSnapshot, snap_id)
@@ -389,7 +375,6 @@ class TestTokenBucket:
         assert bucket.allow("key-b") is True
 
     def test_refills_over_time(self):
-        import time
         from app.core.middleware import _TokenBucket
 
         bucket = _TokenBucket(rate=1000.0, burst=1)  # very fast refill for testing
