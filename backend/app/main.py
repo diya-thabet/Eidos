@@ -11,6 +11,7 @@ from app.api import diagrams as diagrams_api
 from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
 from app.api import indexing as indexing_api
+from app.api import portable as portable_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
 from app.api import reviews as reviews_api
@@ -43,9 +44,12 @@ async def lifespan(app: FastAPI) -> Any:
 
 
 app = FastAPI(
-    title="Eidos - Legacy Code Intelligence",
+    title="Eidos — Code Intelligence Platform",
     version=settings.version,
-    description="Explains legacy codebases, generates docs, and reviews PRs.",
+    description=(
+        "Analyzes codebases across 8 languages, auto-generates documentation, "
+        "reviews PRs for behavioral risks, and answers questions about your code."
+    ),
     lifespan=lifespan,
 )
 
@@ -63,6 +67,7 @@ app.include_router(eval_api.router, prefix="/repos", tags=["evaluations"])
 app.include_router(search_api.router, prefix="/repos", tags=["search"])
 app.include_router(diagrams_api.router, prefix="/repos", tags=["diagrams"])
 app.include_router(trends_api.router, prefix="/repos", tags=["trends"])
+app.include_router(portable_api.router, prefix="/repos", tags=["portable"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 

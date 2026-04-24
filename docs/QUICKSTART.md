@@ -1,0 +1,495 @@
+# Quickstart Guide
+
+This guide walks you through getting Eidos running on your machine from scratch.
+
+---
+
+## Prerequisites
+
+| Tool | Version | Why |
+|------|---------|-----|
+| **Python** | 3.11+ | Backend runtime |
+| **Git** | 2.30+ | Cloning repos to analyze |
+| **Docker + Docker Compose** | Latest | PostgreSQL, Redis, Qdrant (or install them natively) |
+
+---
+
+## 1. Clone the Repository
+
+```bash
+git clone https://github.com/diya-thabet/Eidos.git
+cd Eidos
+```
+
+---
+
+## 2. Start Infrastructure
+
+Eidos needs three services: **PostgreSQL** (main database), **Redis** (caching), and **Qdrant** (vector search).
+
+```bash
+# Start all three with one command
+docker compose -f infra/docker-compose.yml up -d postgres redis qdrant
+```
+
+Wait until they're healthy:
+
+```bash
+docker compose -f infra/docker-compose.yml ps
+```
+
+You should see `healthy` for postgres and redis, `running` for qdrant.
+
+> **No Docker?** You can install PostgreSQL, Redis, and Qdrant natively and update the connection URLs in step 3.
+
+---
+
+## 3. Configure the Backend
+
+```bash
+cd backend
+```
+
+Create a `.env` file (or set environment variables):
+
+```env
+# Required — database connection
+EIDOS_DATABASE_URL=postgresql+asyncpg://eidos:eidos@localhost:5432/eidos
+
+# Optional — vector search (for semantic Q&A)
+EIDOS_QDRANT_URL=http://localhost:6333
+
+# Optional — LLM integration (works without it)
+# EIDOS_LLM_BASE_URL=http://localhost:11434/v1   # Ollama
+# EIDOS_LLM_MODEL=llama3.2
+
+# Optional — authentication (disabled by default)
+EIDOS_AUTH_ENABLED=false
+
+# Where to store cloned repos temporarily
+EIDOS_REPOS_DATA_DIR=./data/repos
+```
+
+**Eidos works fully without an LLM.** All analysis, documentation, reviews, and Q&A work using deterministic static analysis. An LLM only adds optional narrative enrichment.
+
+---
+
+## 4. Install Python Dependencies
+
+```bash
+# Create a virtual environment (recommended)
+python -m venv .venv
+
+# Activate it
+# On macOS/Linux:
+source .venv/bin/activate
+# On Windows:
+.venv\Scripts\activate
+
+# Install Eidos + dev dependencies
+pip install -e ".[dev]"
+```
+
+---
+
+## 5. Start the API Server
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+You should see:
+
+```
+INFO:     Uvicorn running on http://127.0.0.1:8000
+INFO:     Started reloader process
+```
+
+Verify it works:
+
+```bash
+curl http://localhost:8000/health
+# {"status":"ok"}
+
+curl http://localhost:8000/version
+# {"version":"0.2.0","edition":"internal"}
+```
+
+Open **http://localhost:8000/docs** in your browser to see the interactive API documentation.
+
+---
+
+## Using Postman (Alternative to curl)
+
+Every example below shows **curl** first, then the **Postman** equivalent. If you prefer Postman, set it up once:
+
+1. **Download Postman**: https://www.postman.com/downloads/
+2. **Create a new Collection** called `Eidos`
+3. **Set a Collection variable** `base_url` = `http://localhost:8000`
+4. For every request, use `{{base_url}}` as the URL prefix
+5. **Headers**: For POST/PATCH requests, add `Content-Type: application/json`
+
+> **Tip**: Open `http://localhost:8000/docs` in your browser, click any endpoint, and copy the request body schema directly into Postman.
+
+### Postman Environment Setup
+
+Create an **Environment** called `Eidos Local` with these variables:
+
+| Variable | Initial Value |
+|----------|---------------|
+| `base_url` | `http://localhost:8000` |
+| `repo_id` | *(leave empty, fill after step 1)* |
+| `snapshot_id` | *(leave empty, fill after step 2)* |
+
+After each step, update the variables with the real IDs from the responses. This way all subsequent requests auto-fill the correct values.
+
+---
+
+## 6. Analyze Your First Repository
+
+### Step 1: Register a repo
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos \
+  -H "Content-Type: application/json" \
+  -d '{"name": "my-project", "url": "https://github.com/username/my-project"}'
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos` |
+| Body (raw JSON) | `{"name": "my-project", "url": "https://github.com/username/my-project"}` |
+
+Response:
+
+```json
+{
+  "id": "a1b2c3d4e5f6",
+  "name": "my-project",
+  "url": "https://github.com/username/my-project",
+  "default_branch": "main",
+  "created_at": "2025-01-15T10:30:00"
+}
+```
+
+Save the `id` -- you'll use it everywhere. In Postman, set the `repo_id` environment variable to this value.
+
+### Step 2: Trigger ingestion (clone + analyze + index)
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos/a1b2c3d4e5f6/ingest
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos/{{repo_id}}/ingest` |
+| Body | *(none)* |
+
+This runs in the background. Check progress:
+
+**curl:**
+
+```bash
+curl http://localhost:8000/repos/a1b2c3d4e5f6/status
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `GET` |
+| URL | `{{base_url}}/repos/{{repo_id}}/status` |
+
+Wait until the snapshot status is `"completed"`. Copy the snapshot `id` from the response and set it as the `snapshot_id` variable in Postman.
+
+### Step 3: Explore the results
+
+**curl:**
+
+```bash
+# List all symbols (classes, methods, interfaces, etc.)
+curl "http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/symbols?limit=20"
+
+# Get the full analysis overview
+curl "http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/overview"
+
+# Search for anything
+curl "http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/search?q=UserService"
+
+# Generate a class diagram (Mermaid syntax)
+curl "http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/diagram?diagram_type=class"
+```
+
+**Postman:**
+
+| Request | Method | URL |
+|---------|--------|-----|
+| List symbols | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/symbols?limit=20` |
+| Overview | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/overview` |
+| Search | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/search?q=UserService` |
+| Diagram | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/diagram?diagram_type=class` |
+
+---
+
+## 7. Ask Questions About the Code
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/ask \
+  -H "Content-Type: application/json" \
+  -d '{"question": "How does the authentication flow work?"}'
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/ask` |
+| Body (raw JSON) | `{"question": "How does the authentication flow work?"}` |
+
+You can also target a specific symbol:
+
+```json
+{
+  "question": "What does this method do?",
+  "target_symbol": "MyApp.OrderService.PlaceOrder"
+}
+```
+
+Response includes the answer, file/line evidence, confidence level, and verification steps.
+
+---
+
+## 8. Review a Pull Request
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/review \
+  -H "Content-Type: application/json" \
+  -d '{"diff": "--- a/auth.py\n+++ b/auth.py\n@@ -10,7 +10,6 @@\n     def login(self, user):\n-        if not user.is_valid():\n-            raise AuthError()\n         token = self.create_token(user)\n         return token"}'
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/review` |
+| Body (raw JSON) | see below |
+
+```json
+{
+  "diff": "--- a/auth.py\n+++ b/auth.py\n@@ -10,7 +10,6 @@\n     def login(self, user):\n-        if not user.is_valid():\n-            raise AuthError()\n         token = self.create_token(user)\n         return token"
+}
+```
+
+> **Tip**: To get a real diff, run `git diff main..feature-branch` in your repo and paste it as the `diff` value.
+
+Response includes risk score, behavioral findings (e.g., "removed validation"), blast radius, and affected symbols.
+
+---
+
+## 9. Generate Documentation
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos/a1b2c3d4e5f6/snapshots/SNAPSHOT_ID/docs \
+  -H "Content-Type: application/json" \
+  -d '{}'
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/docs` |
+| Body (raw JSON) | `{}` |
+
+To generate a specific document type:
+
+```json
+{
+  "doc_type": "readme"
+}
+```
+
+Valid `doc_type` values: `readme`, `architecture`, `module`, `flow`, `runbook`.
+
+Generates README, architecture overview, module docs, and more -- all with code citations.
+
+---
+
+## 10. Run Tests
+
+```bash
+cd backend
+pytest -v
+```
+
+Expected: **1,504 tests, all passing.**
+
+To run a specific test file:
+
+```bash
+pytest tests/test_analysis_api.py -v
+```
+
+---
+
+## 11. Run with Docker (Full Stack)
+
+Instead of installing Python locally, run everything in Docker:
+
+```bash
+# Internal mode (no auth, hot reload, debug)
+docker compose -f infra/docker-compose.yml --profile internal up -d
+
+# Client mode (auth enabled, production settings)
+docker compose -f infra/docker-compose.yml --profile client up -d
+```
+
+The API will be at **http://localhost:8000**.
+
+---
+
+## Common Configuration
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EIDOS_DATABASE_URL` | `postgresql+asyncpg://eidos:eidos@localhost:5432/eidos` | Database connection |
+| `EIDOS_QDRANT_URL` | `http://localhost:6333` | Vector DB for semantic search |
+| `EIDOS_LLM_BASE_URL` | *(empty)* | LLM endpoint (OpenAI, Ollama, vLLM, LM Studio) |
+| `EIDOS_LLM_MODEL` | `gpt-4o-mini` | Model name |
+| `EIDOS_AUTH_ENABLED` | `false` | Enable GitHub/Google OAuth |
+| `EIDOS_REPOS_DATA_DIR` | `/data/repos` | Temp directory for cloned repos |
+| `EIDOS_WEBHOOK_SECRET` | *(empty)* | HMAC secret for GitHub webhooks |
+| `EIDOS_CORS_ORIGINS` | `["*"]` | Allowed CORS origins |
+| `EIDOS_EDITION` | `internal` | `internal` (no limits) or `client` (quotas enforced) |
+
+All variables use the `EIDOS_` prefix. You can set them via environment variables or a `.env` file in the `backend/` directory.
+
+---
+
+## Using SQLite for Quick Testing (No PostgreSQL Needed)
+
+For a quick test without installing PostgreSQL:
+
+```env
+EIDOS_DATABASE_URL=sqlite+aiosqlite:///./eidos_test.db
+```
+
+> SQLite works for local testing and demos. Use PostgreSQL for anything beyond that.
+
+---
+
+## Private Repositories
+
+To analyze private repos, pass a token when registering:
+
+**curl:**
+
+```bash
+curl -X POST http://localhost:8000/repos \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "private-repo",
+    "url": "https://github.com/org/private-repo",
+    "git_token": "ghp_your_personal_access_token"
+  }'
+```
+
+**Postman:**
+
+| Field | Value |
+|-------|-------|
+| Method | `POST` |
+| URL | `{{base_url}}/repos` |
+| Body (raw JSON) | see below |
+
+```json
+{
+  "name": "private-repo",
+  "url": "https://github.com/org/private-repo",
+  "git_token": "ghp_your_personal_access_token"
+}
+```
+
+The token is encrypted at rest and only used during `git clone`.
+
+---
+
+## Troubleshooting
+
+| Problem | Solution |
+|---------|----------|
+| `Connection refused` on startup | Make sure PostgreSQL is running: `docker compose -f infra/docker-compose.yml ps` |
+| `ModuleNotFoundError` | Run `pip install -e ".[dev]"` inside `backend/` |
+| Ingestion stuck on `pending` | Check logs: `uvicorn` console output shows errors during clone/parse |
+| `tree-sitter` import errors | Run `pip install tree-sitter tree-sitter-c-sharp tree-sitter-java tree-sitter-python` |
+| Tests failing with `asyncpg` errors | Use SQLite for tests: `EIDOS_DATABASE_URL=sqlite+aiosqlite:///./test.db pytest` |
+
+---
+
+## Next Steps
+
+- Read the [full API documentation](http://localhost:8000/docs) (auto-generated Swagger UI)
+- See [HOW_TO_USE.md](HOW_TO_USE.md) for detailed curl examples of every endpoint
+- See [USER_GUIDE.md](USER_GUIDE.md) for a complete feature walkthrough
+- See [ARCHITECTURE.md](ARCHITECTURE.md) for the system design
+- See [CODE_HEALTH.md](CODE_HEALTH.md) for the 40 built-in code quality rules
+
+---
+
+## Postman Collection Quick Reference
+
+Here is every key request you'll need, ready to copy into Postman:
+
+| # | Name | Method | URL | Body |
+|---|------|--------|-----|------|
+| 1 | Health check | `GET` | `{{base_url}}/health` | -- |
+| 2 | Readiness check | `GET` | `{{base_url}}/health/ready` | -- |
+| 3 | Version | `GET` | `{{base_url}}/version` | -- |
+| 4 | Register repo | `POST` | `{{base_url}}/repos` | `{"name":"...","url":"..."}` |
+| 5 | Ingest | `POST` | `{{base_url}}/repos/{{repo_id}}/ingest` | -- |
+| 6 | Repo status | `GET` | `{{base_url}}/repos/{{repo_id}}/status` | -- |
+| 7 | Snapshot detail | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}` | -- |
+| 8 | List symbols | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/symbols` | -- |
+| 9 | Get symbol | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/symbols/Namespace.Class` | -- |
+| 10 | List edges | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/edges` | -- |
+| 11 | Call graph | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/graph/Namespace.Class.Method` | -- |
+| 12 | Overview | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/overview` | -- |
+| 13 | Search | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/search?q=keyword` | -- |
+| 14 | Ask question | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/ask` | `{"question":"..."}` |
+| 15 | Review diff | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/review` | `{"diff":"..."}` |
+| 16 | Generate docs | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/docs` | `{}` |
+| 17 | List docs | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/docs` | -- |
+| 18 | Code health | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/health` | -- |
+| 19 | Health rules | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/health/rules` | -- |
+| 20 | Class diagram | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/diagram?diagram_type=class` | -- |
+| 21 | Module diagram | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/diagram?diagram_type=module` | -- |
+| 22 | Snapshot diff | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/diff/{{other_snapshot_id}}` | -- |
+| 23 | Export | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/export` | -- |
+| 24 | Portable export | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/portable` | -- |
+| 25 | Import snapshot | `POST` | `{{base_url}}/repos/{{repo_id}}/import` | form-data: `file` |
+| 26 | Health trend | `GET` | `{{base_url}}/repos/{{repo_id}}/health/trend` | -- |
+| 25 | Evaluate | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/evaluate` | -- |
+| 26 | Summaries | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/summaries` | -- |
+| 27 | Update repo | `PATCH` | `{{base_url}}/repos/{{repo_id}}` | `{"name":"new-name"}` |
+| 28 | Delete repo | `DELETE` | `{{base_url}}/repos/{{repo_id}}` | -- |
+
+> **All POST/PATCH requests** need the header `Content-Type: application/json`.

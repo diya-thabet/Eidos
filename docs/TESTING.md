@@ -181,8 +181,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_webhooks.py` | 18 | GitHub/GitLab/generic webhook receivers, HMAC signature verification, branch matching, snapshot creation |
 | `test_repo_crud.py` | 12 | DELETE /repos/{id} (cascade, idempotent), PATCH /repos/{id} (partial update, whitespace, not found) |
 | `test_diagrams_and_trends.py` | 23 | Mermaid class/module diagrams, health score trends (improving/degrading/stable/insufficient) |
+| `test_portable.py` | 25 | Portable .eidos export (gzip, compact keys, headers), import (restore, validation), round-trip (symbols/edges/summaries/docs preserved) |
 
-### Updated Total: ~1,504 tests
+### Updated Total: ~1,529 tests
 
 ## Test Design Principles
 

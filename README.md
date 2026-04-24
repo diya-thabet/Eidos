@@ -53,7 +53,9 @@ pytest -v
 | GET    | `/auth/google/callback`                       | Google OAuth callback (JWT)     |
 | GET    | `/repos/{id}/snapshots/{sid}/search`          | Full-text search (symbols, summaries, docs) |
 | GET    | `/repos/{id}/snapshots/{sid}/diff/{other}`    | Compare two snapshots (symbol diff) |
-| GET    | `/repos/{id}/snapshots/{sid}/export`          | Export full analysis as JSON    |\n| GET    | `/repos/{id}/snapshots/{sid}/diagram`         | Generate Mermaid diagram (class/module) |\n| GET    | `/repos/{id}/health/trend`                    | Health score trend across snapshots |
+| GET    | `/repos/{id}/health/trend`                    | Health score trend across snapshots |
+| GET    | `/repos/{id}/snapshots/{sid}/portable`        | Export as compact .eidos file (gzip) |
+| POST   | `/repos/{id}/import`                          | Import a .eidos file to restore a snapshot |
 | POST   | `/webhooks/github`                            | GitHub push webhook receiver    |
 | POST   | `/webhooks/gitlab`                            | GitLab push webhook receiver    |
 | POST   | `/webhooks/push`                              | Generic push webhook            |
@@ -74,6 +76,7 @@ backend/
       webhooks.py       # GitHub/GitLab/generic push webhooks
       diagrams.py       # Mermaid class and module diagrams
       trends.py         # Health score trend tracking
+      portable.py       # Portable .eidos export/import
       dependencies.py   # Shared FastAPI dependencies
     core/
       config.py         # Settings via pydantic-settings

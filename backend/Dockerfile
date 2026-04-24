@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir --prefix=/install .
 FROM python:3.11-slim AS client
 
 LABEL maintainer="Eidos Team"
-LABEL description="Eidos — Legacy Code Intelligence (client edition)"
+LABEL description="Eidos - Code Intelligence Platform"
 
 WORKDIR /app
 
