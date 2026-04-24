@@ -220,7 +220,11 @@ Complete CRUD for repositories:
 | `backend/app/api/webhooks.py` | GitHub, GitLab, and generic webhook receivers |
 | `backend/tests/test_middleware_and_infra.py` | 36 tests for middleware and pagination |
 | `backend/tests/test_search_and_compare.py` | 35 tests for search, diff, and export |
-| `backend/tests/test_webhooks.py` | 18 tests for webhook receivers |\n| `backend/tests/test_repo_crud.py` | 12 tests for DELETE/PATCH repo endpoints |
+| `backend/app/api/diagrams.py` | Mermaid class and module diagram generation |
+| `backend/app/api/trends.py` | Health score trend tracking across snapshots |
+| `backend/app/api/dependencies.py` | Shared verify_snapshot FastAPI dependency |
+| `backend/tests/test_repo_crud.py` | 12 tests for DELETE/PATCH repo endpoints |
+| `backend/tests/test_diagrams_and_trends.py` | 23 tests for diagrams and trends |
 
 ## Modified Files
 
@@ -246,7 +250,7 @@ Complete CRUD for repositories:
 | `test_search_and_compare.py` | 35 | Search (symbols/summaries/docs, filtering, pagination, scoring), snapshot diff (add/remove/modify/reverse), export (all entities, metadata) |
 | `test_webhooks.py` | 18 | GitHub/GitLab/generic webhooks, HMAC verification, branch matching, event filtering |
 
-**Total test count: 1,481** (1,379 original + 102 new) -- 100% pass rate
+**Total test count: 1,504** (1,379 original + 125 new) -- 100% pass rate
 
 ---
 

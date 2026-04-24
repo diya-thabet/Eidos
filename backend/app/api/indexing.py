@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot, Summary
 from app.storage.schemas import PaginatedResponse, SummaryOut
@@ -36,8 +37,8 @@ async def list_summaries(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     base = select(Summary).where(Summary.snapshot_id == snapshot_id)
     if scope_type:
@@ -78,8 +79,8 @@ async def get_summary(
     scope_type: str,
     scope_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     result = await db.execute(
         select(Summary).where(
@@ -101,21 +102,3 @@ async def get_summary(
         created_at=row.created_at.isoformat() if row.created_at else "",
     )
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> RepoSnapshot:
-    """Verify snapshot exists and belongs to the repo."""
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    snap = result.scalar_one_or_none()
-    if snap is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
-    return snap

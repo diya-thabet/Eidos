@@ -17,6 +17,7 @@ from pydantic import BaseModel
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.storage.database import get_db
 from app.storage.models import (
     Edge,
@@ -100,6 +101,7 @@ async def search(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Full-text search across all indexed entities in a snapshot.
@@ -107,7 +109,6 @@ async def search(
     Searches symbol names/fq_names, summary content, and generated
     document titles/markdown.  Results are ranked by relevance.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     pattern = f"%{q}%"
     hits: list[SearchHit] = []
@@ -232,6 +233,7 @@ async def compare_snapshots(
     snapshot_id: str,
     other_snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Compare symbols between two snapshots of the same repo.
@@ -240,8 +242,15 @@ async def compare_snapshots(
     A symbol is considered modified if it exists in both snapshots
     but its signature, line range, or file path changed.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
-    await _verify_snapshot(db, repo_id, other_snapshot_id)
+    # Also verify the other snapshot exists in this repo
+    other_result = await db.execute(
+        select(RepoSnapshot).where(
+            RepoSnapshot.id == other_snapshot_id,
+            RepoSnapshot.repo_id == repo_id,
+        )
+    )
+    if other_result.scalar_one_or_none() is None:
+        raise HTTPException(status_code=404, detail="Snapshot not found")
 
     # Fetch symbols for both snapshots
     base_syms = await _get_symbol_map(db, snapshot_id)
@@ -318,6 +327,7 @@ async def export_snapshot(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Export all analysis results for a snapshot in a single JSON payload.
@@ -325,8 +335,7 @@ async def export_snapshot(
     Includes symbols, edges, summaries, and generated documents.
     Useful for offline analysis, CI/CD pipelines, and integrations.
     """
-    snap = await _verify_snapshot(db, repo_id, snapshot_id)
-
+    snap = _snap
     # Symbols
     sym_result = await db.execute(
         select(Symbol).where(Symbol.snapshot_id == snapshot_id).order_by(Symbol.file_path)
@@ -417,19 +426,20 @@ async def export_snapshot(
 # ---------------------------------------------------------------------------
 
 
-async def _verify_snapshot(
-    db: AsyncSession, repo_id: str, snapshot_id: str
-) -> RepoSnapshot:
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    snap = result.scalar_one_or_none()
-    if snap is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
-    return snap
+
+def _score_symbol(symbol: Symbol, query: str) -> float:
+    """Simple relevance scoring for symbol search."""
+    q = query.lower()
+    score = 0.0
+    if q == symbol.name.lower():
+        score += 10.0
+    elif q in symbol.name.lower():
+        score += 5.0
+    if q in (symbol.fq_name or "").lower():
+        score += 3.0
+    if q in (symbol.namespace or "").lower():
+        score += 1.0
+    return max(score, 0.1)
 
 
 async def _get_symbol_map(db: AsyncSession, snapshot_id: str) -> dict[str, dict[str, Any]]:
@@ -447,21 +457,6 @@ async def _get_symbol_map(db: AsyncSession, snapshot_id: str) -> dict[str, dict[
         }
         for s in result.scalars().all()
     }
-
-
-def _score_symbol(symbol: Symbol, query: str) -> float:
-    """Simple relevance scoring for symbol search."""
-    q = query.lower()
-    score = 0.0
-    if q == symbol.name.lower():
-        score += 10.0
-    elif q in symbol.name.lower():
-        score += 5.0
-    if q in (symbol.fq_name or "").lower():
-        score += 3.0
-    if q in (symbol.namespace or "").lower():
-        score += 1.0
-    return max(score, 0.1)
 
 
 def _score_text(text: str, query: str) -> float:

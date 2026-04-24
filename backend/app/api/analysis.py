@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.storage.database import get_db
 from app.storage.models import Edge, RepoSnapshot, Symbol
 from app.storage.schemas import (
@@ -40,8 +41,8 @@ async def list_symbols(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
     base = select(Symbol).where(Symbol.snapshot_id == snapshot_id)
     if kind:
         base = base.where(Symbol.kind == kind)
@@ -69,8 +70,8 @@ async def get_symbol(
     snapshot_id: str,
     fq_name: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
     result = await db.execute(
         select(Symbol).where(Symbol.snapshot_id == snapshot_id, Symbol.fq_name == fq_name)
     )
@@ -94,8 +95,8 @@ async def list_edges(
     limit: int = Query(100, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
     base = select(Edge).where(Edge.snapshot_id == snapshot_id)
     if edge_type:
         base = base.where(Edge.edge_type == edge_type)
@@ -125,8 +126,8 @@ async def get_graph_neighborhood(
     snapshot_id: str,
     fq_name: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Get the symbol itself
     result = await db.execute(
@@ -166,8 +167,8 @@ async def get_analysis_overview(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Count symbols by kind
     result = await db.execute(
@@ -241,8 +242,8 @@ async def run_health_analysis(
     snapshot_id: str,
     body: HealthCheckRequest | None = None,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     from app.analysis.code_health import HealthConfig, run_health_check, run_llm_health_analysis
     from app.analysis.graph_builder import CodeGraph
@@ -326,20 +327,6 @@ async def run_health_analysis(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> RepoSnapshot:
-    """Verify snapshot exists and belongs to the repo."""
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    snap = result.scalar_one_or_none()
-    if snap is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
-    return snap
 
 
 async def _resolve_edge_symbols(  # type: ignore[no-untyped-def]

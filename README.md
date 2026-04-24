@@ -53,7 +53,7 @@ pytest -v
 | GET    | `/auth/google/callback`                       | Google OAuth callback (JWT)     |
 | GET    | `/repos/{id}/snapshots/{sid}/search`          | Full-text search (symbols, summaries, docs) |
 | GET    | `/repos/{id}/snapshots/{sid}/diff/{other}`    | Compare two snapshots (symbol diff) |
-| GET    | `/repos/{id}/snapshots/{sid}/export`          | Export full analysis as JSON    |
+| GET    | `/repos/{id}/snapshots/{sid}/export`          | Export full analysis as JSON    |\n| GET    | `/repos/{id}/snapshots/{sid}/diagram`         | Generate Mermaid diagram (class/module) |\n| GET    | `/repos/{id}/health/trend`                    | Health score trend across snapshots |
 | POST   | `/webhooks/github`                            | GitHub push webhook receiver    |
 | POST   | `/webhooks/gitlab`                            | GitLab push webhook receiver    |
 | POST   | `/webhooks/push`                              | Generic push webhook            |
@@ -72,6 +72,9 @@ backend/
       docgen.py         # Doc generation + list + get endpoints
       search.py         # Full-text search, snapshot diff, export
       webhooks.py       # GitHub/GitLab/generic push webhooks
+      diagrams.py       # Mermaid class and module diagrams
+      trends.py         # Health score trend tracking
+      dependencies.py   # Shared FastAPI dependencies
     core/
       config.py         # Settings via pydantic-settings
       ingestion.py      # Git clone, file scanning, hashing

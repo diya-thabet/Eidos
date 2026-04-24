@@ -11,10 +11,11 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.core.config import settings
 from app.reasoning.llm_client import LLMConfig, create_llm_client
 from app.reviews.reviewer import review_diff
@@ -41,6 +42,7 @@ async def review_pr(
     snapshot_id: str,
     body: ReviewRequest,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Submit a unified diff for review.
@@ -55,7 +57,6 @@ async def review_pr(
 
     Works with or without an LLM.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Create LLM client (or stub)
     llm_config = _get_llm_config()
@@ -105,8 +106,8 @@ async def list_reviews(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
-    await _verify_snapshot(db, repo_id, snapshot_id)
     result = await db.execute(
         select(Review).where(Review.snapshot_id == snapshot_id).order_by(Review.id.desc())
     )
@@ -131,16 +132,6 @@ async def list_reviews(
         )
     return reviews
 
-
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> Any:
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
 
 
 def _get_llm_config() -> LLMConfig | None:

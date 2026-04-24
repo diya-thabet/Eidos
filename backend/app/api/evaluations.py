@@ -7,10 +7,11 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.guardrails.runner import run_snapshot_evaluation
 from app.storage.database import get_db
 from app.storage.models import Evaluation, RepoSnapshot
@@ -28,6 +29,7 @@ async def evaluate_snapshot(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Run all guardrail checks for a snapshot:
@@ -38,7 +40,6 @@ async def evaluate_snapshot(
 
     Results are persisted and can be retrieved via GET.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
     report = await run_snapshot_evaluation(db, snapshot_id)
 
     return EvalReportOut(
@@ -71,9 +72,9 @@ async def list_evaluations(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """List all past evaluation reports for a snapshot."""
-    await _verify_snapshot(db, repo_id, snapshot_id)
     result = await db.execute(
         select(Evaluation)
         .where(Evaluation.snapshot_id == snapshot_id)
@@ -96,12 +97,3 @@ async def list_evaluations(
     return evals
 
 
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> None:
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")

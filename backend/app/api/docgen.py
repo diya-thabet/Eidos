@@ -13,6 +13,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.core.config import settings
 from app.docgen.models import DocType
 from app.docgen.orchestrator import generate_all_docs, generate_single_doc
@@ -38,6 +39,7 @@ async def generate_docs(
     snapshot_id: str,
     body: GenerateDocsRequest | None = None,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Generate documentation from the analysed codebase.
@@ -49,7 +51,6 @@ async def generate_docs(
     Documents are persisted and can be retrieved via GET.
     Works with or without an LLM.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
     llm = _make_llm()
     body = body or GenerateDocsRequest()
 
@@ -99,9 +100,9 @@ async def list_docs(
     snapshot_id: str,
     doc_type: str | None = None,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """List all generated documents for a snapshot."""
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     stmt = select(GeneratedDoc).where(GeneratedDoc.snapshot_id == snapshot_id)
     if doc_type:
@@ -132,9 +133,9 @@ async def get_doc(
     snapshot_id: str,
     doc_id: int,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """Retrieve a specific generated document by ID."""
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     result = await db.execute(
         select(GeneratedDoc).where(
@@ -160,16 +161,6 @@ async def get_doc(
 # Helpers
 # -------------------------------------------------------------------
 
-
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> Any:
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
 
 
 def _make_llm() -> Any:

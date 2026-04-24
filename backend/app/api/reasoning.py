@@ -9,11 +9,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.dependencies import verify_snapshot
 from app.core.config import settings
 from app.reasoning.answer_builder import build_answer
 from app.reasoning.llm_client import LLMConfig, create_llm_client
@@ -87,6 +87,7 @@ async def ask_question(
     snapshot_id: str,
     body: AskRequest,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """
     Ask a natural-language question about a snapshot of the codebase.
@@ -99,7 +100,6 @@ async def ask_question(
     Works with or without an LLM. Without LLM, returns deterministic
     answers based on code graph analysis.
     """
-    await _verify_snapshot(db, repo_id, snapshot_id)
 
     # Build structured question
     question = build_question(body.question, snapshot_id)
@@ -151,9 +151,9 @@ async def classify_question_endpoint(
     snapshot_id: str,
     body: AskRequest,
     db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
 ) -> Any:
     """Debug endpoint: see how a question is classified without generating an answer."""
-    await _verify_snapshot(db, repo_id, snapshot_id)
     question = build_question(body.question, snapshot_id)
     if body.target_symbol:
         question.target_symbol = body.target_symbol
@@ -168,16 +168,6 @@ async def classify_question_endpoint(
 # Helpers
 # ---------------------------------------------------------------------------
 
-
-async def _verify_snapshot(db: AsyncSession, repo_id: str, snapshot_id: str) -> Any:
-    result = await db.execute(
-        select(RepoSnapshot).where(
-            RepoSnapshot.id == snapshot_id,
-            RepoSnapshot.repo_id == repo_id,
-        )
-    )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Snapshot not found")
 
 
 def _get_llm_config() -> LLMConfig | None:

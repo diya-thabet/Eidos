@@ -328,17 +328,35 @@ class TestPagination:
 
     @pytest.mark.asyncio
     async def test_pagination_invalid_limit_rejected(self, client: AsyncClient):
-        resp = await client.get("/repos/fake/snapshots/fake/symbols?limit=0")
+        repo_id, snap_id = await self._create_repo_and_snapshot(client)
+        async with test_sessionmaker() as session:
+            snap = await session.get(RepoSnapshot, snap_id)
+            if snap:
+                snap.status = SnapshotStatus.completed
+                await session.commit()
+        resp = await client.get(f"/repos/{repo_id}/snapshots/{snap_id}/symbols?limit=0")
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_pagination_negative_offset_rejected(self, client: AsyncClient):
-        resp = await client.get("/repos/fake/snapshots/fake/symbols?offset=-1")
+        repo_id, snap_id = await self._create_repo_and_snapshot(client)
+        async with test_sessionmaker() as session:
+            snap = await session.get(RepoSnapshot, snap_id)
+            if snap:
+                snap.status = SnapshotStatus.completed
+                await session.commit()
+        resp = await client.get(f"/repos/{repo_id}/snapshots/{snap_id}/symbols?offset=-1")
         assert resp.status_code == 422
 
     @pytest.mark.asyncio
     async def test_pagination_limit_too_large_rejected(self, client: AsyncClient):
-        resp = await client.get("/repos/fake/snapshots/fake/symbols?limit=9999")
+        repo_id, snap_id = await self._create_repo_and_snapshot(client)
+        async with test_sessionmaker() as session:
+            snap = await session.get(RepoSnapshot, snap_id)
+            if snap:
+                snap.status = SnapshotStatus.completed
+                await session.commit()
+        resp = await client.get(f"/repos/{repo_id}/snapshots/{snap_id}/symbols?limit=9999")
         assert resp.status_code == 422
 
 

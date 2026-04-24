@@ -7,6 +7,7 @@ from fastapi import FastAPI
 from app.api import admin as admin_api
 from app.api import analysis as analysis_api
 from app.api import auth as auth_api
+from app.api import diagrams as diagrams_api
 from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
 from app.api import indexing as indexing_api
@@ -14,6 +15,7 @@ from app.api import reasoning as reasoning_api
 from app.api import repos
 from app.api import reviews as reviews_api
 from app.api import search as search_api
+from app.api import trends as trends_api
 from app.api import webhooks as webhook_api
 from app.core.config import settings
 from app.core.middleware import install_middleware
@@ -59,6 +61,8 @@ app.include_router(reviews_api.router, prefix="/repos", tags=["reviews"])
 app.include_router(docgen_api.router, prefix="/repos", tags=["docs"])
 app.include_router(eval_api.router, prefix="/repos", tags=["evaluations"])
 app.include_router(search_api.router, prefix="/repos", tags=["search"])
+app.include_router(diagrams_api.router, prefix="/repos", tags=["diagrams"])
+app.include_router(trends_api.router, prefix="/repos", tags=["trends"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 
