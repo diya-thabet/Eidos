@@ -127,17 +127,21 @@ async def search(
             )
             .limit(limit * 2)  # over-fetch, we'll trim later
         )
-        result = await db.execute(sym_stmt)
-        for s in result.scalars().all():
+        sym_result = await db.execute(sym_stmt)
+        for sym in sym_result.scalars().all():
             hits.append(
                 SearchHit(
                     entity_type="symbol",
-                    entity_id=s.fq_name,
-                    title=f"{s.kind}: {s.fq_name}",
-                    snippet=s.signature or f"{s.kind} {s.name}",
-                    file_path=s.file_path,
-                    score=_score_symbol(s, q),
-                    metadata={"kind": s.kind, "start_line": s.start_line, "end_line": s.end_line},
+                    entity_id=sym.fq_name,
+                    title=f"{sym.kind}: {sym.fq_name}",
+                    snippet=sym.signature or f"{sym.kind} {sym.name}",
+                    file_path=sym.file_path,
+                    score=_score_symbol(sym, q),
+                    metadata={
+                        "kind": sym.kind,
+                        "start_line": sym.start_line,
+                        "end_line": sym.end_line,
+                    },
                 )
             )
 
@@ -154,21 +158,21 @@ async def search(
             )
             .limit(limit * 2)
         )
-        result = await db.execute(sum_stmt)
-        for s in result.scalars().all():
-            parsed = {}
+        sum_result = await db.execute(sum_stmt)
+        for summ in sum_result.scalars().all():
+            parsed: dict[str, Any] = {}
             try:
-                parsed = json.loads(s.summary_json)
+                parsed = json.loads(summ.summary_json)
             except (json.JSONDecodeError, TypeError):
                 pass
             hits.append(
                 SearchHit(
                     entity_type="summary",
-                    entity_id=f"{s.scope_type}/{s.scope_id}",
-                    title=f"{s.scope_type} summary: {s.scope_id}",
+                    entity_id=f"{summ.scope_type}/{summ.scope_id}",
+                    title=f"{summ.scope_type} summary: {summ.scope_id}",
                     snippet=parsed.get("purpose", "")[:200],
-                    score=_score_text(s.scope_id, q),
-                    metadata={"scope_type": s.scope_type},
+                    score=_score_text(summ.scope_id, q),
+                    metadata={"scope_type": summ.scope_type},
                 )
             )
 
@@ -186,16 +190,16 @@ async def search(
             )
             .limit(limit * 2)
         )
-        result = await db.execute(doc_stmt)
-        for d in result.scalars().all():
+        doc_result = await db.execute(doc_stmt)
+        for doc in doc_result.scalars().all():
             hits.append(
                 SearchHit(
                     entity_type="doc",
-                    entity_id=str(d.id),
-                    title=d.title,
-                    snippet=d.markdown[:200] if d.markdown else "",
-                    score=_score_text(d.title, q),
-                    metadata={"doc_type": d.doc_type, "scope_id": d.scope_id},
+                    entity_id=str(doc.id),
+                    title=doc.title,
+                    snippet=doc.markdown[:200] if doc.markdown else "",
+                    score=_score_text(doc.title, q),
+                    metadata={"doc_type": doc.doc_type, "scope_id": doc.scope_id},
                 )
             )
 

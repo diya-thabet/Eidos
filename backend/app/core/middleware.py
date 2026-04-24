@@ -46,7 +46,7 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
         rid = request.headers.get("X-Request-ID") or uuid.uuid4().hex
         request_id_ctx.set(rid)
         request.state.request_id = rid
-        response = await call_next(request)
+        response: Response = await call_next(request)
         response.headers["X-Request-ID"] = rid
         return response
 
@@ -63,7 +63,7 @@ class AccessLogMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable[..., Any]) -> Response:
         start = time.perf_counter()
-        response = await call_next(request)
+        response: Response = await call_next(request)
         duration_ms = (time.perf_counter() - start) * 1000
         rid = getattr(request.state, "request_id", "")
         logger.info(
@@ -94,7 +94,8 @@ class ExceptionHandlerMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: Callable[..., Any]) -> Response:
         try:
-            return await call_next(request)
+            response: Response = await call_next(request)
+            return response
         except Exception:
             rid = getattr(request.state, "request_id", "")
             logger.exception(
@@ -149,16 +150,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     _SKIP_PATHS = {"/health", "/version", "/docs", "/openapi.json", "/redoc"}
 
-    def __init__(self, app: FastAPI, rate: float = 1.0, burst: int = 60, enabled: bool = True) -> None:  # noqa: E501
+    def __init__(self, app: Any, rate: float = 1.0, burst: int = 60, enabled: bool = True) -> None:
         super().__init__(app)
         self._bucket = _TokenBucket(rate, burst)
         self._enabled = enabled
 
     async def dispatch(self, request: Request, call_next: Callable[..., Any]) -> Response:
         if not self._enabled:
-            return await call_next(request)
+            response: Response = await call_next(request)
+            return response
         if request.url.path in self._SKIP_PATHS:
-            return await call_next(request)
+            response = await call_next(request)
+            return response
 
         client_ip = request.client.host if request.client else "unknown"
         if not self._bucket.allow(client_ip):
@@ -166,7 +169,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 status_code=429,
                 content={"detail": "Too many requests. Please slow down."},
             )
-        return await call_next(request)
+        response = await call_next(request)
+        return response
 
 
 # ------------------------------------------------------------------
@@ -189,7 +193,7 @@ def install_middleware(app: FastAPI) -> None:
 
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=getattr(settings, "cors_origins", ["*"]),
+        allow_origins=settings.cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -197,10 +201,12 @@ def install_middleware(app: FastAPI) -> None:
     )
 
     # Rate limiting (outermost after CORS)
-    rate_enabled = getattr(settings, "rate_limit_enabled", True)
-    rate = getattr(settings, "rate_limit_per_second", 2.0)
-    burst = getattr(settings, "rate_limit_burst", 120)
-    app.add_middleware(RateLimitMiddleware, rate=rate, burst=burst, enabled=rate_enabled)
+    app.add_middleware(
+        RateLimitMiddleware,
+        rate=settings.rate_limit_per_second,
+        burst=settings.rate_limit_burst,
+        enabled=settings.rate_limit_enabled,
+    )
 
     # Access logging
     app.add_middleware(AccessLogMiddleware)
