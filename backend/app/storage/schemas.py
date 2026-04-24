@@ -95,6 +95,14 @@ class RepoOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class RepoUpdate(BaseModel):
+    """Partial update for a repo (PATCH)."""
+
+    name: str | None = None
+    default_branch: str | None = None
+    git_token: str | None = None
+
+
 class IngestRequest(BaseModel):
     commit_sha: str | None = None
 

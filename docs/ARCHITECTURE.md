@@ -26,7 +26,7 @@
 
 ## 1. Project Overview
 
-**Eidos** is a developer tool that brings intelligence to legacy codebases. It targets C#/.NET projects and provides three core capabilities:
+**Eidos** is a language-agnostic code intelligence platform that analyzes any codebase (C#, Java, Python, TypeScript, Go, Rust, C, C++) and provides three core capabilities:
 
 1. **Explains legacy codebases** - architecture, intent, data flows, with evidence
 2. **Auto-generates documentation** - accurate, regeneratable, with citations to actual code

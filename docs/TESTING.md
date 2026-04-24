@@ -179,8 +179,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_middleware_and_infra.py` | 36 | Request ID middleware, CORS, global exception handler, rate limiting, deep healthcheck, pagination envelope, token bucket unit tests, PaginatedResponse schema |
 | `test_search_and_compare.py` | 35 | Full-text search (symbols, summaries, docs), snapshot diff (added/removed/modified), export API, search scoring |
 | `test_webhooks.py` | 18 | GitHub/GitLab/generic webhook receivers, HMAC signature verification, branch matching, snapshot creation |
+| `test_repo_crud.py` | 12 | DELETE /repos/{id} (cascade, idempotent), PATCH /repos/{id} (partial update, whitespace, not found) |
 
-### Updated Total: ~1,469 tests
+### Updated Total: ~1,481 tests
 
 ## Test Design Principles
 

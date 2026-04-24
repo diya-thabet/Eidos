@@ -20,6 +20,7 @@ from app.storage.schemas import (
     RepoCreate,
     RepoOut,
     RepoStatus,
+    RepoUpdate,
     SnapshotDetail,
     SnapshotOut,
 )
@@ -145,4 +146,47 @@ async def snapshot_detail(
             )
             for f in snapshot.files
         ],
+    )
+
+
+@router.delete("/{repo_id}", status_code=204)
+async def delete_repo(
+    repo_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> None:
+    """Delete a repo and all associated snapshots, symbols, edges, summaries, reviews, and docs."""
+    repo = await db.get(Repo, repo_id)
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repo not found")
+    await db.delete(repo)
+    await db.commit()
+
+
+@router.patch("/{repo_id}", response_model=RepoOut)
+async def update_repo(
+    repo_id: str,
+    body: RepoUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> Any:
+    """Update repo fields (name, default_branch, git_token). Only provided fields are changed."""
+    repo = await db.get(Repo, repo_id)
+    if repo is None:
+        raise HTTPException(status_code=404, detail="Repo not found")
+    if body.name is not None:
+        repo.name = body.name.strip()
+    if body.default_branch is not None:
+        repo.default_branch = body.default_branch.strip()
+    if body.git_token is not None:
+        repo.git_token_enc = encrypt(body.git_token) if body.git_token else ""
+    await db.commit()
+    await db.refresh(repo)
+    return RepoOut(
+        id=repo.id,
+        name=repo.name,
+        url=repo.url,
+        default_branch=repo.default_branch,
+        created_at=repo.created_at.isoformat(),
+        last_indexed_at=repo.last_indexed_at.isoformat() if repo.last_indexed_at else None,
     )

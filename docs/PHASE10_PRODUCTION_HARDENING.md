@@ -202,6 +202,15 @@ Behavior:
 
 ---
 
+### 12. Repo DELETE and PATCH Endpoints
+
+Complete CRUD for repositories:
+
+- `DELETE /repos/{id}` -- Deletes a repo and all associated data (snapshots, symbols, edges, summaries, reviews, docs) via cascade.
+- `PATCH /repos/{id}` -- Partial update of `name`, `default_branch`, or `git_token`. Only provided fields are changed; others remain untouched.
+
+---
+
 ## New Files
 
 | File | Purpose |
@@ -211,7 +220,7 @@ Behavior:
 | `backend/app/api/webhooks.py` | GitHub, GitLab, and generic webhook receivers |
 | `backend/tests/test_middleware_and_infra.py` | 36 tests for middleware and pagination |
 | `backend/tests/test_search_and_compare.py` | 35 tests for search, diff, and export |
-| `backend/tests/test_webhooks.py` | 18 tests for webhook receivers |
+| `backend/tests/test_webhooks.py` | 18 tests for webhook receivers |\n| `backend/tests/test_repo_crud.py` | 12 tests for DELETE/PATCH repo endpoints |
 
 ## Modified Files
 
@@ -237,7 +246,7 @@ Behavior:
 | `test_search_and_compare.py` | 35 | Search (symbols/summaries/docs, filtering, pagination, scoring), snapshot diff (add/remove/modify/reverse), export (all entities, metadata) |
 | `test_webhooks.py` | 18 | GitHub/GitLab/generic webhooks, HMAC verification, branch matching, event filtering |
 
-**Total test count: 1,469** (1,379 original + 90 new) -- 100% pass rate
+**Total test count: 1,481** (1,379 original + 102 new) -- 100% pass rate
 
 ---
 
