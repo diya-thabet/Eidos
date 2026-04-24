@@ -24,3 +24,4 @@ This folder contains the technical documentation for the Eidos Legacy Code Intel
 | [FUTURE_ROADMAP.md](FUTURE_ROADMAP.md) | Future propositions, architecture evolution, integrations |
 | [ENTERPRISE_EXECUTION_PLAN.md](ENTERPRISE_EXECUTION_PLAN.md) | 12-month enterprise roadmap: Q1-Q4 sprints, infrastructure, team, KPIs, monetization, risk register |
 | [FRONTEND_DEV_PLAN.md](FRONTEND_DEV_PLAN.md) | Next.js frontend plan: architecture, page specs, component library, auth, testing, deployment, design system |
+| [PHASE10_PRODUCTION_HARDENING.md](PHASE10_PRODUCTION_HARDENING.md) | Phase 10: CORS, Request IDs, logging, exception handler, rate limiting, deep healthcheck, pagination, search API, snapshot diff, export, webhooks |

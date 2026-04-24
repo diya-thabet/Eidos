@@ -44,6 +44,17 @@ class Settings(BaseSettings):
     # Data retention
     delete_clones_after_indexing: bool = True
 
+    # CORS
+    cors_origins: list[str] = ["*"]
+
+    # Rate limiting
+    rate_limit_enabled: bool = True
+    rate_limit_per_second: float = 10.0
+    rate_limit_burst: int = 500
+
+    # Webhooks
+    webhook_secret: str = ""
+
     model_config = {"env_prefix": "EIDOS_", "env_file": ".env"}
 
     @property

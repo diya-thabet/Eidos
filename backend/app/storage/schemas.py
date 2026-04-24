@@ -1,13 +1,30 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel, HttpUrl, field_validator
 
 from app.storage.models import SnapshotStatus
 
+T = TypeVar("T")
+
 # Blocked hosts that should never appear in repo URLs
 _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]", "metadata.google.internal"}
+
+
+# ---------------------------------------------------------------------------
+# Generic paginated response wrapper
+# ---------------------------------------------------------------------------
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    """Envelope for paginated list endpoints."""
+
+    items: list[Any]  # will be list[T] at runtime
+    total: int
+    limit: int
+    offset: int
+    has_more: bool
 _VALID_PROVIDERS = {"github", "gitlab", "azure_devops", "bitbucket", "other"}
 
 

@@ -11,19 +11,19 @@ import json
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot, Summary
-from app.storage.schemas import SummaryOut
+from app.storage.schemas import PaginatedResponse, SummaryOut
 
 router = APIRouter()
 
 
 @router.get(
     "/{repo_id}/snapshots/{snapshot_id}/summaries",
-    response_model=list[SummaryOut],
+    response_model=PaginatedResponse,
     summary="List summaries for a snapshot",
 )
 async def list_summaries(
@@ -39,16 +39,19 @@ async def list_summaries(
 ) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
 
-    stmt = select(Summary).where(Summary.snapshot_id == snapshot_id)
+    base = select(Summary).where(Summary.snapshot_id == snapshot_id)
     if scope_type:
-        stmt = stmt.where(Summary.scope_type == scope_type)
+        base = base.where(Summary.scope_type == scope_type)
     if scope_id:
-        stmt = stmt.where(Summary.scope_id == scope_id)
-    stmt = stmt.order_by(Summary.scope_type, Summary.scope_id).offset(offset).limit(limit)
+        base = base.where(Summary.scope_id == scope_id)
 
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = total_result.scalar() or 0
+
+    stmt = base.order_by(Summary.scope_type, Summary.scope_id).offset(offset).limit(limit)
     result = await db.execute(stmt)
     rows = result.scalars().all()
-    return [
+    items = [
         SummaryOut(
             id=row.id,
             snapshot_id=row.snapshot_id,
@@ -59,6 +62,9 @@ async def list_summaries(
         )
         for row in rows
     ]
+    return PaginatedResponse(
+        items=items, total=total, limit=limit, offset=offset, has_more=(offset + limit < total)
+    )
 
 
 @router.get(

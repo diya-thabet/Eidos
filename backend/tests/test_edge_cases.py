@@ -75,7 +75,8 @@ class TestEmptySnapshots:
             await db.commit()
         r = await client.get("/repos/r-e/snapshots/s-e/symbols")
         assert r.status_code == 200
-        assert r.json() == []
+        assert r.json()["items"] == []
+        assert r.json()["total"] == 0
 
     @pytest.mark.asyncio
     async def test_edges_empty(self, client):
@@ -91,7 +92,8 @@ class TestEmptySnapshots:
             await db.commit()
         r = await client.get("/repos/r-e/snapshots/s-e/edges")
         assert r.status_code == 200
-        assert r.json() == []
+        assert r.json()["items"] == []
+        assert r.json()["total"] == 0
 
     @pytest.mark.asyncio
     async def test_overview_empty(self, client):

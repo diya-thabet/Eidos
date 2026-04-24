@@ -23,7 +23,8 @@ pytest -v
 
 | Method | Path                                          | Description                     |
 |--------|-----------------------------------------------|---------------------------------|
-| GET    | `/health`                                     | Health check                    |
+| GET    | `/health`                                     | Shallow liveness check          |
+| GET    | `/health/ready`                               | Deep readiness check (DB)       |
 | POST   | `/repos`                                      | Register a repo                 |
 | POST   | `/repos/{id}/ingest`                          | Trigger clone + analysis        |
 | GET    | `/repos/{id}/status`                          | Snapshots with status           |
@@ -50,6 +51,12 @@ pytest -v
 | POST   | `/auth/logout`                                | Logout hint                     |
 | GET    | `/auth/google/login`                          | Start Google OAuth flow         |
 | GET    | `/auth/google/callback`                       | Google OAuth callback (JWT)     |
+| GET    | `/repos/{id}/snapshots/{sid}/search`          | Full-text search (symbols, summaries, docs) |
+| GET    | `/repos/{id}/snapshots/{sid}/diff/{other}`    | Compare two snapshots (symbol diff) |
+| GET    | `/repos/{id}/snapshots/{sid}/export`          | Export full analysis as JSON    |
+| POST   | `/webhooks/github`                            | GitHub push webhook receiver    |
+| POST   | `/webhooks/gitlab`                            | GitLab push webhook receiver    |
+| POST   | `/webhooks/push`                              | Generic push webhook            |
 
 ## Project Structure
 
@@ -63,10 +70,13 @@ backend/
       reasoning.py       # Q&A ask + classify endpoints
       reviews.py        # PR review + list endpoints
       docgen.py         # Doc generation + list + get endpoints
+      search.py         # Full-text search, snapshot diff, export
+      webhooks.py       # GitHub/GitLab/generic push webhooks
     core/
       config.py         # Settings via pydantic-settings
       ingestion.py      # Git clone, file scanning, hashing
       tasks.py          # Background ingestion + analysis + indexing
+      middleware.py     # CORS, request ID, logging, rate limiting, error handling
     analysis/
       models.py         # Data classes (SymbolInfo, EdgeInfo, etc.)
       csharp_parser.py  # Tree-sitter C# parser

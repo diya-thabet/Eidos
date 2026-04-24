@@ -20,6 +20,7 @@ from app.storage.schemas import (
     AnalysisOverview,
     EdgeOut,
     GraphNeighborhood,
+    PaginatedResponse,
     SymbolOut,
 )
 
@@ -28,7 +29,7 @@ router = APIRouter()
 
 @router.get(
     "/{repo_id}/snapshots/{snapshot_id}/symbols",
-    response_model=list[SymbolOut],
+    response_model=PaginatedResponse,
     summary="List symbols in a snapshot",
 )
 async def list_symbols(
@@ -41,14 +42,21 @@ async def list_symbols(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
-    stmt = select(Symbol).where(Symbol.snapshot_id == snapshot_id)
+    base = select(Symbol).where(Symbol.snapshot_id == snapshot_id)
     if kind:
-        stmt = stmt.where(Symbol.kind == kind)
+        base = base.where(Symbol.kind == kind)
     if file_path:
-        stmt = stmt.where(Symbol.file_path == file_path)
-    stmt = stmt.order_by(Symbol.file_path, Symbol.start_line).offset(offset).limit(limit)
+        base = base.where(Symbol.file_path == file_path)
+
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = total_result.scalar() or 0
+
+    stmt = base.order_by(Symbol.file_path, Symbol.start_line).offset(offset).limit(limit)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    items = [SymbolOut.model_validate(s) for s in result.scalars().all()]
+    return PaginatedResponse(
+        items=items, total=total, limit=limit, offset=offset, has_more=(offset + limit < total)
+    )
 
 
 @router.get(
@@ -74,7 +82,7 @@ async def get_symbol(
 
 @router.get(
     "/{repo_id}/snapshots/{snapshot_id}/edges",
-    response_model=list[EdgeOut],
+    response_model=PaginatedResponse,
     summary="List edges in a snapshot",
 )
 async def list_edges(
@@ -88,16 +96,23 @@ async def list_edges(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
     await _verify_snapshot(db, repo_id, snapshot_id)
-    stmt = select(Edge).where(Edge.snapshot_id == snapshot_id)
+    base = select(Edge).where(Edge.snapshot_id == snapshot_id)
     if edge_type:
-        stmt = stmt.where(Edge.edge_type == edge_type)
+        base = base.where(Edge.edge_type == edge_type)
     if source:
-        stmt = stmt.where(Edge.source_fq_name == source)
+        base = base.where(Edge.source_fq_name == source)
     if target:
-        stmt = stmt.where(Edge.target_fq_name == target)
-    stmt = stmt.offset(offset).limit(limit)
+        base = base.where(Edge.target_fq_name == target)
+
+    total_result = await db.execute(select(func.count()).select_from(base.subquery()))
+    total = total_result.scalar() or 0
+
+    stmt = base.offset(offset).limit(limit)
     result = await db.execute(stmt)
-    return result.scalars().all()
+    items = [EdgeOut.model_validate(e) for e in result.scalars().all()]
+    return PaginatedResponse(
+        items=items, total=total, limit=limit, offset=offset, has_more=(offset + limit < total)
+    )
 
 
 @router.get(

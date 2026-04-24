@@ -120,29 +120,34 @@ class TestListSummaries:
     async def test_list_all(self, client):
         resp = await client.get("/repos/repo-idx/snapshots/snap-idx/summaries")
         assert resp.status_code == 200
-        assert len(resp.json()) == 4
+        data = resp.json()
+        assert data["total"] == 4
+        assert len(data["items"]) == 4
 
     @pytest.mark.asyncio
     async def test_filter_by_scope_type(self, client):
         resp = await client.get("/repos/repo-idx/snapshots/snap-idx/summaries?scope_type=symbol")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 2
-        assert all(s["scope_type"] == "symbol" for s in data)
+        assert len(data["items"]) == 2
+        assert all(s["scope_type"] == "symbol" for s in data["items"])
 
     @pytest.mark.asyncio
     async def test_filter_by_scope_id(self, client):
         resp = await client.get("/repos/repo-idx/snapshots/snap-idx/summaries?scope_id=MyApp.Foo")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["scope_id"] == "MyApp.Foo"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["scope_id"] == "MyApp.Foo"
 
     @pytest.mark.asyncio
     async def test_pagination(self, client):
         resp = await client.get("/repos/repo-idx/snapshots/snap-idx/summaries?limit=2&offset=0")
         assert resp.status_code == 200
-        assert len(resp.json()) == 2
+        data = resp.json()
+        assert len(data["items"]) == 2
+        assert data["total"] == 4
+        assert data["has_more"] is True
 
     @pytest.mark.asyncio
     async def test_snapshot_not_found(self, client):
@@ -155,8 +160,8 @@ class TestListSummaries:
             "/repos/repo-idx/snapshots/snap-idx/summaries?scope_type=symbol&scope_id=MyApp.Foo"
         )
         data = resp.json()
-        assert data[0]["summary"]["purpose"] == "Test class."
-        assert data[0]["summary"]["confidence"] == "high"
+        assert data["items"][0]["summary"]["purpose"] == "Test class."
+        assert data["items"][0]["summary"]["confidence"] == "high"
 
 
 class TestGetSummary:

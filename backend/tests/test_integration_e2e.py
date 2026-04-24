@@ -237,37 +237,38 @@ class TestSymbolEndpoints:
         r = await client.get("/repos/r-int/snapshots/s-int/symbols")
         assert r.status_code == 200
         data = r.json()
-        assert len(data) == 9
+        assert data["total"] == 9
+        assert len(data["items"]) == 9
 
     @pytest.mark.asyncio
     async def test_filter_by_kind_class(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/symbols?kind=class")
         assert r.status_code == 200
-        assert all(s["kind"] == "class" for s in r.json())
+        assert all(s["kind"] == "class" for s in r.json()["items"])
 
     @pytest.mark.asyncio
     async def test_filter_by_kind_method(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/symbols?kind=method")
         assert r.status_code == 200
-        assert len(r.json()) == 4
+        assert len(r.json()["items"]) == 4
 
     @pytest.mark.asyncio
     async def test_filter_by_file_path(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/symbols?file_path=Program.cs")
         assert r.status_code == 200
-        assert all(s["file_path"] == "Program.cs" for s in r.json())
+        assert all(s["file_path"] == "Program.cs" for s in r.json()["items"])
 
     @pytest.mark.asyncio
     async def test_filter_by_kind_interface(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/symbols?kind=interface")
         assert r.status_code == 200
-        assert len(r.json()) == 1
-        assert r.json()[0]["name"] == "IRepository"
+        assert len(r.json()["items"]) == 1
+        assert r.json()["items"][0]["name"] == "IRepository"
 
     @pytest.mark.asyncio
     async def test_get_single_symbol(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/symbols?kind=class")
-        fq = r.json()[0]["fq_name"]
+        fq = r.json()["items"][0]["fq_name"]
         r2 = await client.get(f"/repos/r-int/snapshots/s-int/symbols/{fq}")
         assert r2.status_code == 200
         assert r2.json()["fq_name"] == fq
@@ -288,26 +289,26 @@ class TestEdgeEndpoints:
     async def test_list_edges(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/edges")
         assert r.status_code == 200
-        assert len(r.json()) == 7
+        assert r.json()["total"] == 7
 
     @pytest.mark.asyncio
     async def test_filter_edges_by_type(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/edges?edge_type=calls")
         assert r.status_code == 200
-        assert all(e["edge_type"] == "calls" for e in r.json())
-        assert len(r.json()) == 3
+        assert all(e["edge_type"] == "calls" for e in r.json()["items"])
+        assert len(r.json()["items"]) == 3
 
     @pytest.mark.asyncio
     async def test_implements_edges(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/edges?edge_type=implements")
         assert r.status_code == 200
-        assert len(r.json()) == 1
+        assert len(r.json()["items"]) == 1
 
     @pytest.mark.asyncio
     async def test_contains_edges(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/edges?edge_type=contains")
         assert r.status_code == 200
-        assert len(r.json()) == 3
+        assert len(r.json()["items"]) == 3
 
 
 class TestAnalysisOverview:
@@ -338,20 +339,20 @@ class TestSummaryEndpoints:
     async def test_list_summaries(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/summaries")
         assert r.status_code == 200
-        assert len(r.json()) == 4
+        assert r.json()["total"] == 4
 
     @pytest.mark.asyncio
     async def test_filter_summaries_by_scope(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/summaries?scope_type=symbol")
         assert r.status_code == 200
-        assert len(r.json()) == 2
+        assert len(r.json()["items"]) == 2
 
     @pytest.mark.asyncio
     async def test_summary_contains_json(self, client):
         r = await client.get("/repos/r-int/snapshots/s-int/summaries?scope_type=module")
         data = r.json()
-        assert len(data) == 1
-        assert "purpose" in data[0]["summary"]
+        assert data["total"] == 1
+        assert "purpose" in data["items"][0]["summary"]
 
 
 class TestEvaluationIntegration:

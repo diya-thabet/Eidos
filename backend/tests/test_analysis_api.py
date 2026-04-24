@@ -168,15 +168,16 @@ class TestListSymbols:
         resp = await client.get("/repos/repo-001/snapshots/snap-001/symbols")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 4
+        assert data["total"] == 4
+        assert len(data["items"]) == 4
 
     @pytest.mark.asyncio
     async def test_filter_by_kind(self, client):
         resp = await client.get("/repos/repo-001/snapshots/snap-001/symbols?kind=method")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 2
-        assert all(s["kind"] == "method" for s in data)
+        assert len(data["items"]) == 2
+        assert all(s["kind"] == "method" for s in data["items"])
 
     @pytest.mark.asyncio
     async def test_filter_by_file(self, client):
@@ -185,24 +186,27 @@ class TestListSymbols:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["name"] == "IUserService"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["name"] == "IUserService"
 
     @pytest.mark.asyncio
     async def test_pagination(self, client):
         resp = await client.get("/repos/repo-001/snapshots/snap-001/symbols?limit=2&offset=0")
         assert resp.status_code == 200
         page1 = resp.json()
-        assert len(page1) == 2
+        assert len(page1["items"]) == 2
+        assert page1["total"] == 4
+        assert page1["has_more"] is True
 
         resp2 = await client.get("/repos/repo-001/snapshots/snap-001/symbols?limit=2&offset=2")
         assert resp2.status_code == 200
         page2 = resp2.json()
-        assert len(page2) == 2
+        assert len(page2["items"]) == 2
+        assert page2["has_more"] is False
 
         # Pages should not overlap
-        ids1 = {s["id"] for s in page1}
-        ids2 = {s["id"] for s in page2}
+        ids1 = {s["id"] for s in page1["items"]}
+        ids2 = {s["id"] for s in page2["items"]}
         assert ids1.isdisjoint(ids2)
 
     @pytest.mark.asyncio
@@ -248,16 +252,17 @@ class TestListEdges:
         resp = await client.get("/repos/repo-001/snapshots/snap-001/edges")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 4
+        assert data["total"] == 4
+        assert len(data["items"]) == 4
 
     @pytest.mark.asyncio
     async def test_filter_by_edge_type(self, client):
         resp = await client.get("/repos/repo-001/snapshots/snap-001/edges?edge_type=calls")
         assert resp.status_code == 200
         data = resp.json()
-        assert len(data) == 1
-        assert data[0]["source_fq_name"] == "MyApp.UserService.Delete"
-        assert data[0]["target_fq_name"] == "MyApp.UserService.GetById"
+        assert len(data["items"]) == 1
+        assert data["items"][0]["source_fq_name"] == "MyApp.UserService.Delete"
+        assert data["items"][0]["target_fq_name"] == "MyApp.UserService.GetById"
 
     @pytest.mark.asyncio
     async def test_filter_by_source(self, client):
@@ -266,7 +271,7 @@ class TestListEdges:
         )
         assert resp.status_code == 200
         data = resp.json()
-        assert all(e["source_fq_name"] == "MyApp.UserService.Delete" for e in data)
+        assert all(e["source_fq_name"] == "MyApp.UserService.Delete" for e in data["items"])
 
     @pytest.mark.asyncio
     async def test_filter_by_target(self, client):
@@ -274,7 +279,7 @@ class TestListEdges:
             "/repos/repo-001/snapshots/snap-001/edges?target=MyApp.UserService.GetById"
         )
         assert resp.status_code == 200
-        assert len(resp.json()) >= 1
+        assert len(resp.json()["items"]) >= 1
 
 
 class TestGraphNeighborhood:
