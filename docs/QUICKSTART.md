@@ -487,7 +487,10 @@ Here is every key request you'll need, ready to copy into Postman:
 | 24 | Portable export | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/portable` | -- |
 | 25 | Import snapshot | `POST` | `{{base_url}}/repos/{{repo_id}}/import` | form-data: `file` |
 | 26 | Health trend | `GET` | `{{base_url}}/repos/{{repo_id}}/health/trend` | -- |
-| 25 | Evaluate | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/evaluate` | -- |
+| 27 | Create API key | `POST` | `{{base_url}}/auth/api-keys?name=my-key` | -- |
+| 28 | List API keys | `GET` | `{{base_url}}/auth/api-keys` | -- |
+| 29 | Revoke API key | `DELETE` | `{{base_url}}/auth/api-keys/{{key_id}}` | -- |
+| 30 | Evaluate | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/evaluate` | -- |
 | 26 | Summaries | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/summaries` | -- |
 | 27 | Update repo | `PATCH` | `{{base_url}}/repos/{{repo_id}}` | `{"name":"new-name"}` |
 | 28 | Delete repo | `DELETE` | `{{base_url}}/repos/{{repo_id}}` | -- |

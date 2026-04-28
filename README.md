@@ -51,6 +51,9 @@ pytest -v
 | POST   | `/auth/logout`                                | Logout hint                     |
 | GET    | `/auth/google/login`                          | Start Google OAuth flow         |
 | GET    | `/auth/google/callback`                       | Google OAuth callback (JWT)     |
+| POST   | `/auth/api-keys`                              | Create an API key for CI/CD     |
+| GET    | `/auth/api-keys`                              | List your active API keys       |
+| DELETE | `/auth/api-keys/{id}`                         | Revoke an API key               |
 | GET    | `/repos/{id}/snapshots/{sid}/search`          | Full-text search (symbols, summaries, docs) |
 | GET    | `/repos/{id}/snapshots/{sid}/diff/{other}`    | Compare two snapshots (symbol diff) |
 | GET    | `/repos/{id}/health/trend`                    | Health score trend across snapshots |
@@ -90,6 +93,16 @@ backend/
       entry_points.py   # Controller, Main, Startup detection
       metrics.py        # LOC, fan-in/out, hotspot detection
       pipeline.py       # Analysis orchestrator + DB persistence
+      code_health.py    # Health check orchestrator (360 lines)
+      health_rules/     # 40 rules across 8 category modules
+        clean_code.py   # 8 rules (long method, empty method, etc.)
+        solid.py        # 5 rules (god class, DIP, ISP, etc.)
+        complexity.py   # 6 rules (fan-in/out, cohesion, etc.)
+        design.py       # 10 rules (circular deps, dead code, etc.)
+        naming.py       # 4 rules (short names, boolean names, etc.)
+        security.py     # 3 rules (hardcoded secrets, SQL injection)
+        best_practices.py # 3 rules (large files, unused imports)
+        documentation.py  # 1 rule (missing docs)
     indexing/
       summary_schema.py # Summary data classes
       facts_extractor.py # Deterministic facts from code graph

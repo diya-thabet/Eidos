@@ -183,8 +183,10 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_diagrams_and_trends.py` | 23 | Mermaid class/module diagrams, health score trends (improving/degrading/stable/insufficient) |
 | `test_portable.py` | 25 | Portable .eidos export (gzip, compact keys, headers), import (restore, validation), round-trip (symbols/edges/summaries/docs preserved) |
 | `test_progress.py` | 7 | Ingestion progress fields in status/detail responses, default values, all snapshot states |
+| `test_api_keys.py` | 13 | API key create (format, hash, prefix), list (metadata only, no raw key), revoke, auth with X-API-Key header |
+| `test_logging.py` | 3 | JSON formatter in client mode, text in internal mode, field verification |
 
-### Updated Total: ~1,536 tests
+### Updated Total: ~1,552 tests
 
 ## Test Design Principles
 

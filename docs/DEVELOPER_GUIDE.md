@@ -142,7 +142,7 @@ class TestHotspots:
 #### Step 5: Run checks
 
 ```bash
-python -m ruff check app/ tests/
+python -m ruff check alembic/ app/ tests/
 python -m mypy app/ --ignore-missing-imports
 python -m pytest tests/test_hotspots.py -v
 python -m pytest tests/ -q  # full suite
@@ -420,6 +420,8 @@ pytest tests/test_my_feature.py -v          # single file
 pytest tests/ -q                            # full suite
 pytest tests/ -k "test_search" -v           # by name pattern
 pytest tests/ --tb=short                    # shorter tracebacks
+ruff check alembic/ app/ tests/             # lint (must pass in CI)
+mypy app/ --ignore-missing-imports          # type check
 ```
 
 ---

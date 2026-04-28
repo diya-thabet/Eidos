@@ -301,6 +301,33 @@ This creates a new snapshot with status `completed` and all data restored. No re
 
 ---
 
+### 10c. API Key Authentication -- Programmatic Access
+
+For CI/CD pipelines and scripts that can't do an OAuth dance, create an API key:
+
+```
+POST /auth/api-keys?name=my-ci-pipeline
+```
+
+Response (the raw key is shown **only once**):
+```json
+{"id": "abc123", "name": "my-ci-pipeline", "key": "eidos_abc...xyz", "prefix": "eidos_abc..."}
+```
+
+Use the key in any request via the `X-API-Key` header:
+```
+GET /repos/my-repo/status
+X-API-Key: eidos_abc...xyz
+```
+
+Manage your keys:
+- `GET /auth/api-keys` -- list active keys (shows prefix, not raw key)
+- `DELETE /auth/api-keys/{id}` -- revoke a key permanently
+
+**Security**: Keys are SHA-256 hashed in the database. The raw key is never stored.
+
+---
+
 ### 11. Webhooks — Auto-Analyze on Push
 
 Configure your Git provider to send push events to Eidos:
