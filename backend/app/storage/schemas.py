@@ -114,6 +114,8 @@ class SnapshotOut(BaseModel):
     status: SnapshotStatus
     file_count: int
     error_message: str | None = None
+    progress_percent: int = 0
+    progress_message: str = ""
     created_at: str
 
     model_config = {"from_attributes": True}
@@ -146,6 +148,8 @@ class SnapshotDetail(BaseModel):
     commit_sha: str | None
     status: SnapshotStatus
     file_count: int
+    progress_percent: int = 0
+    progress_message: str = ""
     created_at: str
     files: list[FileOut]
 

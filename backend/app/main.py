@@ -28,19 +28,43 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
-    # Create tables on startup (replaced by Alembic migrations in production)
+    logger = logging.getLogger(__name__)
     try:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+        if settings.database_url.startswith("sqlite"):
+            # SQLite (tests/dev): use create_all since Alembic doesn't support async SQLite well
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        else:
+            # PostgreSQL (production): run Alembic migrations
+            from alembic.config import Config
+
+            alembic_cfg = Config("alembic.ini")
+            alembic_cfg.set_main_option("sqlalchemy.url", settings.database_url)
+            await _run_alembic_upgrade(alembic_cfg)
+            logger.info("Alembic migrations applied successfully")
     except Exception:
-        logging.getLogger(__name__).warning(
-            "Could not connect to DB on startup; skipping table creation"
+        logger.warning(
+            "Could not run migrations on startup; falling back to create_all"
         )
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+        except Exception:
+            logger.warning("create_all also failed; DB may be unavailable")
     yield
     try:
         await engine.dispose()
     except Exception:
         pass
+
+
+async def _run_alembic_upgrade(alembic_cfg: Any) -> None:
+    """Run Alembic upgrade in a thread (Alembic is sync)."""
+    import asyncio
+
+    from alembic import command
+
+    await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
 
 
 app = FastAPI(

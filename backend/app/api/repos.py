@@ -109,6 +109,8 @@ async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)) -> Any:
                 status=s.status,
                 file_count=s.file_count,
                 error_message=s.error_message,
+                progress_percent=s.progress_percent,
+                progress_message=s.progress_message,
                 created_at=s.created_at.isoformat(),
             )
             for s in snapshots
@@ -135,6 +137,8 @@ async def snapshot_detail(
         commit_sha=snapshot.commit_sha,
         status=snapshot.status,
         file_count=snapshot.file_count,
+        progress_percent=snapshot.progress_percent,
+        progress_message=snapshot.progress_message,
         created_at=snapshot.created_at.isoformat(),
         files=[
             FileOut(

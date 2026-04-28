@@ -8,6 +8,14 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 |----------|-------------|
 | [QUICKSTART.md](QUICKSTART.md) | **Start here** — clone, install, configure, run, analyze your first repo |
 | [USER_GUIDE.md](USER_GUIDE.md) | Complete feature guide — what Eidos does and how to use every capability |
+| [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | How to add features, endpoints, parsers, health rules, integrations |
+
+## Project Health
+
+| Document | Description |
+|----------|-------------|
+| [PROJECT_STATUS.md](PROJECT_STATUS.md) | Full status report — code health, scalability, feature completeness, risk register |
+| [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) | Prioritized improvement plan with effort estimates and execution timeline |
 
 ## Reference
 

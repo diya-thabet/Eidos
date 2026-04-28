@@ -29,7 +29,15 @@ async def run_ingestion(snapshot_id: str) -> None:
             return
 
         snapshot.status = SnapshotStatus.running
+        snapshot.progress_percent = 0
+        snapshot.progress_message = "Starting ingestion..."
         await db.commit()
+
+        async def _progress(percent: int, message: str) -> None:
+            snapshot.progress_percent = percent
+            snapshot.progress_message = message
+            await db.commit()
+            logger.info("Snapshot %s: %d%% - %s", snapshot_id, percent, message)
 
         try:
             # Decrypt Git token for private repos
@@ -40,7 +48,8 @@ async def run_ingestion(snapshot_id: str) -> None:
                 except ValueError:
                     logger.warning("Could not decrypt Git token for repo %s", repo.id)
 
-            # Phase 1: Clone and scan files
+            # Phase 1: Clone
+            await _progress(5, "Cloning repository...")
             dest = repo_clone_path(repo.id, snapshot_id)
             resolved_sha = await asyncio.to_thread(
                 clone_repo,
@@ -52,6 +61,8 @@ async def run_ingestion(snapshot_id: str) -> None:
             )
             snapshot.commit_sha = resolved_sha
 
+            # Phase 2: Scan files
+            await _progress(15, "Scanning files...")
             file_entries = await asyncio.to_thread(scan_files, dest)
 
             for entry in file_entries:
@@ -66,35 +77,50 @@ async def run_ingestion(snapshot_id: str) -> None:
                 )
 
             snapshot.file_count = len(file_entries)
+            await _progress(25, f"Scanned {len(file_entries)} files. Parsing ASTs...")
 
-            # Phase 2: Static analysis (C# files only)
+            # Phase 3: Static analysis
             graph = await asyncio.to_thread(analyze_snapshot_files, dest, file_entries)
-            await persist_graph(db, snapshot_id, graph)
+            sym_count = len(graph.symbols)
+            edge_count = len(graph.edges)
+            await _progress(
+                50, f"Parsed {sym_count} symbols, {edge_count} edges. Persisting graph..."
+            )
 
-            # Phase 3: Summarisation & indexing
+            await persist_graph(db, snapshot_id, graph)
+            await _progress(65, "Graph persisted. Generating summaries...")
+
+            # Phase 4: Summarisation & indexing
             indexing_stats = await run_indexing(db, snapshot_id, graph)
+            total_summaries = (
+                indexing_stats.get("symbol_summaries", 0)
+                + indexing_stats.get("module_summaries", 0)
+                + indexing_stats.get("file_summaries", 0)
+            )
+            await _progress(90, f"Generated {total_summaries} summaries. Finalizing...")
 
             snapshot.status = SnapshotStatus.completed
+            snapshot.progress_percent = 100
+            snapshot.progress_message = "Ingestion complete"
             repo.last_indexed_at = datetime.now(UTC)
             await db.commit()
             logger.info(
-                "Ingestion + analysis + indexing complete: snapshot=%s, files=%d, "
+                "Ingestion complete: snapshot=%s, files=%d, "
                 "symbols=%d, edges=%d, summaries=%d, sha=%s",
                 snapshot_id,
                 len(file_entries),
                 len(graph.symbols),
                 len(graph.edges),
-                indexing_stats.get("symbol_summaries", 0)
-                + indexing_stats.get("module_summaries", 0)
-                + indexing_stats.get("file_summaries", 0),
+                total_summaries,
                 resolved_sha,
             )
 
-            # Phase 8: cleanup clone after indexing
+            # Cleanup clone after indexing
             cleanup_clone(repo.id, snapshot_id)
 
         except Exception as e:
             logger.exception("Ingestion failed for snapshot %s", snapshot_id)
             snapshot.status = SnapshotStatus.failed
             snapshot.error_message = str(e)[:2000]
+            snapshot.progress_message = f"Failed: {str(e)[:200]}"
             await db.commit()
