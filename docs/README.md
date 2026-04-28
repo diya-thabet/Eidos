@@ -17,6 +17,7 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 |----------|-------------|
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | Full status report — code health, scalability, feature completeness, risk register |
 | [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) | Prioritized improvement plan with effort estimates and execution timeline |
+| [LLM_HANDOFF.md](LLM_HANDOFF.md) | Lessons learned, gotchas, patterns, and tips for the next developer or LLM |
 
 ## Reference
 

@@ -12,19 +12,19 @@ Eidos is a code intelligence platform that analyzes codebases across 8 programmi
 
 | Metric | Value |
 |--------|-------|
-| **Total Python files** | 176 |
+| **Total Python files** | 177 |
 | **Application code** | 100 files / 19,413 lines |
-| **Test code** | 76 files / 19,052 lines |
-| **Total lines of code** | 38,465 |
-| **Test-to-code ratio** | 0.98:1 (near 1:1) |
-| **Tests collected** | 1,608 |
-| **Tests passing** | 1,607 (1 skipped, 0 failed) |
+| **Test code** | 77 files / 19,776 lines |
+| **Total lines of code** | 39,189 |
+| **Test-to-code ratio** | 1.02:1 (tests exceed code!) |
+| **Tests collected** | 1,641 |
+| **Tests passing** | 1,640 (1 skipped, 0 failed) |
 | **Lint (ruff)** | 0 errors |
 | **Type checking (mypy)** | 0 errors across 98 files |
 | **API endpoints** | 55 |
 | **Language parsers** | 9 (C#, Java, Python, TypeScript, TSX, Go, Rust, C, C++) |
 | **Code health rules** | 40 (across 8 category modules) |
-| **Documentation files** | 26 |
+| **Documentation files** | 27 |
 
 ---
 
@@ -250,6 +250,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 10 (Production) | ~1,529 | ~87 | ~36,109 | 50 |
 | Phase 11 (Polish) | **1,551** | **97** | **37,044** | **53** |
 | Phase 12 (Performance) | **1,607** | **100** | **38,465** | **55** |
+| Phase 13 (E2E Validation) | **1,640** | **100** | **39,189** | **55** |
 
 ---
 

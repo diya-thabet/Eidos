@@ -191,7 +191,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_incremental.py` | 9 | First snapshot full parse, unchanged files excluded, changed/new file detection, copy symbols from unchanged files |
 | `test_fulltext_search.py` | 10 | /fulltext endpoint, ILIKE fallback, PostgreSQL detection, partial match, result structure, limit, 404 |
 
-### Updated Total: ~1,607 tests
+| `test_real_repo_e2e.py` | 33 | Full E2E against real Java GitHub repo (Neon-Defenders): clone, parse, symbols, edges, health, search, docs, review, diagrams, export/import, API keys, metrics |
+
+### Updated Total: ~1,640 tests
 
 ## Test Design Principles
 
