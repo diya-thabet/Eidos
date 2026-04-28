@@ -268,3 +268,23 @@ Every parser was validated against a real open-source GitHub repository:
 
 All 9 languages produce correct symbols, edges, health scores, search results,
 diagrams, and portable export/import. Total: 177 E2E tests across 9 real repos.
+
+---
+
+## 13. Deep Language Validation (Challenging Repos)
+
+A second round of testing used larger, harder repos to stress each parser:
+
+| Language | Repo | Symbols | Edges | Health | Key Findings |
+|----------|------|---------|-------|--------|-------------|
+| **Python** | pallets/click | 1,086 | 5,550 | 77.4/100 | 91 classes, 296 methods, 61 inheritance edges, deep decorator chains |
+| **C#** | ardalis/GuardClauses | 750 | 2,969 | 77.5/100 | Interfaces found, generic signatures parsed, extension methods |
+| **Java** | iluwatar/java-design-patterns | 5,553 | 18,792 | varies | Factory/Builder/Singleton/Observer/Strategy classes found, deep inheritance |
+| **TypeScript** | sindresorhus/ky | 48 | 75 | Pass | Async functions, generics, union types parsed |
+| **TSX** | pacocoursey/cmdk | 119 | 251 | Pass | React components (PascalCase), hooks, JSX composition |
+| **Go** | charmbracelet/bubbletea | 761 | 4,457 | 80.6/100 | Interfaces, struct embedding, method receivers detected |
+| **Rust** | hyperium/http | 946 | 3,555 | 74.5/100 | Traits, impl blocks grouped by parent, struct/enum parsing |
+| **C** | DaveGamble/cJSON | 1,026 | 4,354 | 78.9/100 | Structs, function pointers, 152-call test functions |
+| **C++** | fmtlib/fmt | 1,172 | 10,084 | 70.8/100 | Templates, virtual methods, 33 inheritance edges, namespaces |
+
+Total across deep validation: **38 tests, all passing.**
