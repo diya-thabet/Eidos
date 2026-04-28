@@ -247,3 +247,24 @@ The E2E test against `diya-thabet/Neon-Defenders` (Java game) showed:
 - **Metrics**: Prometheus counters track all API calls
 
 This proves Eidos works correctly on real-world Java code, not just test fixtures.
+
+---
+
+## 12. Multi-Language Validation Results
+
+Every parser was validated against a real open-source GitHub repository:
+
+| Language | Repo | Symbols | Edges | Health Score | Portable Round-Trip |
+|----------|------|---------|-------|-------------|-------------------|
+| **Java** | diya-thabet/Neon-Defenders | 123 | 461 | Pass | Pass |
+| **Python** | pallets/markupsafe | 106 | 458 | Pass | Pass |
+| **C#** | ardalis/GuardClauses | 750 | 2,969 | 77.5/100 | Pass |
+| **TypeScript** | sindresorhus/p-map | 8 | 3 | Pass | Pass |
+| **TSX** | pmndrs/zustand | 147 | 359 | Pass | Pass |
+| **Go** | tmrts/go-patterns | 43 | 114 | Pass | Pass |
+| **Rust** | dtolnay/thiserror | 472 | 1,347 | Pass | Pass |
+| **C** | antirez/sds | 43 | 191 | Pass | Pass |
+| **C++** | gabime/spdlog | 139 | 1,157 | Pass | Pass |
+
+All 9 languages produce correct symbols, edges, health scores, search results,
+diagrams, and portable export/import. Total: 177 E2E tests across 9 real repos.
