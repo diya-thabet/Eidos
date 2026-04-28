@@ -23,7 +23,35 @@ from app.core.middleware import install_middleware
 from app.storage.database import engine
 from app.storage.models import Base
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+def _configure_logging() -> None:
+    """Set up logging: JSON in client mode, text in internal mode."""
+    import logging
+
+    if settings.edition == "client":
+        try:
+            from pythonjsonlogger.json import JsonFormatter
+
+            handler = logging.StreamHandler()
+            handler.setFormatter(JsonFormatter(
+                fmt="%(asctime)s %(name)s %(levelname)s %(message)s",
+                rename_fields={"asctime": "timestamp", "levelname": "level"},
+            ))
+            logging.root.handlers = [handler]
+            logging.root.setLevel(logging.INFO)
+        except ImportError:
+            logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s %(name)s %(levelname)s %(message)s",
+            )
+    else:
+        logging.basicConfig(
+            level=logging.INFO,
+            format="%(asctime)s %(name)s %(levelname)s %(message)s",
+        )
+
+
+_configure_logging()
 
 
 @asynccontextmanager
@@ -67,13 +95,31 @@ async def _run_alembic_upgrade(alembic_cfg: Any) -> None:
     await asyncio.to_thread(command.upgrade, alembic_cfg, "head")
 
 
+tags_metadata = [
+    {"name": "repos", "description": "Register, update, delete, status, ingest"},
+    {"name": "analysis", "description": "Symbols, edges, call graphs, overviews, health"},
+    {"name": "search", "description": "Full-text search, snapshot comparison, JSON export"},
+    {"name": "reasoning", "description": "Ask questions about the codebase in natural language"},
+    {"name": "reviews", "description": "PR review: submit a diff, get behavioral risk analysis"},
+    {"name": "docs", "description": "Auto-generate documentation with file/line citations"},
+    {"name": "evaluations", "description": "Guardrails: evaluate output quality and safety"},
+    {"name": "diagrams", "description": "Mermaid class and module diagrams"},
+    {"name": "trends", "description": "Track code health scores across snapshots"},
+    {"name": "portable", "description": "Export/import snapshots as compact .eidos files"},
+    {"name": "indexing", "description": "Summarization and vector indexing pipeline"},
+    {"name": "webhooks", "description": "GitHub, GitLab, and generic push webhooks"},
+    {"name": "auth", "description": "OAuth login (GitHub, Google), JWT tokens, API keys"},
+    {"name": "admin", "description": "User management, roles, plans, usage metering"},
+]
+
 app = FastAPI(
-    title="Eidos — Code Intelligence Platform",
+    title="Eidos - Code Intelligence Platform",
     version=settings.version,
     description=(
         "Analyzes codebases across 8 languages, auto-generates documentation, "
         "reviews PRs for behavioral risks, and answers questions about your code."
     ),
+    openapi_tags=tags_metadata,
     lifespan=lifespan,
 )
 

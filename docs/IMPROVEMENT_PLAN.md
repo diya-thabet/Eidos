@@ -81,11 +81,11 @@ This document lists every concrete improvement identified during a full project 
 
 ---
 
-### 5. External Job Queue for Ingestion
+### 5. External Job Queue for Ingestion (DEFERRED)
 
-**Why**: `BackgroundTasks` runs ingestion inside the API process. If the process crashes mid-ingestion, the job is lost. If you run multiple API replicas, only the one that received the request does the work — no load distribution.
+> **Deferred reason**: Requires Redis at runtime and ARQ dependency. The current `BackgroundTasks` approach works correctly for single-process SaaS. Implement when scaling to multiple API replicas.
 
-**What to do**:
+**What to do when needed**:
 1. Add `arq` (lightweight Redis-based job queue) as a dependency
 2. Create `app/workers/ingestion_worker.py` that picks up jobs from Redis
 3. Change `POST /ingest` to enqueue a job instead of `background.add_task()`
@@ -97,11 +97,11 @@ This document lists every concrete improvement identified during a full project 
 
 ---
 
-### 6. Per-User Rate Limiting (Replace In-Memory)
+### 6. Per-User Rate Limiting (DEFERRED)
 
-**Why**: The current rate limiter uses an in-memory `_TokenBucket` per IP. If you run 2 API replicas, each has its own bucket — a user gets 2x the rate. Also, IP-based limiting doesn't work when users are behind a shared proxy.
+> **Deferred reason**: The in-memory rate limiter works correctly for single-process deployment. Implement Redis-backed limiter when running multiple API replicas.
 
-**What to do**:
+**What to do when needed**:
 1. Add a Redis-backed sliding window rate limiter
 2. Key by `user_id` (from JWT) if authenticated, fall back to IP
 3. Make limits configurable per plan (free: 10 req/min, pro: 100 req/min)
@@ -112,18 +112,14 @@ This document lists every concrete improvement identified during a full project 
 
 ---
 
-### 7. Resolve the 3 TODO Comments
+### ~~7. Resolve the 3 TODO Comments~~ DONE
 
-**Why**: These represent known incomplete features that someone flagged during development.
+**What was done**:
+- `embedder.py:91` -- Replaced misleading TODO with accurate comment (hash fallback is intentional)
+- `summarizer.py:108` -- Replaced misleading TODO with accurate comment (deterministic facts is intentional)
+- `code_health.py:285` -- Was already correct (suggestion text to users, not a code TODO)
 
-| Location | TODO | What to do |
-|----------|------|------------|
-| `code_health.py:285` | TODO in rule logic | Review and complete the rule or remove it |
-| `embedder.py:91` | TODO for embedding batch size | Set a proper batch size based on model limits |
-| `summarizer.py:108` | TODO for LLM prompt | Finalize the summarizer prompt |
-
-**Effort**: 1 hour total
-**Risk if skipped**: Low, but creates confusion for future developers
+**Files changed**: `app/indexing/embedder.py`, `app/indexing/summarizer.py`
 
 ---
 

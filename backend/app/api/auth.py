@@ -8,6 +8,9 @@ Provides:
 - ``GET  /auth/google/callback``  -- handle Google OAuth callback
 - ``GET  /auth/me``               -- current user info
 - ``POST /auth/logout``           -- invalidate session (client-side)
+- ``POST /auth/api-keys``         -- create an API key for CI/CD
+- ``GET  /auth/api-keys``         -- list active API keys
+- ``DELETE /auth/api-keys/{id}``  -- revoke an API key
 """
 
 from __future__ import annotations
@@ -15,7 +18,7 @@ from __future__ import annotations
 import secrets
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -218,3 +221,96 @@ async def get_me(user: User = Depends(get_current_user)) -> Any:
 async def logout() -> Any:
     """JWTs are stateless -- the client should discard the token."""
     return {"detail": "Token discarded. Please delete it on the client."}
+
+
+# ---------------------------------------------------------------------------
+# API Key management
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/api-keys",
+    status_code=201,
+    summary="Create an API key for programmatic access",
+    description="Returns the raw key once. Store it securely -- it cannot be retrieved again.",
+)
+async def create_api_key(
+    name: str = Query(description="A label for this key (e.g. 'CI pipeline')"),
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Create a new API key. The raw key is returned only once."""
+    import hashlib
+    import uuid
+
+    from app.storage.models import ApiKey
+
+    key_id = uuid.uuid4().hex[:12]
+    raw_key = f"eidos_{secrets.token_urlsafe(32)}"
+    prefix = raw_key[:12]
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    db.add(ApiKey(
+        id=key_id,
+        user_id=user.id,
+        name=name,
+        key_hash=key_hash,
+        prefix=prefix,
+    ))
+    await db.commit()
+
+    return {"id": key_id, "name": name, "key": raw_key, "prefix": prefix}
+
+
+@router.get(
+    "/api-keys",
+    summary="List your active API keys",
+    description="Returns key metadata (not the raw key). Use prefix to identify keys.",
+)
+async def list_api_keys(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """List all active API keys for the current user."""
+    from app.storage.models import ApiKey
+
+    result = await db.execute(
+        select(ApiKey)
+        .where(ApiKey.user_id == user.id, ApiKey.is_active.is_(True))
+        .order_by(ApiKey.created_at.desc())
+    )
+    keys = result.scalars().all()
+    return [
+        {
+            "id": k.id,
+            "name": k.name,
+            "prefix": k.prefix,
+            "created_at": k.created_at.isoformat() if k.created_at else "",
+        }
+        for k in keys
+    ]
+
+
+@router.delete(
+    "/api-keys/{key_id}",
+    summary="Revoke an API key",
+    description="Deactivates the key. It can no longer be used for authentication.",
+)
+async def revoke_api_key(
+    key_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Revoke (deactivate) an API key."""
+    from app.storage.models import ApiKey
+
+    result = await db.execute(
+        select(ApiKey).where(ApiKey.id == key_id, ApiKey.user_id == user.id)
+    )
+    key = result.scalar_one_or_none()
+    if key is None:
+        raise HTTPException(status_code=404, detail="API key not found")
+
+    key.is_active = False
+    await db.commit()
+    return {"detail": "API key revoked"}

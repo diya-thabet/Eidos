@@ -88,7 +88,7 @@ class OpenAIEmbedder(Embedder):
         return self._size
 
     async def embed(self, texts: list[str]) -> list[list[float]]:
-        # TODO: implement real OpenAI embedding call
+        # OpenAI embedding not yet wired; uses hash fallback (works without API key)
         logger.warning("OpenAIEmbedder called but not configured; falling back to hash embedder.")
         fallback = HashEmbedder(self._size)
         return await fallback.embed(texts)

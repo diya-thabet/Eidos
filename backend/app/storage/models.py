@@ -59,6 +59,29 @@ class User(Base):
     __table_args__ = (Index("ix_users_github_login", "github_login"),)
 
 
+class ApiKey(Base):
+    """An API key for programmatic access (CI/CD, scripts)."""
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[str] = mapped_column(String(24), primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    key_hash: Mapped[str] = mapped_column(String(128), nullable=False)
+    prefix: Mapped[str] = mapped_column(String(12), nullable=False)
+    is_active: Mapped[bool] = mapped_column(default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+
+    __table_args__ = (
+        Index("ix_api_keys_user", "user_id"),
+        Index("ix_api_keys_prefix", "prefix"),
+    )
+
+
 class Repo(Base):
     __tablename__ = "repos"
 

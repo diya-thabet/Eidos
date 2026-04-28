@@ -68,21 +68,13 @@ class ImportResponse(BaseModel):
     """Response after importing a portable snapshot."""
 
     snapshot_id: str
-
     repo_id: str
-
     symbols_imported: int
-
     edges_imported: int
-
     files_imported: int
-
     summaries_imported: int
-
     docs_imported: int
-
     evaluations_imported: int
-
     message: str
 
 # ---------------------------------------------------------------------------
@@ -94,75 +86,40 @@ class ImportResponse(BaseModel):
 @router.get(
 
     "/{repo_id}/snapshots/{snapshot_id}/portable",
-
-    summary="Export snapshot as a portable .eidos file (gzip'd JSON)",
-
+    summary="Export snapshot as a portable .eidos file",
+    description="Downloads a gzip-compressed JSON file containing all analysis data.",
     response_class=Response,
-
-    responses={
-
-        200: {
-
-            "content": {"application/gzip": {}},
-
-            "description": "Compressed .eidos file",
-
-        }
-
-    },
-
+    responses={200: {"content": {"application/gzip": {}}}},
 )
 
 async def export_portable(
 
     repo_id: str,
-
     snapshot_id: str,
-
     db: AsyncSession = Depends(get_db),
-
     snap: RepoSnapshot = Depends(verify_snapshot),
 
 ) -> Response:
 
     """
-
     Export a complete snapshot as a portable ``.eidos`` file.
-
     The file is gzip-compressed JSON containing all analysis data:
-
     symbols, edges, files, summaries, generated docs, and evaluations.
-
     Use ``POST /repos/{repo_id}/import`` to restore it on any Eidos instance.
-
     """
-
     payload = await _build_export_payload(db, snap)
-
-    json_bytes = json.dumps(payload, separators=(",", ":"), default=str).encode("utf-8")
-
+    json_bytes = json.dumps(payload, separators=(",", ":"), default=str).encode()
     compressed = gzip.compress(json_bytes, compresslevel=9)
 
-    filename = f"{repo_id}_{snapshot_id}.eidos"
-
     return Response(
-
         content=compressed,
-
         media_type="application/gzip",
-
         headers={
-
-            "Content-Disposition": f'attachment; filename="{filename}"',
-
+            "Content-Disposition": f'attachment; filename="{repo_id}_{snapshot_id}.eidos"',
             "X-Eidos-Schema-Version": str(PORTABLE_SCHEMA_VERSION),
-
             "X-Eidos-Uncompressed-Size": str(len(json_bytes)),
-
             "X-Eidos-Compressed-Size": str(len(compressed)),
-
         },
-
     )
 
 # ---------------------------------------------------------------------------
@@ -174,156 +131,103 @@ async def export_portable(
 @router.post(
 
     "/{repo_id}/import",
-
     response_model=ImportResponse,
-
     status_code=201,
-
-    summary="Import a portable .eidos file to restore a snapshot",
-
+    summary="Import a portable .eidos file",
+    description="Upload a .eidos file to restore a snapshot without re-running ingestion.",
 )
 
 async def import_portable(
 
     repo_id: str,
-
     file: UploadFile,
-
     db: AsyncSession = Depends(get_db),
 
 ) -> Any:
 
     """
-
     Import a ``.eidos`` file and create a new snapshot with all analysis data.
-
     The repo must already exist.  A new snapshot is created with status
-
     ``completed`` and all symbols, edges, files, summaries, docs, and
-
     evaluations from the file are restored.
-
     This allows migrating analysis results between Eidos instances or
-
     restoring a previous analysis without re-cloning and re-parsing.
-
     """
-
     # Verify repo exists
-
     repo = await db.get(Repo, repo_id)
-
     if repo is None:
-
         raise HTTPException(status_code=404, detail="Repo not found")
 
-    # Read and validate upload
-
-    if file.content_type and file.content_type not in (
-
-        "application/gzip",
-
-        "application/octet-stream",
-
-        "application/x-gzip",
-
-    ):
-
-        raise HTTPException(
-
-            status_code=400,
-
-            detail=f"Expected gzip file, got {file.content_type}",
-
-        )
-
-    raw = await file.read()
-
-    if len(raw) > MAX_UPLOAD_BYTES:
-
-        raise HTTPException(
-
-            status_code=413,
-
-            detail=f"File too large ({len(raw)} bytes). Max: {MAX_UPLOAD_BYTES}",
-
-        )
-
-    if len(raw) == 0:
-
-        raise HTTPException(status_code=400, detail="Empty file")
-
-    # Decompress and parse
-
-    try:
-
-        decompressed = gzip.decompress(raw)
-
-    except gzip.BadGzipFile:
-
-        raise HTTPException(status_code=400, detail="Invalid gzip file")
-
-    try:
-
-        payload = json.loads(decompressed)
-
-    except json.JSONDecodeError:
-
-        raise HTTPException(status_code=400, detail="Invalid JSON inside gzip")
-
-    # Validate schema
-
-    schema_version = payload.get("schema_version", 0)
-
-    if schema_version > PORTABLE_SCHEMA_VERSION:
-
-        raise HTTPException(
-
-            status_code=400,
-
-            detail=(
-
-                f"File schema version {schema_version} is newer than this server "
-
-                f"supports ({PORTABLE_SCHEMA_VERSION}). Please upgrade Eidos."
-
-            ),
-
-        )
-
-    if "metadata" not in payload:
-
-        raise HTTPException(status_code=400, detail="Missing metadata in .eidos file")
-
-    # Create the snapshot
-
+    payload = await _validate_and_parse_upload(file)
     counts = await _restore_snapshot(db, repo_id, payload)
 
     return ImportResponse(
-
         snapshot_id=counts["snapshot_id"],
-
         repo_id=repo_id,
-
         symbols_imported=counts["symbols"],
-
         edges_imported=counts["edges"],
-
         files_imported=counts["files"],
-
         summaries_imported=counts["summaries"],
-
         docs_imported=counts["docs"],
-
         evaluations_imported=counts["evaluations"],
-
         message="Snapshot restored successfully",
-
     )
 
 # ---------------------------------------------------------------------------
 
-# Internal: build export payload
+# Validation helpers
+
+# ---------------------------------------------------------------------------
+
+async def _validate_and_parse_upload(file: UploadFile) -> dict[str, Any]:
+    """Read, decompress, parse, and validate an uploaded .eidos file."""
+    if file.content_type and file.content_type not in (
+        "application/gzip",
+        "application/octet-stream",
+        "application/x-gzip",
+    ):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Expected gzip file, got {file.content_type}",
+        )
+
+    raw = await file.read()
+    if len(raw) == 0:
+        raise HTTPException(status_code=400, detail="Empty file")
+    if len(raw) > MAX_UPLOAD_BYTES:
+        raise HTTPException(
+            status_code=413,
+            detail=f"File too large ({len(raw)} bytes). Max: {MAX_UPLOAD_BYTES}",
+        )
+
+    try:
+        decompressed = gzip.decompress(raw)
+    except gzip.BadGzipFile:
+        raise HTTPException(status_code=400, detail="Invalid gzip file")
+
+    try:
+        payload = json.loads(decompressed)
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=400, detail="Invalid JSON inside gzip")
+
+    schema_version = payload.get("schema_version", 0)
+    if schema_version > PORTABLE_SCHEMA_VERSION:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"File schema version {schema_version} is newer than this server "
+                f"supports ({PORTABLE_SCHEMA_VERSION}). Please upgrade Eidos."
+            ),
+        )
+    if "metadata" not in payload:
+        raise HTTPException(status_code=400, detail="Missing metadata in .eidos file")
+
+    result: dict[str, Any] = payload
+    return result
+
+# ---------------------------------------------------------------------------
+
+# Export: per-entity serializers
 
 # ---------------------------------------------------------------------------
 
@@ -334,212 +238,95 @@ async def _build_export_payload(
 ) -> dict[str, Any]:
 
     """Serialize a snapshot into a dict ready for JSON compression."""
-
-    snapshot_id = snap.id
-
-    # Files
-
-    file_result = await db.execute(
-
-        select(File).where(File.snapshot_id == snapshot_id)
-
-    )
-
-    files = [
-
-        {"path": f.path, "language": f.language, "hash": f.hash, "size_bytes": f.size_bytes}
-
-        for f in file_result.scalars().all()
-
-    ]
-
-    # Symbols (compact: skip defaults, use short keys)
-
-    sym_result = await db.execute(
-
-        select(Symbol).where(Symbol.snapshot_id == snapshot_id)
-
-    )
-
-    symbols = []
-
-    for s in sym_result.scalars().all():
-
-        sym: dict[str, Any] = {
-
-            "n": s.name,
-
-            "k": s.kind,
-
-            "fq": s.fq_name,
-
-            "fp": s.file_path,
-
-            "sl": s.start_line,
-
-            "el": s.end_line,
-
-        }
-
-        if s.namespace:
-
-            sym["ns"] = s.namespace
-
-        if s.parent_fq_name:
-
-            sym["p"] = s.parent_fq_name
-
-        if s.signature:
-
-            sym["sig"] = s.signature
-
-        if s.modifiers:
-
-            sym["mod"] = s.modifiers
-
-        if s.return_type:
-
-            sym["rt"] = s.return_type
-
-        symbols.append(sym)
-
-    # Edges (compact)
-
-    edge_result = await db.execute(
-
-        select(Edge).where(Edge.snapshot_id == snapshot_id)
-
-    )
-
-    edges = []
-
-    for e in edge_result.scalars().all():
-
-        edge: dict[str, Any] = {
-
-            "s": e.source_fq_name,
-
-            "t": e.target_fq_name,
-
-            "tp": e.edge_type,
-
-        }
-
-        if e.file_path:
-
-            edge["fp"] = e.file_path
-
-        if e.line:
-
-            edge["ln"] = e.line
-
-        edges.append(edge)
-
-    # Summaries
-
-    sum_result = await db.execute(
-
-        select(Summary).where(Summary.snapshot_id == snapshot_id)
-
-    )
-
-    summaries = [
-
-        {"scope_type": s.scope_type, "scope_id": s.scope_id, "json": s.summary_json}
-
-        for s in sum_result.scalars().all()
-
-    ]
-
-    # Docs
-
-    doc_result = await db.execute(
-
-        select(GeneratedDoc).where(GeneratedDoc.snapshot_id == snapshot_id)
-
-    )
-
-    docs = [
-
-        {
-
-            "doc_type": d.doc_type,
-
-            "scope_id": d.scope_id,
-
-            "title": d.title,
-
-            "markdown": d.markdown,
-
-            "llm_narrative": d.llm_narrative or "",
-
-        }
-
-        for d in doc_result.scalars().all()
-
-    ]
-
-    # Evaluations
-
-    eval_result = await db.execute(
-
-        select(Evaluation).where(Evaluation.snapshot_id == snapshot_id)
-
-    )
-
-    evaluations = [
-
-        {
-
-            "scope": ev.scope,
-
-            "overall_score": ev.overall_score,
-
-            "overall_severity": ev.overall_severity,
-
-            "checks_json": ev.checks_json,
-
-            "summary": ev.summary,
-
-        }
-
-        for ev in eval_result.scalars().all()
-
-    ]
-
-    return {
-
+    sid = snap.id
+    result: dict[str, Any] = {
         "schema_version": PORTABLE_SCHEMA_VERSION,
-
         "metadata": {
-
             "commit_sha": snap.commit_sha or "",
-
             "file_count": snap.file_count,
-
             "original_snapshot_id": snap.id,
-
             "original_repo_id": snap.repo_id,
-
         },
-
-        "files": files,
-
-        "symbols": symbols,
-
-        "edges": edges,
-
-        "summaries": summaries,
-
-        "docs": docs,
-
-        "evaluations": evaluations,
-
+        "files": await _export_files(db, sid),
+        "symbols": await _export_symbols(db, sid),
+        "edges": await _export_edges(db, sid),
+        "summaries": await _export_summaries(db, sid),
+        "docs": await _export_docs(db, sid),
+        "evaluations": await _export_evaluations(db, sid),
     }
+    return result
+
+async def _export_files(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(File).where(File.snapshot_id == sid))
+    return [
+        {"path": f.path, "language": f.language, "hash": f.hash, "size_bytes": f.size_bytes}
+        for f in result.scalars().all()
+    ]
+
+async def _export_symbols(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(Symbol).where(Symbol.snapshot_id == sid))
+    symbols = []
+    for s in result.scalars().all():
+        sym: dict[str, Any] = {
+            "n": s.name, "k": s.kind, "fq": s.fq_name,
+            "fp": s.file_path, "sl": s.start_line, "el": s.end_line,
+        }
+        if s.namespace:
+            sym["ns"] = s.namespace
+        if s.parent_fq_name:
+            sym["p"] = s.parent_fq_name
+        if s.signature:
+            sym["sig"] = s.signature
+        if s.modifiers:
+            sym["mod"] = s.modifiers
+        if s.return_type:
+            sym["rt"] = s.return_type
+        symbols.append(sym)
+    return symbols
+
+async def _export_edges(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(Edge).where(Edge.snapshot_id == sid))
+    edges = []
+    for e in result.scalars().all():
+        edge: dict[str, Any] = {"s": e.source_fq_name, "t": e.target_fq_name, "tp": e.edge_type}
+        if e.file_path:
+            edge["fp"] = e.file_path
+        if e.line:
+            edge["ln"] = e.line
+        edges.append(edge)
+    return edges
+
+async def _export_summaries(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(Summary).where(Summary.snapshot_id == sid))
+    return [
+        {"scope_type": s.scope_type, "scope_id": s.scope_id, "json": s.summary_json}
+        for s in result.scalars().all()
+    ]
+
+async def _export_docs(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(GeneratedDoc).where(GeneratedDoc.snapshot_id == sid))
+    return [
+        {
+            "doc_type": d.doc_type, "scope_id": d.scope_id, "title": d.title,
+            "markdown": d.markdown, "llm_narrative": d.llm_narrative or "",
+        }
+        for d in result.scalars().all()
+    ]
+
+async def _export_evaluations(db: AsyncSession, sid: str) -> list[dict[str, Any]]:
+    result = await db.execute(select(Evaluation).where(Evaluation.snapshot_id == sid))
+    return [
+        {
+            "scope": ev.scope, "overall_score": ev.overall_score,
+            "overall_severity": ev.overall_severity,
+            "checks_json": ev.checks_json, "summary": ev.summary,
+        }
+        for ev in result.scalars().all()
+    ]
 
 # ---------------------------------------------------------------------------
 
-# Internal: restore snapshot from payload
+# Import: per-entity restorers
 
 # ---------------------------------------------------------------------------
 
@@ -550,186 +337,86 @@ async def _restore_snapshot(
 ) -> dict[str, Any]:
 
     """Create a new snapshot and populate it from an import payload."""
-
     meta = payload["metadata"]
-
     snapshot_id = uuid.uuid4().hex[:12]
 
-    # Create snapshot
-
-    snapshot = RepoSnapshot(
-
+    db.add(RepoSnapshot(
         id=snapshot_id,
-
         repo_id=repo_id,
-
         commit_sha=meta.get("commit_sha") or None,
-
         status=SnapshotStatus.completed,
-
         file_count=meta.get("file_count", 0),
-
-    )
-
-    db.add(snapshot)
-
+    ))
     await db.flush()
 
-    # Files
-
-    files_data = payload.get("files", [])
-
-    for f in files_data:
-
-        db.add(File(
-
-            snapshot_id=snapshot_id,
-
-            path=f["path"],
-
-            language=f.get("language"),
-
-            hash=f.get("hash", ""),
-
-            size_bytes=f.get("size_bytes", 0),
-
-        ))
-
-    # Symbols (expand compact keys)
-
-    symbols_data = payload.get("symbols", [])
-
-    for s in symbols_data:
-
-        db.add(Symbol(
-
-            snapshot_id=snapshot_id,
-
-            name=s["n"],
-
-            kind=s["k"],
-
-            fq_name=s["fq"],
-
-            file_path=s["fp"],
-
-            start_line=s["sl"],
-
-            end_line=s["el"],
-
-            namespace=s.get("ns", ""),
-
-            parent_fq_name=s.get("p"),
-
-            signature=s.get("sig", ""),
-
-            modifiers=s.get("mod", ""),
-
-            return_type=s.get("rt", ""),
-
-        ))
-
-    # Edges (expand compact keys)
-
-    edges_data = payload.get("edges", [])
-
-    for e in edges_data:
-
-        db.add(Edge(
-
-            snapshot_id=snapshot_id,
-
-            source_fq_name=e["s"],
-
-            target_fq_name=e["t"],
-
-            edge_type=e["tp"],
-
-            file_path=e.get("fp", ""),
-
-            line=e.get("ln"),
-
-        ))
-
-    # Summaries
-
-    summaries_data = payload.get("summaries", [])
-
-    for s in summaries_data:
-
-        db.add(Summary(
-
-            snapshot_id=snapshot_id,
-
-            scope_type=s["scope_type"],
-
-            scope_id=s["scope_id"],
-
-            summary_json=s["json"],
-
-        ))
-
-    # Docs
-
-    docs_data = payload.get("docs", [])
-
-    for d in docs_data:
-
-        db.add(GeneratedDoc(
-
-            snapshot_id=snapshot_id,
-
-            doc_type=d["doc_type"],
-
-            scope_id=d.get("scope_id", ""),
-
-            title=d["title"],
-
-            markdown=d["markdown"],
-
-            llm_narrative=d.get("llm_narrative", ""),
-
-        ))
-
-    # Evaluations
-
-    evals_data = payload.get("evaluations", [])
-
-    for ev in evals_data:
-
-        db.add(Evaluation(
-
-            snapshot_id=snapshot_id,
-
-            scope=ev.get("scope", "snapshot"),
-
-            overall_score=ev.get("overall_score", 0.0),
-
-            overall_severity=ev.get("overall_severity", "pass"),
-
-            checks_json=ev.get("checks_json", "[]"),
-
-            summary=ev.get("summary", ""),
-
-        ))
-
-    await db.commit()
-
-    return {
-
+    counts = {
         "snapshot_id": snapshot_id,
-
-        "symbols": len(symbols_data),
-
-        "edges": len(edges_data),
-
-        "files": len(files_data),
-
-        "summaries": len(summaries_data),
-
-        "docs": len(docs_data),
-
-        "evaluations": len(evals_data),
-
+        "files": _import_files(db, snapshot_id, payload.get("files", [])),
+        "symbols": _import_symbols(db, snapshot_id, payload.get("symbols", [])),
+        "edges": _import_edges(db, snapshot_id, payload.get("edges", [])),
+        "summaries": _import_summaries(db, snapshot_id, payload.get("summaries", [])),
+        "docs": _import_docs(db, snapshot_id, payload.get("docs", [])),
+        "evaluations": _import_evaluations(db, snapshot_id, payload.get("evaluations", [])),
     }
+    await db.commit()
+    return counts
 
+
+def _import_files(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for f in data:
+        db.add(File(
+            snapshot_id=sid, path=f["path"], language=f.get("language"),
+            hash=f.get("hash", ""), size_bytes=f.get("size_bytes", 0),
+        ))
+    return len(data)
+
+
+def _import_symbols(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for s in data:
+        db.add(Symbol(
+            snapshot_id=sid, name=s["n"], kind=s["k"], fq_name=s["fq"],
+            file_path=s["fp"], start_line=s["sl"], end_line=s["el"],
+            namespace=s.get("ns", ""), parent_fq_name=s.get("p"),
+            signature=s.get("sig", ""), modifiers=s.get("mod", ""),
+            return_type=s.get("rt", ""),
+        ))
+    return len(data)
+
+
+def _import_edges(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for e in data:
+        db.add(Edge(
+            snapshot_id=sid, source_fq_name=e["s"], target_fq_name=e["t"],
+            edge_type=e["tp"], file_path=e.get("fp", ""), line=e.get("ln"),
+        ))
+    return len(data)
+
+
+def _import_summaries(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for s in data:
+        db.add(Summary(
+            snapshot_id=sid, scope_type=s["scope_type"],
+            scope_id=s["scope_id"], summary_json=s["json"],
+        ))
+    return len(data)
+
+
+def _import_docs(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for d in data:
+        db.add(GeneratedDoc(
+            snapshot_id=sid, doc_type=d["doc_type"], scope_id=d.get("scope_id", ""),
+            title=d["title"], markdown=d["markdown"],
+            llm_narrative=d.get("llm_narrative", ""),
+        ))
+    return len(data)
+
+
+def _import_evaluations(db: AsyncSession, sid: str, data: list[dict[str, Any]]) -> int:
+    for ev in data:
+        db.add(Evaluation(
+            snapshot_id=sid, scope=ev.get("scope", "snapshot"),
+            overall_score=ev.get("overall_score", 0.0),
+            overall_severity=ev.get("overall_severity", "pass"),
+            checks_json=ev.get("checks_json", "[]"), summary=ev.get("summary", ""),
+        ))
+    return len(data)

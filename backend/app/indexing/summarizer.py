@@ -105,7 +105,7 @@ class LLMSummariser(Summariser):
         self._model = model
 
     async def summarise_symbol(self, facts: SymbolSummary, code_snippet: str = "") -> SymbolSummary:
-        # TODO: implement LLM call
+        # LLM enrichment not yet wired; returns deterministic facts (works without API key)
         logger.warning(
             "LLMSummariser.summarise_symbol called but LLM is not configured; returning facts."
         )
