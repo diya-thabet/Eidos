@@ -565,3 +565,146 @@ def _score_text(text: str, query: str) -> float:
     if q in t:
         return 5.0
     return 0.1
+
+
+# ---------------------------------------------------------------------------
+# PostgreSQL full-text search (optional; falls back to ILIKE)
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{repo_id}/snapshots/{snapshot_id}/fulltext",
+    response_model=PaginatedResponse,
+    summary="PostgreSQL full-text search (ranked by ts_rank)",
+    description=(
+        "Uses PostgreSQL tsvector/tsquery for fast ranked search. "
+        "Falls back to ILIKE on non-PostgreSQL databases."
+    ),
+)
+async def fulltext_search(
+    repo_id: str,
+    snapshot_id: str,
+    q: str = Query(..., min_length=1, max_length=500),
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+    db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
+) -> Any:
+    """Full-text search using PostgreSQL ts_rank when available."""
+
+    is_pg = _is_postgresql(db)
+
+    if is_pg:
+        hits = await _pg_fulltext_search(db, snapshot_id, q, limit, offset)
+    else:
+        # Fallback to ILIKE for SQLite/other DBs
+        hits = await _ilike_fulltext_search(db, snapshot_id, q, limit)
+
+    total = len(hits)
+    page = hits[offset:offset + limit] if not is_pg else hits
+    return PaginatedResponse(
+        items=[h.model_dump() for h in page],
+        total=total,
+        limit=limit,
+        offset=offset,
+        has_more=(offset + limit < total),
+    )
+
+
+def _is_postgresql(db: AsyncSession) -> bool:
+    """Check if the database engine is PostgreSQL."""
+    try:
+        bind = db.bind
+        if bind is None:
+            return False
+        url = str(getattr(bind, 'url', ''))
+        return "postgresql" in url or "postgres" in url
+    except Exception:
+        return False
+
+
+async def _pg_fulltext_search(
+    db: AsyncSession,
+    snapshot_id: str,
+    query: str,
+    limit: int,
+    offset: int,
+) -> list[SearchHit]:
+    """Full-text search using PostgreSQL tsvector."""
+    from sqlalchemy import text as sa_text
+
+    # Use plainto_tsquery for safe query parsing
+    sql = sa_text("""
+        SELECT fq_name, name, kind, file_path, start_line, end_line, signature,
+               ts_rank(
+                   to_tsvector('english', coalesce(fq_name,'') || ' ' ||
+                       coalesce(name,'') || ' ' || coalesce(signature,'')),
+                   plainto_tsquery('english', :query)
+               ) AS rank
+        FROM symbols
+        WHERE snapshot_id = :sid
+          AND to_tsvector('english', coalesce(fq_name,'') || ' ' ||
+              coalesce(name,'') || ' ' || coalesce(signature,''))
+              @@ plainto_tsquery('english', :query)
+        ORDER BY rank DESC
+        LIMIT :lim OFFSET :off
+    """)
+    result = await db.execute(
+        sql, {"sid": snapshot_id, "query": query, "lim": limit, "off": offset}
+    )
+    rows = result.fetchall()
+    return [
+        SearchHit(
+            entity_type="symbol",
+            entity_id=row.fq_name,
+            title=f"{row.kind}: {row.fq_name}",
+            snippet=row.signature or f"{row.kind} {row.name}",
+            file_path=row.file_path,
+            score=float(row.rank),
+            metadata={
+                "kind": row.kind,
+                "start_line": row.start_line,
+                "end_line": row.end_line,
+            },
+        )
+        for row in rows
+    ]
+
+
+async def _ilike_fulltext_search(
+    db: AsyncSession,
+    snapshot_id: str,
+    query: str,
+    limit: int,
+) -> list[SearchHit]:
+    """ILIKE-based fallback for non-PostgreSQL databases."""
+    pattern = f"%{query}%"
+    stmt = (
+        select(Symbol)
+        .where(
+            Symbol.snapshot_id == snapshot_id,
+            or_(
+                Symbol.fq_name.ilike(pattern),
+                Symbol.name.ilike(pattern),
+                Symbol.signature.ilike(pattern),
+            ),
+        )
+        .limit(limit)
+    )
+    result = await db.execute(stmt)
+    return [
+        SearchHit(
+            entity_type="symbol",
+            entity_id=sym.fq_name,
+            title=f"{sym.kind}: {sym.fq_name}",
+            snippet=sym.signature or f"{sym.kind} {sym.name}",
+            file_path=sym.file_path,
+            score=_score_symbol(sym, query),
+            metadata={
+                "kind": sym.kind,
+                "start_line": sym.start_line,
+                "end_line": sym.end_line,
+            },
+        )
+        for sym in result.scalars().all()
+    ]

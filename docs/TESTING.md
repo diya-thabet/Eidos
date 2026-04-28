@@ -185,8 +185,13 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_progress.py` | 7 | Ingestion progress fields in status/detail responses, default values, all snapshot states |
 | `test_api_keys.py` | 13 | API key create (format, hash, prefix), list (metadata only, no raw key), revoke, auth with X-API-Key header |
 | `test_logging.py` | 3 | JSON formatter in client mode, text in internal mode, field verification |
+| `test_parallel_parsing.py` | 15 | Sequential/parallel parsing, single-file isolation, mixed languages, empty list, worker count |
+| `test_prometheus.py` | 12 | /metrics endpoint, Prometheus text format, request counters, duration metrics, path normalization, ingestion counter |
+| `test_retry.py` | 11 | Exponential backoff: success, retry-then-succeed, exhaustion, delay timing, non-retryable exceptions, max delay cap, kwargs |
+| `test_incremental.py` | 9 | First snapshot full parse, unchanged files excluded, changed/new file detection, copy symbols from unchanged files |
+| `test_fulltext_search.py` | 10 | /fulltext endpoint, ILIKE fallback, PostgreSQL detection, partial match, result structure, limit, 404 |
 
-### Updated Total: ~1,552 tests
+### Updated Total: ~1,607 tests
 
 ## Test Design Principles
 

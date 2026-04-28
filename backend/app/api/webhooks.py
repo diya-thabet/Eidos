@@ -234,7 +234,8 @@ async def _process_push(
 async def _trigger_ingestion(
     db: AsyncSession, repo: Repo, commit_sha: str | None
 ) -> str:
-    """Create a snapshot and trigger background ingestion."""
+    """Create a snapshot and trigger background ingestion with retry."""
+    from app.core.retry import retry_with_backoff
     from app.core.tasks import run_ingestion
 
     snapshot = RepoSnapshot(
@@ -245,10 +246,19 @@ async def _trigger_ingestion(
     db.add(snapshot)
     await db.commit()
 
-    # Fire-and-forget ingestion (in production, use a task queue)
+    # Fire ingestion with retry (3 attempts, exponential backoff)
     import asyncio
 
-    asyncio.create_task(run_ingestion(snapshot.id))
+    async def _run_with_retry() -> None:
+        await retry_with_backoff(
+            run_ingestion,
+            snapshot.id,
+            max_retries=2,
+            base_delay=5.0,
+            task_name=f"ingestion[{snapshot.id}]",
+        )
+
+    asyncio.create_task(_run_with_retry())
 
     return snapshot.id
 

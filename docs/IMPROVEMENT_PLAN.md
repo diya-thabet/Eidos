@@ -175,67 +175,102 @@ This document lists every concrete improvement identified during a full project 
 
 ---
 
-## ? P3 — Future Backlog
+## ~~P3 — Future Backlog~~ (COMPLETED)
 
-### 12. Parallel File Parsing
+> All 5 P3 items were implemented and tested with 56 new tests.
 
-**Why**: Currently, files are parsed sequentially. For a 10K-file repo, this takes minutes. Using `asyncio.gather` or a process pool could cut this by 4-8x.
+### ~~12. Parallel File Parsing~~ DONE
 
-**Effort**: 3-4 hours
+**What was done**:
+- `pipeline.py`: Added `ProcessPoolExecutor`-based parallel parsing for repos with >20 files
+- Sequential fallback for small repos and single-worker mode
+- `_parse_single_file` runs in subprocess for isolation
+- Worker count: `min(EIDOS_PARSE_WORKERS or cpu_count, 8)`
+- 15 new tests covering sequential, parallel, single-file parsing, edge cases
 
-### 13. PostgreSQL Full-Text Search
+**Files changed**: `app/analysis/pipeline.py`, `tests/test_parallel_parsing.py`
 
-**Why**: The current `ILIKE` search doesn't rank results or handle stemming. `tsvector` gives proper full-text search with ranking.
+---
 
-**Effort**: 4-6 hours
+### ~~13. PostgreSQL Full-Text Search~~ DONE
 
-### 14. Prometheus Metrics Endpoint
+**What was done**:
+- New `/fulltext` endpoint using `tsvector`/`ts_rank` on PostgreSQL
+- ILIKE fallback for SQLite (tests) and other databases
+- `_is_postgresql` auto-detection from engine URL
+- `plainto_tsquery` for safe user input parsing
+- 10 new tests covering endpoint, fallback, detection, result structure
 
-**Why**: SaaS needs observability — request latency, error rates, ingestion times.
+**Files changed**: `app/api/search.py`, `tests/test_fulltext_search.py`
 
-**Effort**: 1-2 hours
+---
 
-### 15. Webhook Retry with Exponential Backoff
+### ~~14. Prometheus Metrics Endpoint~~ DONE
 
-**Why**: If ingestion fails after a webhook push, there's no retry. Adding dead-letter queue with retries makes it reliable.
+**What was done**:
+- New `GET /metrics` endpoint returning Prometheus text exposition format
+- `MetricsMiddleware` records request count + duration per method/path/status
+- `record_ingestion()` counter for completed/failed ingestions
+- Path normalization collapses dynamic IDs for metric grouping
+- No external dependency (generates text format directly)
+- 12 new tests covering endpoint, format, counters, path normalization
 
-**Effort**: 2-3 hours
+**Files changed**: `app/api/metrics.py`, `app/main.py`, `app/core/tasks.py`, `tests/test_prometheus.py`
 
-### 16. Diff-Based Incremental Ingestion
+---
 
-**Why**: Currently, every ingestion re-parses the entire repo. If only 3 files changed, re-parsing 10K files is wasteful. Compare file hashes and only re-parse changed files.
+### ~~15. Webhook Retry with Exponential Backoff~~ DONE
 
-**Effort**: 6-8 hours
+**What was done**:
+- New `retry_with_backoff()` utility with configurable retries, delay, backoff, max cap
+- Webhooks now retry ingestion 3 times with exponential backoff on failure
+- Supports custom retryable exception types
+- 11 new tests covering success, retry, exhaustion, delay, non-retryable exceptions, kwargs
+
+**Files changed**: `app/core/retry.py`, `app/api/webhooks.py`, `tests/test_retry.py`
+
+---
+
+### ~~16. Diff-Based Incremental Ingestion~~ DONE
+
+**What was done**:
+- New `compute_changed_files()`: compares file hashes against previous snapshot
+- New `copy_unchanged_symbols()`: copies symbols/edges from unchanged files
+- `tasks.py` now uses incremental parsing by default
+- First snapshot: full parse. Subsequent: only changed/new files re-parsed
+- 9 new tests covering first snapshot, unchanged, changed, new files, copy behavior
+
+**Files changed**: `app/core/incremental.py`, `app/core/tasks.py`, `tests/test_incremental.py`
 
 ---
 
 ## Execution Timeline
 
-### ~~Week 1 — Foundation~~ DONE
+### ~~Week 1 - Foundation~~ DONE
 - [x] P0.1: Alembic migrations
 - [x] P0.2: Fix LLM prompts
 - [x] P0.3: Ingestion progress
 - [x] P1.7: Resolve TODOs
 
-### ~~Week 2 — Reliability~~ DONE
+### ~~Week 2 - Reliability~~ DONE
 - [x] P1.4: Split code_health.py
-- [ ] P1.5: ARQ job queue (deferred — single-process is fine for now)
-- [ ] P1.6: Redis rate limiter (deferred — single-process is fine for now)
+- [ ] P1.5: ARQ job queue (deferred - single-process is fine for now)
+- [ ] P1.6: Redis rate limiter (deferred - single-process is fine for now)
 
-### ~~Week 3 — Polish~~ DONE
+### ~~Week 3 - Polish~~ DONE
 - [x] P2.8: Extract long functions
 - [x] P2.9: OpenAPI descriptions
 - [x] P2.10: API key auth
 - [x] P2.11: JSON logging
 
-### Week 4+ — Future (P3)
-- [ ] P3.12: Parallel file parsing
-- [ ] P3.13: PostgreSQL full-text search
-- [ ] P3.14: Prometheus metrics
-- [ ] P3.15: Webhook retry with backoff
-- [ ] P3.16: Diff-based incremental ingestion
+### ~~Week 4 - Performance~~ DONE
+- [x] P3.12: Parallel file parsing
+- [x] P3.13: PostgreSQL full-text search
+- [x] P3.14: Prometheus metrics
+- [x] P3.15: Webhook retry with backoff
+- [x] P3.16: Diff-based incremental ingestion
 
-**Status: 12 of 14 items completed. 2 items deferred (require Redis).**
+**Status: 15 of 16 items completed. 2 items deferred (require Redis).**
 
 ---
 

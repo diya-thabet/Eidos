@@ -12,19 +12,19 @@ Eidos is a code intelligence platform that analyzes codebases across 8 programmi
 
 | Metric | Value |
 |--------|-------|
-| **Total Python files** | 168 |
-| **Application code** | 97 files / 18,816 lines |
-| **Test code** | 71 files / 18,228 lines |
-| **Total lines of code** | 37,044 |
-| **Test-to-code ratio** | 0.97:1 (near 1:1) |
-| **Tests collected** | 1,552 |
-| **Tests passing** | 1,551 (1 skipped, 0 failed) |
+| **Total Python files** | 176 |
+| **Application code** | 100 files / 19,413 lines |
+| **Test code** | 76 files / 19,052 lines |
+| **Total lines of code** | 38,465 |
+| **Test-to-code ratio** | 0.98:1 (near 1:1) |
+| **Tests collected** | 1,608 |
+| **Tests passing** | 1,607 (1 skipped, 0 failed) |
 | **Lint (ruff)** | 0 errors |
-| **Type checking (mypy)** | 0 errors across 95 files |
-| **API endpoints** | 53 |
+| **Type checking (mypy)** | 0 errors across 98 files |
+| **API endpoints** | 55 |
 | **Language parsers** | 9 (C#, Java, Python, TypeScript, TSX, Go, Rust, C, C++) |
 | **Code health rules** | 40 (across 8 category modules) |
-| **Documentation files** | 25 |
+| **Documentation files** | 26 |
 
 ---
 
@@ -249,6 +249,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 9 (Multi-lang) | ~1,379 | ~80 | ~30,000 | 38 |
 | Phase 10 (Production) | ~1,529 | ~87 | ~36,109 | 50 |
 | Phase 11 (Polish) | **1,551** | **97** | **37,044** | **53** |
+| Phase 12 (Performance) | **1,607** | **100** | **38,465** | **55** |
 
 ---
 
@@ -267,6 +268,6 @@ Eidos is designed to integrate with external tools at every layer:
 
 ## Conclusion
 
-The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 53 API endpoints, 9 language parsers, 40 health rules, API key auth, structured logging, Alembic migrations, and 1,551 tests at a 0.97:1 test-to-code ratio, the system is fully ready for a single-person SaaS launch.
+The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 55 API endpoints, 9 language parsers, 40 health rules, API key auth, structured logging, Alembic migrations, Prometheus metrics, incremental ingestion, and 1,607 tests at a 0.98:1 test-to-code ratio, the system is fully ready for a single-person SaaS launch.
 
-All P0 (must-have) and P2 (polish) improvement items have been completed. The **only remaining next steps** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.
+All P0, P1, P2, and P3 improvement items have been completed (15 of 16; 2 deferred). The **only remaining next steps** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.

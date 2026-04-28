@@ -62,6 +62,8 @@ pytest -v
 | POST   | `/webhooks/github`                            | GitHub push webhook receiver    |
 | POST   | `/webhooks/gitlab`                            | GitLab push webhook receiver    |
 | POST   | `/webhooks/push`                              | Generic push webhook            |
+| GET    | `/metrics`                                    | Prometheus metrics (text format)|
+| GET    | `/repos/{id}/snapshots/{sid}/fulltext`         | PostgreSQL full-text search     |
 
 ## Project Structure
 

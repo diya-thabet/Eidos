@@ -491,6 +491,8 @@ Here is every key request you'll need, ready to copy into Postman:
 | 28 | List API keys | `GET` | `{{base_url}}/auth/api-keys` | -- |
 | 29 | Revoke API key | `DELETE` | `{{base_url}}/auth/api-keys/{{key_id}}` | -- |
 | 30 | Evaluate | `POST` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/evaluate` | -- |
+| 31 | Full-text search | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/fulltext?q=User` | -- |
+| 32 | Prometheus metrics | `GET` | `{{base_url}}/metrics` | -- |
 | 26 | Summaries | `GET` | `{{base_url}}/repos/{{repo_id}}/snapshots/{{snapshot_id}}/summaries` | -- |
 | 27 | Update repo | `PATCH` | `{{base_url}}/repos/{{repo_id}}` | `{"name":"new-name"}` |
 | 28 | Delete repo | `DELETE` | `{{base_url}}/repos/{{repo_id}}` | -- |

@@ -5,7 +5,9 @@ import logging
 from datetime import UTC, datetime
 
 from app.analysis.pipeline import analyze_snapshot_files, persist_graph
+from app.api.metrics import record_ingestion
 from app.auth.crypto import decrypt
+from app.core.incremental import compute_changed_files, copy_unchanged_symbols
 from app.core.ingestion import clone_repo, repo_clone_path, scan_files
 from app.core.retention import cleanup_clone
 from app.indexing.indexer import run_indexing
@@ -79,8 +81,11 @@ async def run_ingestion(snapshot_id: str) -> None:
             snapshot.file_count = len(file_entries)
             await _progress(25, f"Scanned {len(file_entries)} files. Parsing ASTs...")
 
-            # Phase 3: Static analysis
-            graph = await asyncio.to_thread(analyze_snapshot_files, dest, file_entries)
+            # Phase 3: Incremental analysis (only re-parse changed files)
+            changed_files, prev_snapshot_id = await compute_changed_files(
+                db, repo.id, file_entries,
+            )
+            graph = await asyncio.to_thread(analyze_snapshot_files, dest, changed_files)
             sym_count = len(graph.symbols)
             edge_count = len(graph.edges)
             await _progress(
@@ -88,6 +93,14 @@ async def run_ingestion(snapshot_id: str) -> None:
             )
 
             await persist_graph(db, snapshot_id, graph)
+
+            # Copy symbols/edges from unchanged files (incremental)
+            if prev_snapshot_id:
+                changed_paths = {f["path"] for f in changed_files}
+                await copy_unchanged_symbols(
+                    db, prev_snapshot_id, snapshot_id, changed_paths,
+                )
+
             await _progress(65, "Graph persisted. Generating summaries...")
 
             # Phase 4: Summarisation & indexing
@@ -104,6 +117,7 @@ async def run_ingestion(snapshot_id: str) -> None:
             snapshot.progress_message = "Ingestion complete"
             repo.last_indexed_at = datetime.now(UTC)
             await db.commit()
+            record_ingestion("completed")
             logger.info(
                 "Ingestion complete: snapshot=%s, files=%d, "
                 "symbols=%d, edges=%d, summaries=%d, sha=%s",
@@ -124,3 +138,4 @@ async def run_ingestion(snapshot_id: str) -> None:
             snapshot.error_message = str(e)[:2000]
             snapshot.progress_message = f"Failed: {str(e)[:200]}"
             await db.commit()
+            record_ingestion("failed")

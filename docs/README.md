@@ -6,7 +6,8 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 
 | Document | Description |
 |----------|-------------|
-| [QUICKSTART.md](QUICKSTART.md) | **Start here** — clone, install, configure, run, analyze your first repo |
+| [SYSTEM_OVERVIEW.md](SYSTEM_OVERVIEW.md) | **New? Start here** — plain-English explanation of the whole system with every endpoint listed |
+| [QUICKSTART.md](QUICKSTART.md) | Clone, install, configure, run, analyze your first repo |
 | [USER_GUIDE.md](USER_GUIDE.md) | Complete feature guide — what Eidos does and how to use every capability |
 | [DEVELOPER_GUIDE.md](DEVELOPER_GUIDE.md) | How to add features, endpoints, parsers, health rules, integrations |
 

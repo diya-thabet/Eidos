@@ -18,6 +18,8 @@ from app.api import reviews as reviews_api
 from app.api import search as search_api
 from app.api import trends as trends_api
 from app.api import webhooks as webhook_api
+from app.api.metrics import MetricsMiddleware
+from app.api.metrics import router as metrics_router
 from app.core.config import settings
 from app.core.middleware import install_middleware
 from app.storage.database import engine
@@ -140,6 +142,8 @@ app.include_router(trends_api.router, prefix="/repos", tags=["trends"])
 app.include_router(portable_api.router, prefix="/repos", tags=["portable"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
+app.include_router(metrics_router, tags=["monitoring"])
+app.add_middleware(MetricsMiddleware)
 
 
 @app.get("/health")
