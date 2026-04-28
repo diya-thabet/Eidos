@@ -23,7 +23,7 @@ pnpm dev             # start dev server at http://localhost:3000
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `NEXT_PUBLIC_API_URL` | Yes | `http://localhost:8000` | Backend API URL |
+| `NEXT_PUBLIC_API_URL` | Yes | `http://localhost:8000` | Backend API URL (55 endpoints) |
 | `NEXT_PUBLIC_APP_URL` | Yes | `http://localhost:3000` | Frontend URL |
 | `NEXTAUTH_URL` | Yes | `http://localhost:3000` | NextAuth callback URL |
 | `NEXTAUTH_SECRET` | Yes | -- | 32+ char secret for JWT signing |
@@ -31,6 +31,17 @@ pnpm dev             # start dev server at http://localhost:3000
 | `GITHUB_CLIENT_SECRET` | For GitHub login | -- | GitHub OAuth App secret |
 | `GOOGLE_CLIENT_ID` | For Google login | -- | Google OAuth client ID |
 | `GOOGLE_CLIENT_SECRET` | For Google login | -- | Google OAuth secret |
+
+## Backend Compatibility
+
+This frontend is designed for the Eidos backend v0.3.0+ with all 55 endpoints:
+- 9 language parsers (Python, Java, C#, TypeScript, TSX, Go, Rust, C, C++)
+- Code health (40 rules), search (keyword + fulltext), diagrams (class + module)
+- Q&A, code reviews, doc generation, evaluations
+- Portable export/import (.eidos format)
+- Prometheus metrics at `/metrics`
+- API key auth for CI/CD integration
+- Webhook auto-ingestion (GitHub, GitLab, generic push)
 
 ## Available Commands
 

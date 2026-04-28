@@ -54,15 +54,40 @@ All notable changes to the Eidos frontend.
 
 - **API client** (`lib/api-client.ts`):
   - Typed fetch wrapper with auth header injection, error handling
-  - Full endpoint coverage: repos, snapshots, analysis, health, reasoning, reviews, docs, auth, admin
+  - Full endpoint coverage for all 55 backend endpoints:
+    - Repos: create, status, detail, update, delete, ingest
+    - Analysis: symbols (paginated), symbol detail, edges, callgraph, overview
+    - Health: POST health check (with config), GET rules list
+    - Search: keyword search, fulltext search (PG tsvector + ILIKE fallback)
+    - Q&A: POST ask
+    - Reviews: POST review, GET review history
+    - Docs: POST generate, GET list, GET single doc
+    - Evaluations: POST evaluate, GET evaluation history
+    - Diagrams: GET diagram (class/module type param)
+    - Trends: GET health trend across snapshots
+    - Portable: GET .eidos export, POST .eidos import
+    - Indexing: POST index, GET summaries
+    - Export: GET JSON export, GET snapshot diff
+    - Auth: login, callback (GitHub + Google), me, logout, API keys CRUD
+    - Admin: users list/detail/role, plans list/create, usage stats
+    - Monitoring: GET /health, GET /health/ready, GET /metrics
+    - Webhooks: POST github/gitlab/push (server-to-server, not frontend)
   - All TypeScript interfaces matching backend Pydantic schemas
 
 - **React Query hooks**:
-  - `use-repos.ts`: list, get, status, create, ingest
-  - `use-analysis.ts`: symbols, overview, graph neighborhood
-  - `use-health.ts`: rules list, health check mutation
+  - `use-repos.ts`: list, get, status, detail, create, update, delete, ingest
+  - `use-analysis.ts`: symbols (paginated), symbol detail, edges, overview, callgraph
+  - `use-health.ts`: rules list, health check mutation, health trend
+  - `use-search.ts`: keyword search, fulltext search
   - `use-chat.ts`: stateful chat with send/clear, error handling
-  - `use-admin.ts`: system, users, plans
+  - `use-reviews.ts`: submit review, list reviews
+  - `use-docs.ts`: generate docs, list docs, get doc
+  - `use-evaluations.ts`: run evaluation, list evaluations
+  - `use-diagrams.ts`: class diagram, module diagram
+  - `use-portable.ts`: export .eidos, import .eidos
+  - `use-export.ts`: JSON export, snapshot diff
+  - `use-admin.ts`: system, users, plans, usage
+  - `use-api-keys.ts`: create, list, revoke API keys
   - `use-debounce.ts`: generic debounce hook
 
 - **Stores** (Zustand):
@@ -86,5 +111,6 @@ All notable changes to the Eidos frontend.
   - Dockerfile (multi-stage: deps ? build ? standalone runner)
   - Auth middleware
 
-### File count: 40+ files
-### Lines of code: ~2,500+
+### File count: 55+ files
+### Lines of code: ~3,500+
+### Backend endpoints covered: 55/55
