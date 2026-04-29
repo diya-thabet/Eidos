@@ -149,6 +149,31 @@ class File(Base):
     __table_args__ = (Index("ix_files_snapshot_path", "snapshot_id", "path"),)
 
 
+class SymbolNote(Base):
+    """User annotation on a symbol."""
+
+    __tablename__ = "symbol_notes"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False,
+    )
+    symbol_fq_name: Mapped[str] = mapped_column(Text, nullable=False)
+    note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    author: Mapped[str] = mapped_column(String(256), default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        Index("ix_symbol_notes_snapshot_fq", "snapshot_id", "symbol_fq_name"),
+    )
+
+
 # -------------------------------------------------------------------
 # Plans & Metering
 # -------------------------------------------------------------------

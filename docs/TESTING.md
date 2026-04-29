@@ -202,8 +202,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_dead_code.py` | 29 | Dead code: BFS reachability, unreachable funcs/classes/modules, dead imports, 4 health rules, API endpoint, edge cases (cycles, 1000-node graphs) |
 | `test_clone_detection.py` | 33 | Clone detection: structural fingerprinting (Python, Java), exact/near clone grouping, similarity, 3 health rules, API endpoint, pipeline integration |
 | `test_coupling.py` | 24 | Module coupling: Martin metrics (Ca/Ce/I/A/D), cohesion, cycle detection, 5 health rules (zones of pain/uselessness), API endpoint |
+| `test_api_gaps.py` | 28 | API endpoint gaps: list repos, list snapshots (paginated), delete snapshot, list files (with language filter), get callers, symbol notes CRUD |
 
-### Updated Total: ~2,053 tests (2,047 passed + 6 skipped)
+### Updated Total: ~2,081 tests (2,075 passed + 6 skipped)
 
 ## Test Design Principles
 

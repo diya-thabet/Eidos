@@ -742,6 +742,125 @@ Query params:
 
 ---
 
+## Repos List
+
+### GET /repos
+
+```json
+[
+  {
+    "id": "abc123",
+    "name": "my-repo",
+    "url": "https://github.com/org/repo",
+    "default_branch": "main",
+    "created_at": "2025-01-15T10:00:00+00:00",
+    "last_indexed_at": "2025-06-01T12:00:00+00:00"
+  }
+]
+```
+
+---
+
+## Snapshots List
+
+### GET /repos/{id}/snapshots?limit=50&offset=0
+
+```json
+[
+  {
+    "id": "s1",
+    "repo_id": "abc123",
+    "commit_sha": "abc",
+    "status": "completed",
+    "file_count": 42,
+    "created_at": "2025-06-01T12:00:00+00:00",
+    "progress_percent": 100,
+    "progress_message": "Ingestion complete"
+  }
+]
+```
+
+---
+
+## Delete Snapshot
+
+### DELETE /repos/{id}/snapshots/{sid}
+
+Returns 204 No Content on success.
+
+---
+
+## File List
+
+### GET /repos/{id}/snapshots/{sid}/files?language=python
+
+```json
+[
+  {
+    "id": 1,
+    "path": "src/main.py",
+    "language": "python",
+    "hash": "abc123def456",
+    "size_bytes": 1024
+  }
+]
+```
+
+Query params:
+- `language` (optional): filter by language
+
+---
+
+## Callers
+
+### GET /repos/{id}/snapshots/{sid}/symbols/{fq_name}/callers
+
+```json
+{
+  "target_fq_name": "app.service.process",
+  "callers": [
+    {
+      "fq_name": "app.api.handler",
+      "name": "handler",
+      "kind": "method",
+      "file_path": "api/handler.py",
+      "start_line": 15
+    }
+  ],
+  "total": 1
+}
+```
+
+---
+
+## Symbol Notes
+
+### PATCH /repos/{id}/snapshots/{sid}/symbols/{fq_name}/notes
+
+Request body:
+```json
+{ "note": "This function needs refactoring", "author": "Alice" }
+```
+
+Response:
+```json
+{
+  "id": 1,
+  "snapshot_id": "s1",
+  "symbol_fq_name": "app.service.process",
+  "note": "This function needs refactoring",
+  "author": "Alice",
+  "created_at": "2025-06-01T12:00:00+00:00",
+  "updated_at": "2025-06-01T12:00:00+00:00"
+}
+```
+
+### GET /repos/{id}/snapshots/{sid}/symbols/{fq_name}/notes
+
+Returns array of `SymbolNote` objects.
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export
@@ -1203,5 +1322,36 @@ interface HotspotsReport {
   snapshot_id: string;
   total: number;
   items: HotspotItem[];
+}
+
+// Callers
+interface CallerOut {
+  fq_name: string;
+  name: string;
+  kind: string;
+  file_path: string;
+  start_line: number;
+}
+
+interface CallersResponse {
+  target_fq_name: string;
+  callers: CallerOut[];
+  total: number;
+}
+
+// Symbol Notes
+interface SymbolNoteCreate {
+  note: string;
+  author?: string;
+}
+
+interface SymbolNoteOut {
+  id: number;
+  snapshot_id: string;
+  symbol_fq_name: string;
+  note: string;
+  author: string;
+  created_at: string;
+  updated_at: string;
 }
 ```

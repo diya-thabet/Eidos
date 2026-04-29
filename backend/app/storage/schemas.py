@@ -294,6 +294,55 @@ class SearchResultOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Symbol notes
+# ---------------------------------------------------------------------------
+
+
+class SymbolNoteCreate(BaseModel):
+    """Payload for creating/updating a symbol note."""
+
+    note: str
+    author: str = ""
+
+
+class SymbolNoteOut(BaseModel):
+    """Symbol note response."""
+
+    id: int
+    snapshot_id: str
+    symbol_fq_name: str
+    note: str
+    author: str
+    created_at: str
+    updated_at: str
+
+    model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Callers
+# ---------------------------------------------------------------------------
+
+
+class CallerOut(BaseModel):
+    """A symbol that calls a given target."""
+
+    fq_name: str
+    name: str
+    kind: str
+    file_path: str
+    start_line: int
+
+
+class CallersResponse(BaseModel):
+    """Response for the callers endpoint."""
+
+    target_fq_name: str
+    callers: list[CallerOut]
+    total: int
+
+
+# ---------------------------------------------------------------------------
 # Review schemas (Phase 5)
 # ---------------------------------------------------------------------------
 
