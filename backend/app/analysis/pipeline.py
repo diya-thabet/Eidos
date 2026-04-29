@@ -15,9 +15,10 @@ from pathlib import Path
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from tree_sitter import Language
 
 from app.analysis.graph_builder import CodeGraph, build_graph
-from app.analysis.models import FileAnalysis
+from app.analysis.models import FileAnalysis, SymbolKind
 from app.analysis.parser_registry import get_parser, supported_languages
 from app.storage.models import Edge, Symbol
 
@@ -48,6 +49,142 @@ def _parse_single_file(
         return None
 
 
+# -----------------------------------------------------------------------
+# Complexity enrichment
+# -----------------------------------------------------------------------
+
+# Tree-sitter node types that represent functions/methods across languages
+_FUNC_NODE_TYPES: frozenset[str] = frozenset({
+    # Python
+    "function_definition",
+    # Java / C# / C++ / C
+    "method_declaration", "constructor_declaration",
+    "function_definition",
+    # TypeScript / TSX
+    "function_declaration", "method_definition",
+    "arrow_function",
+    # Go
+    "function_declaration", "method_declaration",
+    # Rust
+    "function_item",
+})
+
+# Map language id -> tree-sitter Language object (lazy-loaded)
+_TS_LANGS: dict[str, Any] = {}
+
+
+def _get_ts_language(lang: str) -> Any:
+    """Get tree-sitter Language for a language id. Cached."""
+    if lang in _TS_LANGS:
+        return _TS_LANGS[lang]
+    try:
+        mod: Any = None
+        if lang == "python":
+            import tree_sitter_python as mod
+        elif lang == "java":
+            import tree_sitter_java as mod
+        elif lang == "csharp":
+            import tree_sitter_c_sharp as mod
+        elif lang == "typescript":
+            import tree_sitter_typescript as _ts_mod
+            _TS_LANGS[lang] = Language(_ts_mod.language_typescript())
+            return _TS_LANGS[lang]
+        elif lang == "tsx":
+            import tree_sitter_typescript as _tsx_mod
+            _TS_LANGS[lang] = Language(_tsx_mod.language_tsx())
+            return _TS_LANGS[lang]
+        elif lang == "go":
+            import tree_sitter_go as mod
+        elif lang == "rust":
+            import tree_sitter_rust as mod
+        elif lang == "c":
+            import tree_sitter_c as mod
+        elif lang == "cpp":
+            import tree_sitter_cpp as mod
+        else:
+            return None
+        if mod is not None:
+            _TS_LANGS[lang] = Language(mod.language())
+        return _TS_LANGS.get(lang)
+    except Exception:
+        return None
+
+
+def _find_func_nodes(node: Any, results: list[Any]) -> None:
+    """Collect all function/method AST nodes in the tree."""
+    if node.type in _FUNC_NODE_TYPES:
+        results.append(node)
+    for child in node.children:
+        _find_func_nodes(child, results)
+
+
+def _enrich_complexity(
+    repo_dir: Path,
+    analyses: list[FileAnalysis],
+    file_records: list[dict[str, Any]],
+) -> None:
+    """Compute complexity metrics for every function in every file."""
+    from tree_sitter import Parser as TSParser
+
+    from app.analysis.complexity import (
+        cognitive_complexity,
+        cyclomatic_complexity,
+    )
+
+    # Build path -> language lookup
+    path_to_lang: dict[str, str] = {
+        f["path"]: f["language"] for f in file_records
+    }
+
+    for analysis in analyses:
+        # Only process files with function/method symbols
+        func_symbols = [
+            s for s in analysis.symbols
+            if s.kind in (
+                SymbolKind.METHOD,
+                SymbolKind.CONSTRUCTOR,
+            )
+        ]
+        if not func_symbols:
+            continue
+
+        lang = path_to_lang.get(analysis.path, "")
+        ts_lang = _get_ts_language(lang)
+        if ts_lang is None:
+            continue
+
+        full_path = repo_dir / analysis.path
+        if not full_path.exists():
+            continue
+
+        try:
+            source = full_path.read_bytes()
+        except Exception:
+            continue
+
+        parser = TSParser(ts_lang)
+        tree = parser.parse(source)
+
+        # Find all function nodes in the AST
+        func_nodes: list[Any] = []
+        _find_func_nodes(tree.root_node, func_nodes)
+
+        # Match AST nodes to symbols by line number
+        for sym in func_symbols:
+            for fnode in func_nodes:
+                node_start = fnode.start_point[0] + 1  # 0-indexed -> 1-indexed
+                node_end = fnode.end_point[0] + 1
+                if node_start == sym.start_line or (
+                    abs(node_start - sym.start_line) <= 2
+                    and abs(node_end - sym.end_line) <= 2
+                ):
+                    sym.cyclomatic_complexity = cyclomatic_complexity(fnode)
+                    sym.cognitive_complexity = cognitive_complexity(
+                        fnode, sym.name,
+                    )
+                    break
+
+
 def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -> CodeGraph:
     """
     Run static analysis on all parseable files in a snapshot directory.
@@ -75,6 +212,9 @@ def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -
         analyses = _parse_parallel(repo_dir, parseable)
     else:
         analyses = _parse_sequential(repo_dir, parseable)
+
+    # Compute cyclomatic + cognitive complexity for every function/method
+    _enrich_complexity(repo_dir, analyses, parseable)
 
     graph = build_graph(analyses)
     logger.info(
@@ -155,6 +295,8 @@ async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) ->
             signature=sym.signature,
             modifiers=",".join(sym.modifiers),
             return_type=sym.return_type,
+            cyclomatic_complexity=sym.cyclomatic_complexity,
+            cognitive_complexity=sym.cognitive_complexity,
         )
         db.add(db_symbol)
         await db.flush()  # get the auto-generated ID

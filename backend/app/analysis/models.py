@@ -56,6 +56,8 @@ class SymbolInfo:
     return_type: str = ""
     base_types: list[str] = field(default_factory=list)  # inheritance / implements
     doc_comment: str = ""
+    cyclomatic_complexity: int = 0
+    cognitive_complexity: int = 0
 
 
 @dataclass

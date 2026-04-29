@@ -228,6 +228,8 @@ class Symbol(Base):
     modifiers: Mapped[str] = mapped_column(Text, default="")  # comma-separated
     return_type: Mapped[str] = mapped_column(String(256), default="")
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # extra info as JSON
+    cyclomatic_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    cognitive_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     __table_args__ = (
         Index("ix_symbols_snapshot_fq", "snapshot_id", "fq_name"),

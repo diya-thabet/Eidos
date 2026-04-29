@@ -519,6 +519,53 @@ Use this for a line chart showing health score over time.
 
 ---
 
+## Complexity Metrics
+
+### GET /repos/{id}/snapshots/{sid}/complexity?min_cc=0
+
+```json
+{
+  "snapshot_id": "s1",
+  "total_functions": 296,
+  "avg_cyclomatic": 4.2,
+  "avg_cognitive": 6.8,
+  "max_cyclomatic": {
+    "fq_name": "app.parser.parse_expression",
+    "name": "parse_expression",
+    "kind": "method",
+    "file_path": "parser.py",
+    "start_line": 45,
+    "end_line": 120,
+    "lines": 76,
+    "cyclomatic_complexity": 35,
+    "cognitive_complexity": 52
+  },
+  "max_cognitive": { "..." : "same shape" },
+  "high_cyclomatic_count": 12,
+  "high_cognitive_count": 8,
+  "items": [
+    {
+      "fq_name": "app.parser.parse_expression",
+      "name": "parse_expression",
+      "kind": "method",
+      "file_path": "parser.py",
+      "start_line": 45,
+      "end_line": 120,
+      "lines": 76,
+      "cyclomatic_complexity": 35,
+      "cognitive_complexity": 52
+    }
+  ]
+}
+```
+
+Query params:
+- `min_cc` (int, default 0): only include functions with cyclomatic complexity >= this value
+
+Items are sorted by cyclomatic complexity descending.
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export
@@ -893,5 +940,30 @@ interface RepoStatus {
   repo_id: string;
   name: string;
   snapshots: Snapshot[];
+}
+
+// Complexity metrics
+interface ComplexityItem {
+  fq_name: string;
+  name: string;
+  kind: string;
+  file_path: string;
+  start_line: number;
+  end_line: number;
+  lines: number;
+  cyclomatic_complexity: number;
+  cognitive_complexity: number;
+}
+
+interface ComplexityMetrics {
+  snapshot_id: string;
+  total_functions: number;
+  avg_cyclomatic: number;
+  avg_cognitive: number;
+  max_cyclomatic: ComplexityItem | null;
+  max_cognitive: ComplexityItem | null;
+  high_cyclomatic_count: number;
+  high_cognitive_count: number;
+  items: ComplexityItem[];
 }
 ```

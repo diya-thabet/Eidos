@@ -17,6 +17,11 @@ __all__ = [
     "CouplingBetweenObjectsRule",
     "LackOfCohesionRule",
     "ComplexityDensityRule",
+    "HighCyclomaticRule",
+    "VeryHighCyclomaticRule",
+    "HighCognitiveRule",
+    "VeryHighCognitiveRule",
+    "ComplexityPerLineRule",
 ]
 
 
@@ -246,6 +251,174 @@ class ComplexityDensityRule(HealthRule):
 # ==================================================================
 # ARCHITECTURE rules
 # ==================================================================
+
+
+# ==================================================================
+# CYCLOMATIC / COGNITIVE COMPLEXITY rules (computed by tree-sitter)
+# ==================================================================
+
+
+class HighCyclomaticRule(HealthRule):
+    rule_id = "CX004"
+    rule_name = "high_cyclomatic_complexity"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Cyclomatic complexity exceeds 15"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        threshold = getattr(config, "max_cyclomatic", 15)
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                continue
+            cc = sym.cyclomatic_complexity
+            if cc > threshold:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Cyclomatic complexity is {cc} (max {threshold})",
+                        suggestion="Split into smaller functions with fewer branches",
+                    )
+                )
+        return findings
+
+
+class VeryHighCyclomaticRule(HealthRule):
+    rule_id = "CX005"
+    rule_name = "very_high_cyclomatic_complexity"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.ERROR
+    description = "Cyclomatic complexity exceeds 30"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        threshold = getattr(config, "max_cyclomatic_error", 30)
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                continue
+            cc = sym.cyclomatic_complexity
+            if cc > threshold:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Cyclomatic complexity is {cc} (max {threshold})",
+                        suggestion="This function is extremely complex; refactor urgently",
+                    )
+                )
+        return findings
+
+
+class HighCognitiveRule(HealthRule):
+    rule_id = "CX006"
+    rule_name = "high_cognitive_complexity"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Cognitive complexity exceeds 20"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        threshold = getattr(config, "max_cognitive", 20)
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                continue
+            cog = sym.cognitive_complexity
+            if cog > threshold:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Cognitive complexity is {cog} (max {threshold})",
+                        suggestion="Reduce nesting depth; extract nested logic into helpers",
+                    )
+                )
+        return findings
+
+
+class VeryHighCognitiveRule(HealthRule):
+    rule_id = "CX007"
+    rule_name = "very_high_cognitive_complexity"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.ERROR
+    description = "Cognitive complexity exceeds 40"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        threshold = getattr(config, "max_cognitive_error", 40)
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                continue
+            cog = sym.cognitive_complexity
+            if cog > threshold:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=f"Cognitive complexity is {cog} (max {threshold})",
+                        suggestion=(
+                            "This function is extremely hard to understand; "
+                            "refactor urgently"
+                        ),
+                    )
+                )
+        return findings
+
+
+class ComplexityPerLineRule(HealthRule):
+    rule_id = "CX008"
+    rule_name = "complexity_per_line"
+    category = RuleCategory.COMPLEXITY
+    severity = Severity.WARNING
+    description = "Cyclomatic complexity per line of code is too high"
+
+    def check(self, graph: CodeGraph, config: HealthConfig) -> list[HealthFinding]:
+        findings = []
+        for sym in graph.symbols.values():
+            if sym.kind not in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
+                continue
+            cc = sym.cyclomatic_complexity
+            loc = sym.end_line - sym.start_line + 1
+            if loc < 3 or cc < 3:
+                continue
+            ratio = cc / loc
+            if ratio > 0.5:
+                findings.append(
+                    HealthFinding(
+                        rule_id=self.rule_id,
+                        rule_name=self.rule_name,
+                        category=self.category,
+                        severity=self.severity,
+                        symbol_fq_name=sym.fq_name,
+                        file_path=sym.file_path,
+                        line=sym.start_line,
+                        message=(
+                            f"CC/LOC ratio is {ratio:.2f} ({cc} branches in {loc} lines)"
+                        ),
+                        suggestion="Nearly every line is a branch; simplify the logic",
+                    )
+                )
+        return findings
 
 
 

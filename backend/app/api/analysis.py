@@ -357,3 +357,92 @@ async def _resolve_edge_symbols(  # type: ignore[no-untyped-def]
         )
     )
     return list(result.scalars().all())
+
+
+# ------------------------------------------------------------------
+# Complexity metrics
+# ------------------------------------------------------------------
+
+
+class ComplexityItem(BaseModel):
+    fq_name: str
+    name: str
+    kind: str
+    file_path: str
+    start_line: int
+    end_line: int
+    lines: int
+    cyclomatic_complexity: int
+    cognitive_complexity: int
+
+
+class ComplexityMetrics(BaseModel):
+    snapshot_id: str
+    total_functions: int
+    avg_cyclomatic: float
+    avg_cognitive: float
+    max_cyclomatic: ComplexityItem | None
+    max_cognitive: ComplexityItem | None
+    high_cyclomatic_count: int
+    high_cognitive_count: int
+    items: list[ComplexityItem]
+
+
+@router.get(
+    "/{repo_id}/snapshots/{snapshot_id}/complexity",
+    response_model=ComplexityMetrics,
+    summary="Get complexity metrics for all functions",
+)
+async def get_complexity_metrics(
+    repo_id: str,
+    snapshot_id: str,
+    min_cc: int = Query(0, ge=0, description="Minimum cyclomatic complexity to include"),
+    db: AsyncSession = Depends(get_db),
+    _snapshot: RepoSnapshot = Depends(verify_snapshot),
+) -> ComplexityMetrics:
+    """Return cyclomatic and cognitive complexity per function/method."""
+    result = await db.execute(
+        select(Symbol)
+        .where(
+            Symbol.snapshot_id == snapshot_id,
+            Symbol.kind.in_(["method", "constructor"]),
+        )
+        .order_by(Symbol.cyclomatic_complexity.desc())
+    )
+    symbols = list(result.scalars().all())
+
+    items = []
+    for s in symbols:
+        cc = s.cyclomatic_complexity or 0
+        cog = s.cognitive_complexity or 0
+        if cc < min_cc:
+            continue
+        items.append(ComplexityItem(
+            fq_name=s.fq_name,
+            name=s.name,
+            kind=s.kind,
+            file_path=s.file_path,
+            start_line=s.start_line,
+            end_line=s.end_line,
+            lines=s.end_line - s.start_line + 1,
+            cyclomatic_complexity=cc,
+            cognitive_complexity=cog,
+        ))
+
+    total = len(items)
+    avg_cc = sum(i.cyclomatic_complexity for i in items) / total if total else 0
+    avg_cog = sum(i.cognitive_complexity for i in items) / total if total else 0
+    max_cc = max(items, key=lambda i: i.cyclomatic_complexity) if items else None
+    max_cog = max(items, key=lambda i: i.cognitive_complexity) if items else None
+
+    return ComplexityMetrics(
+        snapshot_id=snapshot_id,
+        total_functions=total,
+        avg_cyclomatic=round(avg_cc, 2),
+        avg_cognitive=round(avg_cog, 2),
+        max_cyclomatic=max_cc,
+        max_cognitive=max_cog,
+        high_cyclomatic_count=sum(1 for i in items if i.cyclomatic_complexity > 15),
+        high_cognitive_count=sum(1 for i in items if i.cognitive_complexity > 20),
+        items=items,
+    )

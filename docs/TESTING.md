@@ -195,7 +195,10 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_multilang_e2e.py` | 144 | Full E2E against 8 real GitHub repos (Python/markupsafe, C#/GuardClauses, TS/p-map, TSX/zustand, Go/go-patterns, Rust/thiserror, C/sds, C++/spdlog): clone, parse, API, search, health, export, portable round-trip |
 | `test_deep_languages.py` | 38 | Deep per-language validation against 9 challenging repos (click, GuardClauses, java-design-patterns, ky, cmdk, bubbletea, http, cJSON, fmt): full graph analysis, inheritance chains, call graphs, API pipeline |
 
-### Updated Total: ~1,817 tests (1,811 passed + 6 skipped)
+| `test_deep_languages.py` | 38 | Deep validation: 9 challenging repos (click, GuardClauses, java-design-patterns, ky, cmdk, bubbletea, http, cJSON, fmt) |
+| `test_complexity.py` | 57 | Cyclomatic & cognitive complexity: calculator unit tests (9 langs), pipeline integration, 5 health rules, API endpoint, edge cases |
+
+### Updated Total: ~1,875 tests (1,869 passed + 6 skipped)
 
 ## Test Design Principles
 

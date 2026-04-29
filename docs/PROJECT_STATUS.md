@@ -79,7 +79,7 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Area | Assessment | Evidence |
 |------|-----------|----------|
-| **Test coverage** | ? Excellent | 1,818 tests (CI-verified), 1.09:1 test-to-code ratio, 18 real repos validated |
+| **Test coverage** | ? Excellent | 1,875 tests (CI-verified), 1.10:1 test-to-code ratio, 18 real repos validated |
 | **Type safety** | ? Excellent | mypy strict mode, 0 errors across 98 files |
 | **Lint cleanliness** | ? Excellent | ruff with E, F, I, UP rules — 0 violations |
 | **Extensibility** | ? Excellent | ABC parser pattern, registry, adding a language = 1 file + 2 lines |
@@ -256,6 +256,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 13 (E2E Validation) | **1,640** | **100** | **39,189** | **55** |
 | Phase 14 (Multi-Lang E2E) | **1,779** | **100** | **39,719** | **55** |
 | Phase 15 (Deep Validation) | **1,818** | **100** | **40,537** | **55** |
+| Phase 16 (Complexity Metrics) | **1,875** | **101** | **42,074** | **56** |
 
 ---
 
@@ -310,6 +311,6 @@ Every parser was tested against challenging open-source repos:
 
 ## Conclusion
 
-The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 55 API endpoints, 9 language parsers (all deeply validated against challenging repos like fmtlib/fmt, java-design-patterns, and pallets/click), 40 health rules, API key auth, structured logging, Alembic migrations, Prometheus metrics, incremental ingestion, and **1,818 CI-verified tests** at a 1.09:1 test-to-code ratio, the system is fully production-ready.
+The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 56 API endpoints, 9 language parsers (all deeply validated against challenging repos like fmtlib/fmt, java-design-patterns, and pallets/click), 45 health rules (including cyclomatic and cognitive complexity), API key auth, structured logging, Alembic migrations, Prometheus metrics, incremental ingestion, and **1,875 CI-verified tests** at a 1.10:1 test-to-code ratio, the system is fully production-ready.
 
 All improvement plan items (P0 through P3) have been completed. The **remaining steps for SaaS launch** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.

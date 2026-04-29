@@ -17,6 +17,8 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 |----------|-------------|
 | [PROJECT_STATUS.md](PROJECT_STATUS.md) | Full status report — code health, scalability, feature completeness, risk register |
 | [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) | Prioritized improvement plan with effort estimates and execution timeline |
+| [EXECUTION_PLAN.md](EXECUTION_PLAN.md) | What to build next: 9 phases, 84 hours, from LLM wiring to dependency scanning |
+| [compExecutionPlan.md](compExecutionPlan.md) | Company-constrained plan: 9 phases, 60 hours, no LLM/Docker needed |
 | [LLM_HANDOFF.md](LLM_HANDOFF.md) | Lessons learned, gotchas, patterns, and tips for the next developer or LLM |
 
 ## Reference

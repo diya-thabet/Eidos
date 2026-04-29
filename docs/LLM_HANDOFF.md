@@ -288,3 +288,15 @@ A second round of testing used larger, harder repos to stress each parser:
 | **C++** | fmtlib/fmt | 1,172 | 10,084 | 70.8/100 | Templates, virtual methods, 33 inheritance edges, namespaces |
 
 Total across deep validation: **38 tests, all passing.**
+
+---
+
+## 14. Cyclomatic & Cognitive Complexity (Phase 16)
+
+Every function/method now has computed complexity metrics:
+- **Cyclomatic complexity** (McCabe): counts decision points via tree-sitter AST
+- **Cognitive complexity** (Sonar-style): penalizes nesting depth and recursion
+- Works across all 9 languages
+- 5 new health rules: CX004-CX008
+- New endpoint: `GET /complexity` with per-function metrics, averages, and filtering
+- 57 new tests covering all languages, health rules, API, and edge cases
