@@ -1,7 +1,7 @@
 Metadata-Version: 2.4
 Name: eidos
 Version: 0.1.0
-Summary: Legacy Code Intelligence Tool
+Summary: Code Intelligence Platform - multi-language analysis, documentation, and PR review
 Requires-Python: >=3.11
 Requires-Dist: fastapi>=0.115
 Requires-Dist: uvicorn[standard]>=0.30
@@ -26,6 +26,8 @@ Requires-Dist: tree-sitter-c>=0.23
 Requires-Dist: tree-sitter-cpp>=0.23
 Requires-Dist: PyJWT>=2.8
 Requires-Dist: cryptography>=42.0
+Requires-Dist: python-multipart>=0.0.6
+Requires-Dist: python-json-logger>=3.0
 Provides-Extra: dev
 Requires-Dist: pytest>=8.0; extra == "dev"
 Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
