@@ -65,12 +65,12 @@ def _init_repo(tmp_path: Path) -> Path:
     _git(repo, "add", ".")
     _git(repo, "commit", "-m", "initial")
 
-    # Second commit by Bob
+    # Second commit by Bob (rewrites entire hello function)
     _git(repo, "config", "user.name", "Bob")
     _git(repo, "config", "user.email", "bob@test.com")
     (repo / "main.py").write_text(textwrap.dedent("""\
-        def hello():
-            print("hello world")
+        def hello(name="world"):
+            print(f"hello {name}")
 
         def goodbye():
             print("goodbye")
@@ -225,7 +225,9 @@ class TestExtractBlameForSnapshot:
         ]
         blame_map = extract_blame_for_snapshot(repo, symbols)
         info = blame_map["main.hello"]
+        # Bob rewrote both lines so he must be the last author
         assert info.last_author == "Bob"
+        assert info.author_count == 1  # only Bob owns lines 1-2
 
     def test_helper_has_alice(self, tmp_path):
         repo = _init_repo(tmp_path)
