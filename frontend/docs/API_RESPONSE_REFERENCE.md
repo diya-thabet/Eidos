@@ -701,6 +701,47 @@ Uses BFS from entry points (controllers, main, constructors, public classes, tes
 
 ---
 
+## Clones
+
+### GET /repos/{id}/snapshots/{sid}/clones?near_clones=false
+
+```json
+{
+  "snapshot_id": "s1",
+  "total_functions_analyzed": 142,
+  "exact_clone_groups": [
+    {
+      "fingerprint": "a1b2c3d4e5f67890",
+      "count": 3,
+      "members": [
+        {
+          "fq_name": "app.service.processA",
+          "name": "processA",
+          "file_path": "service.py",
+          "start_line": 10,
+          "end_line": 25,
+          "lines": 16
+        }
+      ]
+    }
+  ],
+  "near_clone_pairs": [
+    {
+      "a": { "fq_name": "...", "name": "...", "file_path": "...", "start_line": 1, "end_line": 20, "lines": 20 },
+      "b": { "fq_name": "...", "name": "...", "file_path": "...", "start_line": 1, "end_line": 20, "lines": 20 },
+      "similarity": 0.75
+    }
+  ],
+  "total_exact_clones": 6,
+  "total_near_clones": 2
+}
+```
+
+Query params:
+- `near_clones` (bool, default false): enable near-clone detection (slower, O(n^2))
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export

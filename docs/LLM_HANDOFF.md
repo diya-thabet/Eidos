@@ -331,3 +331,14 @@ Full graph reachability analysis:
 - **New endpoint**: `GET /dead-code` reconstructs CodeGraph from DB and runs full analysis
 - Handles cycles, 1000+ node graphs, public/private visibility
 - 29 new tests
+
+## 18. Clone Detection (Phase 20)
+
+AST structural fingerprinting for copy-paste detection:
+- **Fingerprinting**: walks tree-sitter AST recording only node types (ignores identifiers/literals/comments), SHA-256 hash
+- **Near-clone detection**: sliding window of statement-level hashes, Jaccard similarity >= 60%
+- **Pipeline integration**: fingerprint computed alongside complexity in `_enrich_complexity`, stored as `_structural_fingerprint` on SymbolInfo
+- **3 new health rules**: DUP001 (exact clone), DUP002 (near clone, API-only), DUP003 (clone cluster > 3 copies)
+- **New endpoint**: `GET /clones` with exact groups and near-clone pairs
+- Works across all 9 languages (same tree-sitter approach)
+- 33 new tests: Python + Java real code clones, similarity math, pipeline enrichment

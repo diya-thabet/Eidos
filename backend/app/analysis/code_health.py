@@ -185,6 +185,11 @@ from app.analysis.health_rules.clean_code import (  # noqa: E402
     TooManyParametersRule,
     VoidAbuseRule,
 )
+from app.analysis.health_rules.clones import (  # noqa: E402
+    CloneClusterRule,
+    ExactCloneRule,
+    NearCloneRule,
+)
 from app.analysis.health_rules.complexity import (  # noqa: E402
     ComplexityDensityRule,
     ComplexityPerLineRule,
@@ -318,6 +323,10 @@ ALL_RULES: list[HealthRule] = [
     UnreachableClassRule(),
     DeadModuleRule(),
     DeadImportRule(),
+    # Clone Detection (3)
+    ExactCloneRule(),
+    NearCloneRule(),
+    CloneClusterRule(),
 ]
 
 

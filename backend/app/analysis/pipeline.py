@@ -127,6 +127,9 @@ def _enrich_complexity(
     """Compute complexity metrics for every function in every file."""
     from tree_sitter import Parser as TSParser
 
+    from app.analysis.clone_detection import (
+        structural_fingerprint,
+    )
     from app.analysis.complexity import (
         cognitive_complexity,
         cyclomatic_complexity,
@@ -183,6 +186,8 @@ def _enrich_complexity(
                     sym.cognitive_complexity = cognitive_complexity(
                         fnode, sym.name,
                     )
+                    # Structural fingerprint for clone detection
+                    sym._structural_fingerprint = structural_fingerprint(fnode)  # type: ignore[attr-defined]
                     break
 
 

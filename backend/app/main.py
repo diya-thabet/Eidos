@@ -8,6 +8,7 @@ from app.api import admin as admin_api
 from app.api import analysis as analysis_api
 from app.api import auth as auth_api
 from app.api import blame as blame_api
+from app.api import clones as clones_api
 from app.api import dead_code as dead_code_api
 from app.api import deps as deps_api
 from app.api import diagrams as diagrams_api
@@ -146,6 +147,7 @@ app.include_router(portable_api.router, prefix="/repos", tags=["portable"])
 app.include_router(deps_api.router, prefix="/repos", tags=["dependencies"])
 app.include_router(blame_api.router, prefix="/repos", tags=["blame"])
 app.include_router(dead_code_api.router, prefix="/repos", tags=["dead-code"])
+app.include_router(clones_api.router, prefix="/repos", tags=["clones"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])
