@@ -381,3 +381,13 @@ Refactored the 6 longest functions (all >100 lines) into well-named helpers:
 - New `SymbolNote` DB model with snapshot_id + symbol_fq_name index
 - New schemas: `SymbolNoteCreate`, `SymbolNoteOut`, `CallerOut`, `CallersResponse`
 - 28 new tests covering all endpoints, pagination, filters, 404s, CRUD
+
+## 22. Export Enhancements (Phase 24)
+
+3 new export formats, all pure Python (stdlib csv, json, io, zipfile):
+- **CSV/ZIP** (`GET /export/csv`): ZIP containing symbols.csv, edges.csv, health_findings.csv, optionally dependencies.csv
+- **SARIF 2.1.0** (`GET /export/sarif`): standard format for GitHub Code Scanning, VS Code, Azure DevOps
+- **Markdown report** (`GET /export/markdown`): human-readable health report with severity breakdown, top findings table, most complex functions
+- New module: `app/exports/generators.py` with `generate_csv_zip`, `generate_sarif`, `generate_markdown_report`
+- New API router: `app/api/exports.py` with 3 endpoints
+- 38 new tests: 7 CSV unit tests, 8 SARIF unit tests, 8 Markdown unit tests, 12 API tests, 3 edge cases

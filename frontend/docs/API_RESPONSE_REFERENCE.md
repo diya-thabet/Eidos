@@ -861,6 +861,54 @@ Returns array of `SymbolNote` objects.
 
 ---
 
+## Export: CSV
+
+### GET /repos/{id}/snapshots/{sid}/export/csv
+
+Returns a ZIP file (`application/zip`) containing:
+- `symbols.csv` — all symbols with complexity metrics, blame data
+- `edges.csv` — all call/contains/inherits edges
+- `health_findings.csv` — all health rule violations
+- `dependencies.csv` (if available)
+
+---
+
+## Export: SARIF
+
+### GET /repos/{id}/snapshots/{sid}/export/sarif
+
+Returns SARIF 2.1.0 JSON compatible with GitHub Code Scanning and VS Code:
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/...",
+  "version": "2.1.0",
+  "runs": [{
+    "tool": { "driver": { "name": "Eidos", "version": "1.0.0", "rules": [...] } },
+    "results": [{
+      "ruleId": "CC001",
+      "level": "warning",
+      "message": { "text": "Cyclomatic complexity 20 exceeds threshold" },
+      "locations": [{ "physicalLocation": { "artifactLocation": { "uri": "main.py" }, "region": { "startLine": 1 } } }]
+    }]
+  }]
+}
+```
+
+---
+
+## Export: Markdown
+
+### GET /repos/{id}/snapshots/{sid}/export/markdown
+
+Returns a `text/markdown` health report with:
+- Summary table (files, symbols, edges, findings)
+- Severity breakdown with icons (?? error, ?? warning, ?? info)
+- Top 30 findings table
+- Top 15 most complex functions
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export

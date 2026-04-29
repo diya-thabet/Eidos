@@ -277,11 +277,12 @@ Each rule gives a severity (info, warning, error) and a suggestion for how to fi
 
 | Metric | Value |
 |--------|-------|
-| Python source lines | 48,716 |
-| Application files | 116 |
-| Test files | 86 |
-| Automated tests | 2,081 |
-| API endpoints | 69 |
+| Python source lines | 49,640 |
+| Application files | 119 |
+| Test files | 87 |
+| Automated tests | 2,119 |
+| API endpoints | 72 |
 | Language parsers | 9 (all deeply validated) |
 | Code health rules | 66 |
+| Export formats | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |
 | Test-to-code ratio | 1.07:1 (tests exceed code!) |

@@ -483,7 +483,7 @@ Returns a single Markdown file: executive summary, health score, top findings, c
 | **6** | Coupling & Cohesion | 5h | Medium (architecture) | ? DONE |
 | **7** | Refactor Long Funcs | 8h | Medium (maintainability) | ? DONE |
 | **8** | API Endpoint Gaps | 6h | Medium (frontend needs) | ? DONE |
-| **9** | Export Enhancements | 4h | Low-Medium (integration) | No |
+| **9** | Export Enhancements | 4h | Low-Medium (integration) | ? DONE |
 | | **TOTAL** | **60h** | | **Nothing blocked** |
 
 ---

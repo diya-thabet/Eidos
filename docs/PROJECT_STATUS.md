@@ -12,19 +12,20 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Metric | Value |
 |--------|-------|
-| **Total Python files** | 179 |
-| **Application code** | 100 files / 19,413 lines |
-| **Test code** | 79 files / 21,124 lines |
-| **Total lines of code** | 40,537 |
-| **Test-to-code ratio** | 1.09:1 (tests exceed code) |
-| **Tests (CI-verified)** | 1,818 (1,812 passed, 6 skipped, 0 failed) |
+| **Total Python files** | 206 |
+| **Application code** | 119 files / 23,967 lines |
+| **Test code** | 87 files / 25,673 lines |
+| **Total lines of code** | 49,640 |
+| **Test-to-code ratio** | 1.07:1 (tests exceed code) |
+| **Tests (CI-verified)** | 2,119 (2,113 passed, 6 skipped, 0 failed) |
 | **Lint (ruff)** | 0 errors |
-| **Type checking (mypy)** | 0 errors across 98 files |
-| **API endpoints** | 55 |
+| **Type checking (mypy)** | 0 errors across 117 files |
+| **API endpoints** | 72 |
 | **Language parsers** | 9 -- all validated on real repos |
-| **Code health rules** | 40 (across 8 category modules) |
+| **Code health rules** | 66 (across 13 category modules) |
+| **Export formats** | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |
 | **Real repos validated** | 18 (pallets/click, fmtlib/fmt, java-design-patterns, ...) |
-| **Documentation files** | 27 |
+| **Documentation files** | 29 |
 
 ---
 
@@ -79,8 +80,8 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Area | Assessment | Evidence |
 |------|-----------|----------|
-| **Test coverage** | ? Excellent | 2,081 tests (CI-verified), 1.07:1 test-to-code ratio, 18 real repos validated |
-| **Type safety** | ? Excellent | mypy strict mode, 0 errors across 98 files |
+| **Test coverage** | ? Excellent | 2,119 tests (CI-verified), 1.07:1 test-to-code ratio, 18 real repos validated |
+| **Type safety** | ? Excellent | mypy strict mode, 0 errors across 117 files |
 | **Lint cleanliness** | ? Excellent | ruff with E, F, I, UP rules — 0 violations |
 | **Extensibility** | ? Excellent | ABC parser pattern, registry, adding a language = 1 file + 2 lines |
 | **Separation of concerns** | ? Good | Clear module boundaries: analysis, indexing, reasoning, reviews, docgen |
@@ -263,6 +264,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 20 (Clone Detection) | **2,029** | **113** | **47,009** | **61** |
 | Phase 21 (Module Coupling) | **2,053** | **116** | **48,010** | **62** |
 | Phase 22 (Refactor + API Gaps) | **2,081** | **116** | **48,716** | **69** |
+| Phase 23 (Export Enhancements) | **2,119** | **119** | **49,640** | **72** |
 
 ---
 
@@ -317,6 +319,6 @@ Every parser was tested against challenging open-source repos:
 
 ## Conclusion
 
-The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 69 API endpoints, 9 language parsers, 66 health rules (complexity, deps, blame, dead code, clones, coupling/cohesion), and **2,081 CI-verified tests** at a 1.07:1 test-to-code ratio, the system is fully production-ready.
+The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 72 API endpoints, 9 language parsers, 66 health rules (complexity, deps, blame, dead code, clones, coupling/cohesion), 5 export formats (JSON, .eidos, CSV/ZIP, SARIF, Markdown), and **2,119 CI-verified tests** at a 1.07:1 test-to-code ratio, the system is fully production-ready.
 
 All improvement plan items (P0 through P3) have been completed. The **remaining steps for SaaS launch** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.

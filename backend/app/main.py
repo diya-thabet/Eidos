@@ -15,6 +15,7 @@ from app.api import deps as deps_api
 from app.api import diagrams as diagrams_api
 from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
+from app.api import exports as exports_api
 from app.api import indexing as indexing_api
 from app.api import portable as portable_api
 from app.api import reasoning as reasoning_api
@@ -150,6 +151,7 @@ app.include_router(blame_api.router, prefix="/repos", tags=["blame"])
 app.include_router(dead_code_api.router, prefix="/repos", tags=["dead-code"])
 app.include_router(clones_api.router, prefix="/repos", tags=["clones"])
 app.include_router(coupling_api.router, prefix="/repos", tags=["coupling"])
+app.include_router(exports_api.router, prefix="/repos", tags=["exports"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])
