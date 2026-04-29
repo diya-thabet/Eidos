@@ -661,6 +661,46 @@ Supported ecosystems: `pypi`, `npm`, `maven`, `crates`, `go`, `nuget`, `cmake`, 
 
 ---
 
+## Dead Code
+
+### GET /repos/{id}/snapshots/{sid}/dead-code
+
+```json
+{
+  "snapshot_id": "s1",
+  "total_symbols": 296,
+  "reachable_count": 250,
+  "unreachable_count": 46,
+  "entry_point_count": 12,
+  "unreachable_functions": [
+    {
+      "fq_name": "legacy.old_handler",
+      "name": "old_handler",
+      "kind": "method",
+      "file_path": "legacy/handler.py",
+      "start_line": 10,
+      "end_line": 25
+    }
+  ],
+  "unreachable_classes": [],
+  "unreachable_modules": [
+    {
+      "module": "legacy",
+      "file_count": 3,
+      "symbol_count": 8,
+      "files": ["legacy/a.py", "legacy/b.py", "legacy/c.py"]
+    }
+  ],
+  "dead_imports": [
+    { "source_file": "main.py", "target": "legacy.old_handler", "line": 5 }
+  ]
+}
+```
+
+Uses BFS from entry points (controllers, main, constructors, public classes, tests) to find deeply unreachable code.
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export

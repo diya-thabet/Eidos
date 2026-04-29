@@ -79,7 +79,7 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Area | Assessment | Evidence |
 |------|-----------|----------|
-| **Test coverage** | ? Excellent | 1,967 tests (CI-verified), 1.08:1 test-to-code ratio, 18 real repos validated |
+| **Test coverage** | ? Excellent | 1,996 tests (CI-verified), 1.08:1 test-to-code ratio, 18 real repos validated |
 | **Type safety** | ? Excellent | mypy strict mode, 0 errors across 98 files |
 | **Lint cleanliness** | ? Excellent | ruff with E, F, I, UP rules — 0 violations |
 | **Extensibility** | ? Excellent | ABC parser pattern, registry, adding a language = 1 file + 2 lines |
@@ -259,6 +259,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 16 (Complexity Metrics) | **1,875** | **101** | **42,074** | **56** |
 | Phase 17 (Dependency Parsing) | **1,936** | **104** | **43,766** | **57** |
 | Phase 18 (Git Blame/Churn) | **1,967** | **107** | **44,845** | **59** |
+| Phase 19 (Dead Code Detection) | **1,996** | **110** | **45,896** | **60** |
 
 ---
 
@@ -313,6 +314,6 @@ Every parser was tested against challenging open-source repos:
 
 ## Conclusion
 
-The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 59 API endpoints, 9 language parsers (all deeply validated), 54 health rules (complexity, dependencies, git blame/churn), API key auth, structured logging, Alembic migrations, Prometheus metrics, incremental ingestion, and **1,967 CI-verified tests** at a 1.08:1 test-to-code ratio, the system is fully production-ready.
+The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 60 API endpoints, 9 language parsers (all deeply validated), 58 health rules (complexity, dependencies, git blame/churn, dead code detection), API key auth, structured logging, Alembic migrations, Prometheus metrics, incremental ingestion, and **1,996 CI-verified tests** at a 1.08:1 test-to-code ratio, the system is fully production-ready.
 
 All improvement plan items (P0 through P3) have been completed. The **remaining steps for SaaS launch** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.

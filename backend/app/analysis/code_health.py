@@ -198,6 +198,12 @@ from app.analysis.health_rules.complexity import (  # noqa: E402
     VeryHighCognitiveRule,
     VeryHighCyclomaticRule,
 )
+from app.analysis.health_rules.dead_code import (  # noqa: E402
+    DeadImportRule,
+    DeadModuleRule,
+    UnreachableClassRule,
+    UnreachableFunctionRule,
+)
 from app.analysis.health_rules.dependencies import (  # noqa: E402
     DevInProductionRule,
     DuplicateDependencyRule,
@@ -307,6 +313,11 @@ ALL_RULES: list[HealthRule] = [
     StaleCodeRule(),
     BusFactorRule(),
     RecentChurnRule(),
+    # Dead Code (4)
+    UnreachableFunctionRule(),
+    UnreachableClassRule(),
+    DeadModuleRule(),
+    DeadImportRule(),
 ]
 
 

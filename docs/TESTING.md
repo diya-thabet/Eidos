@@ -199,8 +199,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_complexity.py` | 57 | Cyclomatic & cognitive complexity: calculator unit tests (9 langs), pipeline integration, 5 health rules, API endpoint, edge cases |
 | `test_dependency_parser.py` | 61 | Dependency parsing: 11 manifest parsers (7 ecosystems), pipeline integration, 5 health rules, API endpoint, edge cases |
 | `test_blame.py` | 31 | Git blame/churn: blame extraction on real git repos, blame_for_range, 4 health rules (hotspot/stale/bus-factor/churn), 2 API endpoints |
+| `test_dead_code.py` | 29 | Dead code: BFS reachability, unreachable funcs/classes/modules, dead imports, 4 health rules, API endpoint, edge cases (cycles, 1000-node graphs) |
 
-### Updated Total: ~1,967 tests (1,961 passed + 6 skipped)
+### Updated Total: ~1,996 tests (1,990 passed + 6 skipped)
 
 ## Test Design Principles
 

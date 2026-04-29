@@ -62,7 +62,7 @@ def _find(report, rule_id):
 
 class TestRuleRegistry:
     def test_total_rule_count(self):
-        assert len(ALL_RULES) == 54
+        assert len(ALL_RULES) == 58
 
     def test_all_have_id(self):
         for r in ALL_RULES:
@@ -90,7 +90,7 @@ class TestRuleRegistry:
 
     def test_metadata_returns_all(self):
         meta = HealthConfig.all_rules()
-        assert len(meta) == 54
+        assert len(meta) == 58
         assert all("rule_id" in m and "description" in m for m in meta)
 
 

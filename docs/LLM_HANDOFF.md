@@ -321,3 +321,13 @@ Every function/method now has git blame metadata:
 - **4 new health rules**: GB001 (hotspot = high churn + high CC), GB002 (stale code = old + no callers), GB003 (bus factor = 1 author across module), GB004 (recent churn > 10 commits)
 - **2 new endpoints**: `GET /contributors` (per-author stats), `GET /hotspots` (risk = churn x complexity)
 - 31 new tests using real temporary git repos with multiple authors/commits
+
+## 17. Dead Code Detection (Phase 19)
+
+Full graph reachability analysis:
+- **BFS from entry points**: detects entry points (controllers, main, constructors, public classes, test functions), then BFS following call/contains/inherits edges (NOT import edges)
+- **4 categories**: unreachable functions, unreachable classes, dead modules (zero reachable symbols), dead imports (imported but unreachable target)
+- **4 new health rules**: DC001 (unreachable function), DC002 (unreachable class), DC003 (dead module), DC004 (dead import)
+- **New endpoint**: `GET /dead-code` reconstructs CodeGraph from DB and runs full analysis
+- Handles cycles, 1000+ node graphs, public/private visibility
+- 29 new tests
