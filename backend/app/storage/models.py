@@ -360,3 +360,25 @@ class Evaluation(Base):
     )
 
     __table_args__ = (Index("ix_evaluations_snapshot", "snapshot_id"),)
+
+
+class Dependency(Base):
+    """A declared dependency from a manifest file."""
+
+    __tablename__ = "dependencies"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    version: Mapped[str] = mapped_column(String(256), default="*")
+    ecosystem: Mapped[str] = mapped_column(String(32), nullable=False)
+    file_path: Mapped[str] = mapped_column(Text, nullable=False)
+    is_dev: Mapped[bool] = mapped_column(default=False)
+    is_pinned: Mapped[bool] = mapped_column(default=False)
+
+    __table_args__ = (
+        Index("ix_deps_snapshot", "snapshot_id"),
+        Index("ix_deps_snapshot_eco", "snapshot_id", "ecosystem"),
+    )

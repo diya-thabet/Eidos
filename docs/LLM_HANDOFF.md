@@ -300,3 +300,14 @@ Every function/method now has computed complexity metrics:
 - 5 new health rules: CX004-CX008
 - New endpoint: `GET /complexity` with per-function metrics, averages, and filtering
 - 57 new tests covering all languages, health rules, API, and edge cases
+
+## 15. Dependency File Parsing (Phase 17)
+
+Every manifest file in a repo is now parsed during ingestion:
+- **11 parsers**: requirements.txt, pyproject.toml, setup.cfg, package.json, pom.xml, build.gradle, go.mod, Cargo.toml, .csproj, vcpkg.json, CMakeLists.txt
+- **7 ecosystems**: PyPI, npm, Maven, Crates, Go, NuGet, CMake/vcpkg
+- **5 new health rules**: DEP001-DEP005 (unpinned, wide range, unused, duplicate, dev-in-production)
+- **New DB model**: `Dependency` table with ecosystem, version, is_dev, is_pinned
+- **New endpoint**: `GET /dependencies` with ecosystem summaries
+- Cross-references import edges to detect unused dependencies (DEP003)
+- 61 new tests covering all parsers, health rules, API, pipeline integration, and edge cases

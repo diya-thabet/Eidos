@@ -8,6 +8,7 @@ from __future__ import annotations
 import logging
 from collections import defaultdict
 from dataclasses import dataclass, field
+from typing import Any
 
 from app.analysis.models import (
     EdgeInfo,
@@ -33,6 +34,7 @@ class CodeGraph:
     symbols: dict[str, SymbolInfo] = field(default_factory=dict)  # fq_name -> SymbolInfo
     edges: list[EdgeInfo] = field(default_factory=list)
     modules: dict[str, ModuleInfo] = field(default_factory=dict)  # namespace -> ModuleInfo
+    dependencies: list[Any] = field(default_factory=list)  # DependencyInfo objects
     files: dict[str, FileAnalysis] = field(default_factory=dict)  # path -> FileAnalysis
 
     # Adjacency lists (built by finalize())

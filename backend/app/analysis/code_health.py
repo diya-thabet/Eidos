@@ -181,11 +181,23 @@ from app.analysis.health_rules.clean_code import (  # noqa: E402
 )
 from app.analysis.health_rules.complexity import (  # noqa: E402
     ComplexityDensityRule,
+    ComplexityPerLineRule,
     CouplingBetweenObjectsRule,
+    HighCognitiveRule,
+    HighCyclomaticRule,
     HighFanInRule,
     HighFanOutRule,
     LackOfCohesionRule,
     TooManyChildrenRule,
+    VeryHighCognitiveRule,
+    VeryHighCyclomaticRule,
+)
+from app.analysis.health_rules.dependencies import (  # noqa: E402
+    DevInProductionRule,
+    DuplicateDependencyRule,
+    UnpinnedDependencyRule,
+    UnusedDependencyRule,
+    WideVersionRangeRule,
 )
 from app.analysis.health_rules.design import (  # noqa: E402
     CircularDependencyRule,
@@ -246,6 +258,12 @@ ALL_RULES: list[HealthRule] = [
     CouplingBetweenObjectsRule(),
     LackOfCohesionRule(),
     ComplexityDensityRule(),
+    # Complexity: cyclomatic/cognitive (5)
+    HighCyclomaticRule(),
+    VeryHighCyclomaticRule(),
+    HighCognitiveRule(),
+    VeryHighCognitiveRule(),
+    ComplexityPerLineRule(),
     # Design (10)
     CircularDependencyRule(),
     OrphanClassRule(),
@@ -272,6 +290,12 @@ ALL_RULES: list[HealthRule] = [
     HardcodedSecretRule(),
     SqlInjectionRiskRule(),
     InsecureFieldRule(),
+    # Dependencies (5)
+    UnpinnedDependencyRule(),
+    WideVersionRangeRule(),
+    UnusedDependencyRule(),
+    DuplicateDependencyRule(),
+    DevInProductionRule(),
 ]
 
 

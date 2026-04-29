@@ -20,6 +20,7 @@ from tree_sitter import Language
 from app.analysis.graph_builder import CodeGraph, build_graph
 from app.analysis.models import FileAnalysis, SymbolKind
 from app.analysis.parser_registry import get_parser, supported_languages
+from app.storage.models import Dependency as DependencyModel
 from app.storage.models import Edge, Symbol
 
 logger = logging.getLogger(__name__)
@@ -217,11 +218,17 @@ def analyze_snapshot_files(repo_dir: Path, file_records: list[dict[str, Any]]) -
     _enrich_complexity(repo_dir, analyses, parseable)
 
     graph = build_graph(analyses)
+
+    # Scan dependency manifests
+    from app.analysis.dependency_parser import scan_dependencies
+    graph.dependencies = scan_dependencies(repo_dir)
+
     logger.info(
-        "Analysis complete: %d files parsed, %d symbols, %d edges (workers=%d)",
+        "Analysis complete: %d files, %d symbols, %d edges, %d deps (workers=%d)",
         len(analyses),
         len(graph.symbols),
         len(graph.edges),
+        len(graph.dependencies),
         _MAX_WORKERS if len(parseable) > 20 else 1,
     )
     return graph
@@ -323,3 +330,22 @@ async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) ->
         len(graph.edges),
         snapshot_id,
     )
+
+    # Persist dependencies
+    for dep in getattr(graph, "dependencies", []):
+        db.add(DependencyModel(
+            snapshot_id=snapshot_id,
+            name=dep.name,
+            version=dep.version,
+            ecosystem=dep.ecosystem,
+            file_path=dep.file_path,
+            is_dev=dep.is_dev,
+            is_pinned=dep.is_pinned,
+        ))
+    if graph.dependencies:
+        await db.flush()
+        logger.info(
+            "Persisted %d dependencies for snapshot %s",
+            len(graph.dependencies),
+            snapshot_id,
+        )

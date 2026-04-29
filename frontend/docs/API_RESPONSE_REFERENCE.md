@@ -566,6 +566,50 @@ Items are sorted by cyclomatic complexity descending.
 
 ---
 
+## Dependencies
+
+### GET /repos/{id}/snapshots/{sid}/dependencies
+
+```json
+{
+  "snapshot_id": "s1",
+  "total": 42,
+  "ecosystems": [
+    {
+      "ecosystem": "pypi",
+      "total": 15,
+      "pinned": 10,
+      "unpinned": 5,
+      "dev": 3,
+      "production": 12
+    },
+    {
+      "ecosystem": "npm",
+      "total": 27,
+      "pinned": 20,
+      "unpinned": 7,
+      "dev": 8,
+      "production": 19
+    }
+  ],
+  "items": [
+    {
+      "id": 1,
+      "name": "flask",
+      "version": "2.3.0",
+      "ecosystem": "pypi",
+      "file_path": "requirements.txt",
+      "is_dev": false,
+      "is_pinned": true
+    }
+  ]
+}
+```
+
+Supported ecosystems: `pypi`, `npm`, `maven`, `crates`, `go`, `nuget`, `cmake`, `vcpkg`.
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export
@@ -965,5 +1009,32 @@ interface ComplexityMetrics {
   high_cyclomatic_count: number;
   high_cognitive_count: number;
   items: ComplexityItem[];
+}
+
+// Dependency
+interface DependencyItem {
+  id: number;
+  name: string;
+  version: string;
+  ecosystem: 'pypi' | 'npm' | 'maven' | 'crates' | 'go' | 'nuget' | 'cmake' | 'vcpkg';
+  file_path: string;
+  is_dev: boolean;
+  is_pinned: boolean;
+}
+
+interface EcosystemSummary {
+  ecosystem: string;
+  total: number;
+  pinned: number;
+  unpinned: number;
+  dev: number;
+  production: number;
+}
+
+interface DependencyReport {
+  snapshot_id: string;
+  total: number;
+  ecosystems: EcosystemSummary[];
+  items: DependencyItem[];
 }
 ```

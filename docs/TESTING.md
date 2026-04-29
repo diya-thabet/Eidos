@@ -197,8 +197,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 
 | `test_deep_languages.py` | 38 | Deep validation: 9 challenging repos (click, GuardClauses, java-design-patterns, ky, cmdk, bubbletea, http, cJSON, fmt) |
 | `test_complexity.py` | 57 | Cyclomatic & cognitive complexity: calculator unit tests (9 langs), pipeline integration, 5 health rules, API endpoint, edge cases |
+| `test_dependency_parser.py` | 61 | Dependency parsing: 11 manifest parsers (7 ecosystems), pipeline integration, 5 health rules, API endpoint, edge cases |
 
-### Updated Total: ~1,875 tests (1,869 passed + 6 skipped)
+### Updated Total: ~1,936 tests (1,930 passed + 6 skipped)
 
 ## Test Design Principles
 
