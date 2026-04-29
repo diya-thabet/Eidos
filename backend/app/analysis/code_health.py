@@ -163,11 +163,17 @@ class HealthRule:
 
 
 
-# Import all 40 rules from category modules
+# Import all rules from category modules
 from app.analysis.health_rules.best_practices import (  # noqa: E402
     DeepNamespaceRule,
     LargeFileRule,
     UnusedImportRule,
+)
+from app.analysis.health_rules.blame import (  # noqa: E402
+    BusFactorRule,
+    HotspotRule,
+    RecentChurnRule,
+    StaleCodeRule,
 )
 from app.analysis.health_rules.clean_code import (  # noqa: E402
     ConstructorOverInjectionRule,
@@ -296,6 +302,11 @@ ALL_RULES: list[HealthRule] = [
     UnusedDependencyRule(),
     DuplicateDependencyRule(),
     DevInProductionRule(),
+    # Git Blame / Churn (4)
+    HotspotRule(),
+    StaleCodeRule(),
+    BusFactorRule(),
+    RecentChurnRule(),
 ]
 
 

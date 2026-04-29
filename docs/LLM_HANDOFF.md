@@ -311,3 +311,13 @@ Every manifest file in a repo is now parsed during ingestion:
 - **New endpoint**: `GET /dependencies` with ecosystem summaries
 - Cross-references import edges to detect unused dependencies (DEP003)
 - 61 new tests covering all parsers, health rules, API, pipeline integration, and edge cases
+
+## 16. Git Blame / Churn Analysis (Phase 18)
+
+Every function/method now has git blame metadata:
+- **Blame extraction**: `app/analysis/blame.py` uses GitPython to run `git blame` per file
+- **4 new DB columns on Symbol**: `last_author`, `last_modified_at`, `author_count`, `commit_count`
+- **Pipeline integration**: blame runs after persist_graph in `tasks.py`, non-fatal on failure
+- **4 new health rules**: GB001 (hotspot = high churn + high CC), GB002 (stale code = old + no callers), GB003 (bus factor = 1 author across module), GB004 (recent churn > 10 commits)
+- **2 new endpoints**: `GET /contributors` (per-author stats), `GET /hotspots` (risk = churn x complexity)
+- 31 new tests using real temporary git repos with multiple authors/commits

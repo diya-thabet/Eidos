@@ -12,7 +12,7 @@ from app.core.ingestion import clone_repo, repo_clone_path, scan_files
 from app.core.retention import cleanup_clone
 from app.indexing.indexer import run_indexing
 from app.storage.database import async_session
-from app.storage.models import File, Repo, RepoSnapshot, SnapshotStatus
+from app.storage.models import File, Repo, RepoSnapshot, SnapshotStatus, Symbol
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,52 @@ async def run_ingestion(snapshot_id: str) -> None:
                     db, prev_snapshot_id, snapshot_id, changed_paths,
                 )
 
-            await _progress(65, "Graph persisted. Generating summaries...")
+            await _progress(65, "Graph persisted. Extracting blame data...")
+
+            # Phase 4a: Git blame / churn analysis
+            try:
+                from app.analysis.blame import extract_blame_for_snapshot
+                sym_dicts = [
+                    {
+                        "fq_name": s.fq_name,
+                        "file_path": s.file_path,
+                        "start_line": s.start_line,
+                        "end_line": s.end_line,
+                    }
+                    for s in graph.symbols.values()
+                    if s.kind.value in ("method", "constructor")
+                ]
+                blame_map = await asyncio.to_thread(
+                    extract_blame_for_snapshot, dest, sym_dicts,
+                )
+                if blame_map:
+                    from sqlalchemy import update
+                    for fq_name, info in blame_map.items():
+                        await db.execute(
+                            update(Symbol)
+                            .where(
+                                Symbol.snapshot_id == snapshot_id,
+                                Symbol.fq_name == fq_name,
+                            )
+                            .values(
+                                last_author=info.last_author,
+                                last_modified_at=info.last_modified_at,
+                                author_count=info.author_count,
+                                commit_count=info.commit_count,
+                            )
+                        )
+                    await db.flush()
+                    logger.info(
+                        "Blame data persisted for %d symbols",
+                        len(blame_map),
+                    )
+            except Exception:
+                logger.warning(
+                    "Blame extraction failed (non-fatal), continuing",
+                    exc_info=True,
+                )
+
+            await _progress(70, "Generating summaries...")
 
             # Phase 4: Summarisation & indexing
             indexing_stats = await run_indexing(db, snapshot_id, graph)

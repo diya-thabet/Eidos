@@ -230,6 +230,12 @@ class Symbol(Base):
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # extra info as JSON
     cyclomatic_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     cognitive_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    last_author: Mapped[str] = mapped_column(String(256), default="", server_default="")
+    last_modified_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True,
+    )
+    author_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    commit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     __table_args__ = (
         Index("ix_symbols_snapshot_fq", "snapshot_id", "fq_name"),

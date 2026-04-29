@@ -58,6 +58,10 @@ class SymbolInfo:
     doc_comment: str = ""
     cyclomatic_complexity: int = 0
     cognitive_complexity: int = 0
+    last_author: str = ""
+    last_modified_at: str | None = None  # ISO datetime string
+    author_count: int = 0
+    commit_count: int = 0
 
 
 @dataclass

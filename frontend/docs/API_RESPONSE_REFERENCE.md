@@ -610,6 +610,57 @@ Supported ecosystems: `pypi`, `npm`, `maven`, `crates`, `go`, `nuget`, `cmake`, 
 
 ---
 
+## Contributors
+
+### GET /repos/{id}/snapshots/{sid}/contributors
+
+```json
+{
+  "snapshot_id": "s1",
+  "total_authors": 5,
+  "contributors": [
+    {
+      "author": "Alice",
+      "function_count": 42,
+      "file_count": 8,
+      "modules": ["app.api", "app.core"]
+    }
+  ]
+}
+```
+
+---
+
+## Hotspots
+
+### GET /repos/{id}/snapshots/{sid}/hotspots?limit=50
+
+```json
+{
+  "snapshot_id": "s1",
+  "total": 12,
+  "items": [
+    {
+      "fq_name": "app.parser.parse_expression",
+      "name": "parse_expression",
+      "file_path": "parser.py",
+      "start_line": 45,
+      "end_line": 120,
+      "cyclomatic_complexity": 35,
+      "cognitive_complexity": 52,
+      "commit_count": 15,
+      "author_count": 3,
+      "last_author": "Bob",
+      "risk_score": 525.0
+    }
+  ]
+}
+```
+
+`risk_score` = `commit_count * cyclomatic_complexity`. Sorted descending.
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export
@@ -1036,5 +1087,40 @@ interface DependencyReport {
   total: number;
   ecosystems: EcosystemSummary[];
   items: DependencyItem[];
+}
+
+// Contributors
+interface ContributorStats {
+  author: string;
+  function_count: number;
+  file_count: number;
+  modules: string[];
+}
+
+interface ContributorsReport {
+  snapshot_id: string;
+  total_authors: number;
+  contributors: ContributorStats[];
+}
+
+// Hotspots
+interface HotspotItem {
+  fq_name: string;
+  name: string;
+  file_path: string;
+  start_line: number;
+  end_line: number;
+  cyclomatic_complexity: number;
+  cognitive_complexity: number;
+  commit_count: number;
+  author_count: number;
+  last_author: string;
+  risk_score: number;
+}
+
+interface HotspotsReport {
+  snapshot_id: string;
+  total: number;
+  items: HotspotItem[];
 }
 ```
