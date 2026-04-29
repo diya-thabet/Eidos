@@ -27,9 +27,9 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 |----------|-------------|
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System architecture, data model, API reference |
 | [HOW_TO_USE.md](HOW_TO_USE.md) | Detailed curl & Postman examples for every endpoint |
-| [CODE_HEALTH.md](CODE_HEALTH.md) | 40 code health rules (SOLID, clean code, complexity, security) |
-| [MULTI_LANGUAGE_PARSERS.md](MULTI_LANGUAGE_PARSERS.md) | Parser architecture for 8 languages + how to add new ones |
-| [TESTING.md](TESTING.md) | Test strategy, 1,504-test inventory, how to run |
+| [CODE_HEALTH.md](CODE_HEALTH.md) | 66 code health rules (SOLID, clean code, complexity, security, blame, clones, coupling, dead code) |
+| [MULTI_LANGUAGE_PARSERS.md](MULTI_LANGUAGE_PARSERS.md) | Parser architecture for 9 languages + how to add new ones |
+| [TESTING.md](TESTING.md) | Test strategy, 2,119-test inventory, how to run |
 
 ## Phase Documentation
 

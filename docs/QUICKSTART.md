@@ -341,7 +341,7 @@ cd backend
 pytest -v
 ```
 
-Expected: **1,504 tests, all passing.**
+Expected: **2,119 tests, all passing.**
 
 To run a specific test file:
 

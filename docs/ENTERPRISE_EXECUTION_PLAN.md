@@ -28,7 +28,7 @@
 
 ## 1. Executive Summary
 
-Eidos is a code intelligence platform that explains legacy codebases, generates documentation, reviews PRs, and measures code health. The system currently has a **working backend** with 9 language parsers, 40 health rules, RBAC, usage metering, and 1379 passing tests across 30,650 lines of code.
+Eidos is a code intelligence platform that analyzes codebases, generates documentation, reviews PRs, and measures code health. The system currently has a **working backend** with 9 language parsers, 40 health rules, RBAC, usage metering, and 1379 passing tests across 30,650 lines of code.
 
 This plan transforms Eidos from a functional prototype into a **production-grade enterprise SaaS product** over 4 quarters, covering:
 
@@ -45,7 +45,7 @@ This plan transforms Eidos from a functional prototype into a **production-grade
 |------|--------|--------|
 | **Backend API** | 9 routers | repos, analysis, indexing, reasoning, reviews, docgen, evaluations, auth, admin |
 | **Parsers** | 9 languages | C#, Java, Python, TypeScript/TSX, Go, Rust, C, C++ |
-| **Code Health** | 40 rules | Clean code, SOLID, complexity, coupling, code smells, security, naming, architecture |
+| **Code Health** | 66 rules | Clean code, SOLID, complexity, coupling, code smells, security, naming, architecture |
 | **Auth** | RBAC | 5 roles (superadmin/admin/employee/support/user), GitHub + Google OAuth, JWT |
 | **Metering** | Flexible | JSONB plans (time/token/scan/combo/unlimited), usage tracking |
 | **Docker** | Multi-stage | Client + internal editions, compose profiles |

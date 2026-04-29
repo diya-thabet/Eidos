@@ -1,13 +1,13 @@
 # Code Health Analysis
 
-> Static analysis engine with **40 rules** across **8 categories** that checks
+> Static analysis engine with **66 rules** across **13 categories** that checks
 > code for clean code principles, SOLID violations, coupling/cohesion metrics,
 > code smells (Fowler catalogue), architectural patterns, naming conventions,
 > and security concerns. Optional LLM integration for deeper semantic analysis.
 
 ---
 
-## Rule Catalog (40 rules)
+## Rule Catalog (66 rules)
 
 ### Clean Code (CC) -- 8 rules
 
@@ -104,7 +104,7 @@
 GET /repos/{repo_id}/snapshots/{snapshot_id}/health/rules
 ```
 
-Returns metadata for all 40 rules.
+Returns metadata for all 66 rules.
 
 ### Run health check
 

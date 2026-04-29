@@ -10,7 +10,7 @@
 | Metric | Value |
 |--------|-------|
 | App code | 19,413 lines across 100 files |
-| Tests | 1,818 (CI-verified) |
+| Tests | 2,119 (CI-verified) |
 | API endpoints | 55 |
 | Language parsers | 9 (all validated) |
 | Health rules | 40 |
@@ -367,7 +367,7 @@ After 5 weeks: the product goes from "excellent static analysis tool" to "full A
 | Temptation | Why Skip It |
 |-----------|-------------|
 | Build your own LLM | Use OpenAI/Ollama/vLLM. The LLM client abstraction already supports any provider. |
-| GraphQL API | REST is fine. The frontend only needs 55 endpoints, not ad-hoc queries. |
+| GraphQL API | REST is fine. The frontend only needs 72 endpoints, not ad-hoc queries. |
 | Real-time WebSocket updates | Polling the status endpoint every 2s during ingestion is simpler and sufficient. |
 | Custom vector DB | Qdrant is already integrated and scales independently. |
 | Multi-tenant database isolation | Shared-schema with `user_id` filtering is fine up to 10K users. Shard later. |

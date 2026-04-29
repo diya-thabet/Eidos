@@ -14,7 +14,7 @@ FastAPI app (app/main.py)
   |
   +-- Analysis engine (app/analysis/) -- tree-sitter parsers + graph builder
   |     Parses 9 languages into SymbolInfo + EdgeInfo
-  |     code_health.py orchestrates 40 rules from health_rules/
+  |     code_health.py orchestrates 66 rules from health_rules/
   |
   +-- Indexing pipeline (app/indexing/) -- summaries + vector embeddings
   |

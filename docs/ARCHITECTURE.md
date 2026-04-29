@@ -1,4 +1,4 @@
-# Eidos - Legacy Code Intelligence Tool
+# Eidos - Code Intelligence Platform
 
 ## Technical Documentation (Phases 0-2)
 
@@ -26,9 +26,9 @@
 
 ## 1. Project Overview
 
-**Eidos** is a language-agnostic code intelligence platform that analyzes any codebase (C#, Java, Python, TypeScript, Go, Rust, C, C++) and provides three core capabilities:
+**Eidos** is a language-agnostic code intelligence platform that analyzes any codebase across 9 languages (C#, Java, Python, TypeScript, Go, Rust, C, C++, Kotlin) and provides three core capabilities:
 
-1. **Explains legacy codebases** - architecture, intent, data flows, with evidence
+1. **Explains codebases** - architecture, intent, data flows, with evidence
 2. **Auto-generates documentation** - accurate, regeneratable, with citations to actual code
 3. **Reviews PRs for logic/behavior risks** - not style nitpicks, but real behavioral concerns
 
@@ -95,7 +95,7 @@ Eidos follows a **modular monolith** architecture. All components live in a sing
 3. Background task:
    a. Clones the repo (GitPython, with auth token injection for private repos)
    b. Scans files (language detection, hashing)
-   c. Parses all C# files (tree-sitter)
+   c. Parses all source files (tree-sitter, 9 languages)
    d. Builds code graph (symbols + edges)
    e. Generates summaries (symbol, module, file level)
    f. Creates vector embeddings for semantic search
@@ -418,7 +418,7 @@ Identifies symbols that are both **large** (many lines) and **highly called** (m
 Orchestrates the full analysis flow:
 
 ```python
-# Step 1: Analyze all C# files in the snapshot
+# Step 1: Analyze all source files in the snapshot
 graph = analyze_snapshot_files(repo_dir, file_records) ? CodeGraph
 
 # Step 2: Persist to database
@@ -426,7 +426,7 @@ await persist_graph(db, snapshot_id, graph)
 ```
 
 **Pipeline behavior:**
-- Filters for C# files only (other languages skipped)
+- Parses files in all 9 supported languages
 - Logs warnings for missing files but continues
 - Catches per-file parse errors without aborting
 - Links edge records to symbol IDs via `flush()` after each symbol insert

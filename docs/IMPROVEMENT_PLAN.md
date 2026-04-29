@@ -59,7 +59,7 @@ This document lists every concrete improvement identified during a full project 
 
 ### 4. Split `code_health.py` into Separate Rule Modules
 
-**Why**: `code_health.py` is 1,905 lines — the largest file in the project. It contains all 40 rules, the config system, and the runner. This makes it hard to find a specific rule, hard to test one rule in isolation, and hard for two people to work on rules simultaneously.
+**Why**: `code_health.py` is 1,905 lines — the largest file in the project. It contains all 66 rules, the config system, and the runner. This makes it hard to find a specific rule, hard to test one rule in isolation, and hard for two people to work on rules simultaneously.
 
 **What to do**:
 1. Create `app/analysis/health_rules/` directory

@@ -14,7 +14,7 @@ Eidos is a tool that helps developers understand their code. You give it a Git r
 4. **Generates documentation** automatically
 5. **Reviews code changes** for risks before you merge them
 6. **Answers questions** about your codebase in plain English
-7. **Scores code health** with 40 rules checking for common problems
+7. **Scores code health** with 66 rules checking for common problems
 
 You interact with Eidos through a REST API. No frontend is needed - you can use it from your terminal, CI/CD pipeline, or any HTTP client.
 
@@ -242,7 +242,7 @@ This means analyzing a repo with 10,000 files where only 5 changed takes seconds
 
 ## Code Health Rules
 
-Eidos checks your code against 40 rules in 8 categories:
+Eidos checks your code against 66 rules in 13 categories:
 
 | Category | Examples |
 |----------|----------|

@@ -3,7 +3,7 @@
 ## Overview
 
 Phase 4 adds a natural-language question-answering engine that lets
-developers ask questions about their legacy codebase and receive
+developers ask questions about their codebase and receive
 structured answers with evidence, confidence ratings, and verification
 checklists.
 

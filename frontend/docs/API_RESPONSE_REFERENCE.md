@@ -280,7 +280,7 @@ Response:
 
 ### GET /repos/{id}/snapshots/{sid}/health/rules
 
-Array of all 40 rules:
+Array of all 66 rules:
 
 ```json
 [

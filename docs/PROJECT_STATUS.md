@@ -36,7 +36,7 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 | Module | Lines | Files | Purpose |
 |--------|-------|-------|---------|
 | `analysis` | 7,100 | 27 | Static analysis — 9 tree-sitter parsers, parallel parsing (ProcessPoolExecutor), graph builder, 40 health rules (8 modules), metrics |
-| `api` | 4,000 | 17 | REST API — 55 endpoints: repos, analysis, search, fulltext, Q&A, reviews, docs, diagrams, trends, portable, webhooks, auth, admin, Prometheus metrics |
+| `api` | 4,000 | 17 | REST API — 72 endpoints: repos, analysis, search, fulltext, Q&A, reviews, docs, diagrams, trends, portable, webhooks, auth, admin, Prometheus metrics |
 | `guardrails` | 1,170 | 6 | Output evaluation — hallucination detection, PII sanitizer, review/doc/answer evaluators |
 | `reviews` | 1,064 | 5 | PR review engine — unified diff parser, 8 behavioral heuristics, blast radius analysis |
 | `docgen` | 1,063 | 5 | Documentation generator — templates, section builder, markdown renderer with citations |
@@ -133,7 +133,7 @@ These are **functional** and don't cause runtime issues, but ideally `core/confi
 | Git clone + ingestion | ? Complete | POST /ingest, background task | ~25 |
 | Multi-language parsing (9 langs) | ? Complete | — (internal) | ~450 |
 | Code graph (symbols + edges) | ? Complete | GET symbols, edges, graph | ~60 |
-| Code health (40 rules) | ? Complete | POST health, GET rules | 95 |
+| Code health (66 rules) | ? Complete | POST health, GET rules | 95 |
 | Summaries (symbol/module/file) | ? Complete | GET summaries | ~20 |
 | Q&A engine | ? Complete | POST ask, POST classify | ~40 |
 | PR review | ? Complete | POST review, GET reviews | ~30 |

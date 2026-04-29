@@ -250,7 +250,7 @@ Complete CRUD for repositories:
 | `test_search_and_compare.py` | 35 | Search (symbols/summaries/docs, filtering, pagination, scoring), snapshot diff (add/remove/modify/reverse), export (all entities, metadata) |
 | `test_webhooks.py` | 18 | GitHub/GitLab/generic webhooks, HMAC verification, branch matching, event filtering |
 
-**Total test count: 1,504** (1,379 original + 125 new) -- 100% pass rate
+**Total test count: 2,119** (all phases combined) -- 100% pass rate
 
 ---
 

@@ -518,7 +518,7 @@ Total: 12 working days = 2.5 weeks
 |--------|--------|-------|
 | Health rules | 40 | 61 (+21 new rules) |
 | API endpoints | 55 | 65 (+10 new endpoints) |
-| Tests | 1,818 | ~2,020 (+200 new tests) |
+| Tests | 1,818 | **2,119** (+301 new tests) |
 | Lines of code | 40,537 | ~45,000 |
 | Long functions (>60 lines) | 33 | <5 |
 | Metrics computed | 0 | 3 (cyclomatic, cognitive, maintainability) |

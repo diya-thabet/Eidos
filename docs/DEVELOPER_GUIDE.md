@@ -257,7 +257,7 @@ Create `tests/test_kotlin_parser.py` with tests for:
 
 ## 5. Adding a New Code Health Rule
 
-All 40 rules live in `app/analysis/code_health.py`.
+All 66 rules live in `app/analysis/code_health.py`.
 
 ### Step 1: Define the rule function
 
