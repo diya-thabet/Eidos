@@ -249,10 +249,10 @@ class TestPhase3_RegisterAndIngest:
 
     @pytest.mark.asyncio
     async def test_list_repos(self, client: AsyncClient):
-        """No GET /repos/ list endpoint exists - verify 405."""
+        """GET /repos/ list endpoint returns all repos."""
         resp = await client.get("/repos", follow_redirects=True)
-        # There is no list endpoint - just verify registering works
-        assert resp.status_code in (404, 405)
+        assert resp.status_code == 200
+        assert isinstance(resp.json(), list)
 
     @pytest.mark.asyncio
     async def test_repo_status(self, client: AsyncClient):
