@@ -201,8 +201,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_blame.py` | 31 | Git blame/churn: blame extraction on real git repos, blame_for_range, 4 health rules (hotspot/stale/bus-factor/churn), 2 API endpoints |
 | `test_dead_code.py` | 29 | Dead code: BFS reachability, unreachable funcs/classes/modules, dead imports, 4 health rules, API endpoint, edge cases (cycles, 1000-node graphs) |
 | `test_clone_detection.py` | 33 | Clone detection: structural fingerprinting (Python, Java), exact/near clone grouping, similarity, 3 health rules, API endpoint, pipeline integration |
+| `test_coupling.py` | 24 | Module coupling: Martin metrics (Ca/Ce/I/A/D), cohesion, cycle detection, 5 health rules (zones of pain/uselessness), API endpoint |
 
-### Updated Total: ~2,029 tests (2,023 passed + 6 skipped)
+### Updated Total: ~2,053 tests (2,047 passed + 6 skipped)
 
 ## Test Design Principles
 

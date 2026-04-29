@@ -203,6 +203,13 @@ from app.analysis.health_rules.complexity import (  # noqa: E402
     VeryHighCognitiveRule,
     VeryHighCyclomaticRule,
 )
+from app.analysis.health_rules.coupling import (  # noqa: E402
+    HighInstabilityRule,
+    LowCohesionModuleRule,
+    ModuleCycleRule,
+    ZoneOfPainRule,
+    ZoneOfUselessnessRule,
+)
 from app.analysis.health_rules.dead_code import (  # noqa: E402
     DeadImportRule,
     DeadModuleRule,
@@ -327,6 +334,12 @@ ALL_RULES: list[HealthRule] = [
     ExactCloneRule(),
     NearCloneRule(),
     CloneClusterRule(),
+    # Module Coupling & Cohesion (5)
+    HighInstabilityRule(),
+    LowCohesionModuleRule(),
+    ZoneOfPainRule(),
+    ZoneOfUselessnessRule(),
+    ModuleCycleRule(),
 ]
 
 

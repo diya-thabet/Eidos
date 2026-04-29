@@ -480,7 +480,7 @@ Returns a single Markdown file: executive summary, health score, top findings, c
 | **3** | Git Blame / Churn | 8h | High (team insights) | ? DONE |
 | **4** | Dead Code Detection | 5h | Medium (cleanup value) | ? DONE |
 | **5** | Clone Detection | 6h | Medium (DRY enforcement) | ? DONE |
-| **6** | Coupling & Cohesion | 5h | Medium (architecture) | No |
+| **6** | Coupling & Cohesion | 5h | Medium (architecture) | ? DONE |
 | **7** | Refactor Long Funcs | 8h | Medium (maintainability) | No |
 | **8** | API Endpoint Gaps | 6h | Medium (frontend needs) | No |
 | **9** | Export Enhancements | 4h | Low-Medium (integration) | No |

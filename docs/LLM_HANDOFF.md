@@ -342,3 +342,17 @@ AST structural fingerprinting for copy-paste detection:
 - **New endpoint**: `GET /clones` with exact groups and near-clone pairs
 - Works across all 9 languages (same tree-sitter approach)
 - 33 new tests: Python + Java real code clones, similarity math, pipeline enrichment
+
+## 19. Module Coupling & Cohesion (Phase 21)
+
+Robert C. Martin's package metrics computed per module:
+- **Afferent coupling (Ca)**: modules that depend on this one
+- **Efferent coupling (Ce)**: modules this one depends on
+- **Instability**: Ce / (Ca + Ce) -- 0=stable, 1=unstable
+- **Abstractness**: interfaces / total types
+- **Distance from main sequence**: |A + I - 1|
+- **Cohesion**: intra-module edges / total edges
+- **Cycle detection**: DFS on module dependency graph
+- **5 health rules**: MC001 (high instability), MC002 (low cohesion), MC003 (zone of pain), MC004 (zone of uselessness), MC005 (module cycle)
+- **New endpoint**: `GET /coupling` with per-module metrics and cycle list
+- 24 new tests
