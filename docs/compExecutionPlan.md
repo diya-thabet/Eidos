@@ -481,7 +481,7 @@ Returns a single Markdown file: executive summary, health score, top findings, c
 | **4** | Dead Code Detection | 5h | Medium (cleanup value) | ? DONE |
 | **5** | Clone Detection | 6h | Medium (DRY enforcement) | ? DONE |
 | **6** | Coupling & Cohesion | 5h | Medium (architecture) | ? DONE |
-| **7** | Refactor Long Funcs | 8h | Medium (maintainability) | No |
+| **7** | Refactor Long Funcs | 8h | Medium (maintainability) | ? DONE |
 | **8** | API Endpoint Gaps | 6h | Medium (frontend needs) | No |
 | **9** | Export Enhancements | 4h | Low-Medium (integration) | No |
 | | **TOTAL** | **60h** | | **Nothing blocked** |

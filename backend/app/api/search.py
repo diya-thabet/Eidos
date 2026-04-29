@@ -113,96 +113,12 @@ async def search(
     pattern = f"%{q}%"
     hits: list[SearchHit] = []
 
-    # Search symbols
     if entity_type is None or entity_type == "symbol":
-        sym_stmt = (
-            select(Symbol)
-            .where(
-                Symbol.snapshot_id == snapshot_id,
-                or_(
-                    Symbol.name.ilike(pattern),
-                    Symbol.fq_name.ilike(pattern),
-                    Symbol.file_path.ilike(pattern),
-                    Symbol.namespace.ilike(pattern),
-                ),
-            )
-            .limit(limit * 2)  # over-fetch, we'll trim later
-        )
-        sym_result = await db.execute(sym_stmt)
-        for sym in sym_result.scalars().all():
-            hits.append(
-                SearchHit(
-                    entity_type="symbol",
-                    entity_id=sym.fq_name,
-                    title=f"{sym.kind}: {sym.fq_name}",
-                    snippet=sym.signature or f"{sym.kind} {sym.name}",
-                    file_path=sym.file_path,
-                    score=_score_symbol(sym, q),
-                    metadata={
-                        "kind": sym.kind,
-                        "start_line": sym.start_line,
-                        "end_line": sym.end_line,
-                    },
-                )
-            )
-
-    # Search summaries
+        hits.extend(await _search_symbols(db, snapshot_id, pattern, q, limit))
     if entity_type is None or entity_type == "summary":
-        sum_stmt = (
-            select(Summary)
-            .where(
-                Summary.snapshot_id == snapshot_id,
-                or_(
-                    Summary.scope_id.ilike(pattern),
-                    Summary.summary_json.ilike(pattern),
-                ),
-            )
-            .limit(limit * 2)
-        )
-        sum_result = await db.execute(sum_stmt)
-        for summ in sum_result.scalars().all():
-            parsed: dict[str, Any] = {}
-            try:
-                parsed = json.loads(summ.summary_json)
-            except (json.JSONDecodeError, TypeError):
-                pass
-            hits.append(
-                SearchHit(
-                    entity_type="summary",
-                    entity_id=f"{summ.scope_type}/{summ.scope_id}",
-                    title=f"{summ.scope_type} summary: {summ.scope_id}",
-                    snippet=parsed.get("purpose", "")[:200],
-                    score=_score_text(summ.scope_id, q),
-                    metadata={"scope_type": summ.scope_type},
-                )
-            )
-
-    # Search generated docs
+        hits.extend(await _search_summaries(db, snapshot_id, pattern, q, limit))
     if entity_type is None or entity_type == "doc":
-        doc_stmt = (
-            select(GeneratedDoc)
-            .where(
-                GeneratedDoc.snapshot_id == snapshot_id,
-                or_(
-                    GeneratedDoc.title.ilike(pattern),
-                    GeneratedDoc.markdown.ilike(pattern),
-                    GeneratedDoc.scope_id.ilike(pattern),
-                ),
-            )
-            .limit(limit * 2)
-        )
-        doc_result = await db.execute(doc_stmt)
-        for doc in doc_result.scalars().all():
-            hits.append(
-                SearchHit(
-                    entity_type="doc",
-                    entity_id=str(doc.id),
-                    title=doc.title,
-                    snippet=doc.markdown[:200] if doc.markdown else "",
-                    score=_score_text(doc.title, q),
-                    metadata={"doc_type": doc.doc_type, "scope_id": doc.scope_id},
-                )
-            )
+        hits.extend(await _search_docs(db, snapshot_id, pattern, q, limit))
 
     # Sort by score descending
     hits.sort(key=lambda h: h.score, reverse=True)
@@ -216,6 +132,106 @@ async def search(
         offset=offset,
         has_more=(offset + limit < total),
     )
+
+
+async def _search_symbols(
+    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
+) -> list[SearchHit]:
+    """Search symbol names and paths."""
+    stmt = (
+        select(Symbol)
+        .where(
+            Symbol.snapshot_id == snapshot_id,
+            or_(
+                Symbol.name.ilike(pattern),
+                Symbol.fq_name.ilike(pattern),
+                Symbol.file_path.ilike(pattern),
+                Symbol.namespace.ilike(pattern),
+            ),
+        )
+        .limit(limit * 2)
+    )
+    result = await db.execute(stmt)
+    return [
+        SearchHit(
+            entity_type="symbol",
+            entity_id=sym.fq_name,
+            title=f"{sym.kind}: {sym.fq_name}",
+            snippet=sym.signature or f"{sym.kind} {sym.name}",
+            file_path=sym.file_path,
+            score=_score_symbol(sym, q),
+            metadata={
+                "kind": sym.kind,
+                "start_line": sym.start_line,
+                "end_line": sym.end_line,
+            },
+        )
+        for sym in result.scalars().all()
+    ]
+
+
+async def _search_summaries(
+    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
+) -> list[SearchHit]:
+    """Search summary content."""
+    stmt = (
+        select(Summary)
+        .where(
+            Summary.snapshot_id == snapshot_id,
+            or_(
+                Summary.scope_id.ilike(pattern),
+                Summary.summary_json.ilike(pattern),
+            ),
+        )
+        .limit(limit * 2)
+    )
+    result = await db.execute(stmt)
+    hits: list[SearchHit] = []
+    for summ in result.scalars().all():
+        parsed: dict[str, Any] = {}
+        try:
+            parsed = json.loads(summ.summary_json)
+        except (json.JSONDecodeError, TypeError):
+            pass
+        hits.append(SearchHit(
+            entity_type="summary",
+            entity_id=f"{summ.scope_type}/{summ.scope_id}",
+            title=f"{summ.scope_type} summary: {summ.scope_id}",
+            snippet=parsed.get("purpose", "")[:200],
+            score=_score_text(summ.scope_id, q),
+            metadata={"scope_type": summ.scope_type},
+        ))
+    return hits
+
+
+async def _search_docs(
+    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
+) -> list[SearchHit]:
+    """Search generated docs."""
+    stmt = (
+        select(GeneratedDoc)
+        .where(
+            GeneratedDoc.snapshot_id == snapshot_id,
+            or_(
+                GeneratedDoc.title.ilike(pattern),
+                GeneratedDoc.markdown.ilike(pattern),
+                GeneratedDoc.scope_id.ilike(pattern),
+            ),
+        )
+        .limit(limit * 2)
+    )
+    result = await db.execute(stmt)
+    return [
+        SearchHit(
+            entity_type="doc",
+            entity_id=str(doc.id),
+            title=doc.title,
+            snippet=doc.markdown[:200] if doc.markdown else "",
+            score=_score_text(doc.title, q),
+            metadata={"doc_type": doc.doc_type, "scope_id": doc.scope_id},
+        )
+        for doc in result.scalars().all()
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -421,101 +437,6 @@ async def export_snapshot(
     )
 
 
-
-
-async def _search_symbols(
-    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
-) -> list[SearchHit]:
-    """Search symbols by name, fq_name, file_path, or signature."""
-    stmt = (
-        select(Symbol)
-        .where(
-            Symbol.snapshot_id == snapshot_id,
-            or_(
-                Symbol.fq_name.ilike(pattern),
-                Symbol.name.ilike(pattern),
-                Symbol.file_path.ilike(pattern),
-                Symbol.signature.ilike(pattern),
-            ),
-        )
-        .limit(limit * 2)
-    )
-    result = await db.execute(stmt)
-    return [
-        SearchHit(
-            entity_type="symbol",
-            entity_id=sym.fq_name,
-            title=f"{sym.kind}: {sym.fq_name}",
-            snippet=sym.signature or f"{sym.kind} {sym.name}",
-            file_path=sym.file_path,
-            score=_score_symbol(sym, q),
-            metadata={"kind": sym.kind, "start_line": sym.start_line, "end_line": sym.end_line},
-        )
-        for sym in result.scalars().all()
-    ]
-
-
-async def _search_summaries(
-    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
-) -> list[SearchHit]:
-    """Search summaries by scope_id or content."""
-    stmt = (
-        select(Summary)
-        .where(
-            Summary.snapshot_id == snapshot_id,
-            or_(Summary.scope_id.ilike(pattern), Summary.summary_json.ilike(pattern)),
-        )
-        .limit(limit * 2)
-    )
-    result = await db.execute(stmt)
-    hits = []
-    for summ in result.scalars().all():
-        parsed: dict[str, Any] = {}
-        try:
-            parsed = json.loads(summ.summary_json)
-        except (json.JSONDecodeError, TypeError):
-            pass
-        hits.append(
-            SearchHit(
-                entity_type="summary",
-                entity_id=f"{summ.scope_type}/{summ.scope_id}",
-                title=f"{summ.scope_type} summary: {summ.scope_id}",
-                snippet=parsed.get("purpose", "")[:200],
-                score=_score_text(summ.scope_id, q),
-                metadata={"scope_type": summ.scope_type},
-            )
-        )
-    return hits
-
-
-async def _search_docs(
-    db: AsyncSession, snapshot_id: str, pattern: str, q: str, limit: int,
-) -> list[SearchHit]:
-    """Search generated docs by title, content, or scope."""
-    stmt = (
-        select(GeneratedDoc)
-        .where(
-            GeneratedDoc.snapshot_id == snapshot_id,
-            or_(
-                GeneratedDoc.title.ilike(pattern),
-                GeneratedDoc.markdown.ilike(pattern),
-                GeneratedDoc.scope_id.ilike(pattern),
-            ),
-        )
-        .limit(limit * 2)
-    )
-    result = await db.execute(stmt)
-    return [
-        SearchHit(
-            entity_type="doc",
-            entity_id=str(doc.id),
-            title=doc.title,
-            snippet=doc.markdown[:200] if doc.markdown else "",
-            score=_score_text(doc.title, q),
-            metadata={"doc_type": doc.doc_type, "scope_id": doc.scope_id},
-        )
-        for doc in result.scalars().all()
-    ]
 
 
 # ---------------------------------------------------------------------------

@@ -66,10 +66,46 @@ class CouplingReport:
 
 def analyze_coupling(graph: CodeGraph) -> CouplingReport:
     """Compute module-level coupling and cohesion metrics."""
-    # Step 1: Assign each symbol to a module
     sym_to_mod = _assign_modules(graph)
+    mod_data = _count_module_symbols(graph, sym_to_mod)
+    _apply_file_counts(graph, mod_data)
+    afferent, efferent, intra, inter = _compute_edge_metrics(
+        graph, sym_to_mod,
+    )
+    _compute_derived_metrics(mod_data, afferent, efferent, intra, inter)
+    cycles = _detect_cycles(efferent)
 
-    # Step 2: Count per-module symbols
+    modules = sorted(mod_data.values(), key=lambda x: x.name)
+    n = len(modules)
+    return CouplingReport(
+        total_modules=n,
+        modules=modules,
+        dependency_cycles=cycles,
+        avg_instability=round(
+            sum(m.instability for m in modules) / n if n else 0.0, 3,
+        ),
+        avg_cohesion=round(
+            sum(m.cohesion for m in modules) / n if n else 0.0, 3,
+        ),
+        avg_distance=round(
+            sum(m.distance for m in modules) / n if n else 0.0, 3,
+        ),
+    )
+
+
+def _assign_modules(graph: CodeGraph) -> dict[str, str]:
+    """Map every symbol fq_name to its module name."""
+    result: dict[str, str] = {}
+    for sym in graph.symbols.values():
+        mod = sym.namespace or _folder_module(sym.file_path)
+        result[sym.fq_name] = mod
+    return result
+
+
+def _count_module_symbols(
+    graph: CodeGraph, sym_to_mod: dict[str, str],
+) -> dict[str, ModuleMetrics]:
+    """Count symbols per module."""
     mod_data: dict[str, ModuleMetrics] = {}
     for sym in graph.symbols.values():
         mod = sym_to_mod.get(sym.fq_name, "")
@@ -94,14 +130,25 @@ def analyze_coupling(graph: CodeGraph) -> CouplingReport:
             else ",".join(sym.modifiers)
         ):
             m.abstract_count += 1
+    return mod_data
 
-    # Step 2b: File counts from graph.modules
+
+def _apply_file_counts(
+    graph: CodeGraph, mod_data: dict[str, ModuleMetrics],
+) -> None:
+    """Apply file counts from graph.modules."""
     for gm in graph.modules.values():
-        name = gm.name
-        if name in mod_data:
-            mod_data[name].file_count = gm.file_count
+        if gm.name in mod_data:
+            mod_data[gm.name].file_count = gm.file_count
 
-    # Step 3: Compute coupling from edges
+
+def _compute_edge_metrics(
+    graph: CodeGraph, sym_to_mod: dict[str, str],
+) -> tuple[
+    dict[str, set[str]], dict[str, set[str]],
+    dict[str, int], dict[str, int],
+]:
+    """Compute afferent, efferent, intra, and inter edge counts."""
     afferent: dict[str, set[str]] = defaultdict(set)
     efferent: dict[str, set[str]] = defaultdict(set)
     intra: dict[str, int] = defaultdict(int)
@@ -112,7 +159,6 @@ def analyze_coupling(graph: CodeGraph) -> CouplingReport:
         tgt_mod = sym_to_mod.get(edge.target_fq_name, "")
         if not src_mod or not tgt_mod:
             continue
-
         if src_mod == tgt_mod:
             intra[src_mod] += 1
         else:
@@ -120,8 +166,17 @@ def analyze_coupling(graph: CodeGraph) -> CouplingReport:
             inter[tgt_mod] += 1
             efferent[src_mod].add(tgt_mod)
             afferent[tgt_mod].add(src_mod)
+    return afferent, efferent, intra, inter
 
-    # Step 4: Compute metrics
+
+def _compute_derived_metrics(
+    mod_data: dict[str, ModuleMetrics],
+    afferent: dict[str, set[str]],
+    efferent: dict[str, set[str]],
+    intra: dict[str, int],
+    inter: dict[str, int],
+) -> None:
+    """Compute instability, abstractness, distance, cohesion."""
     for mod, m in mod_data.items():
         m.afferent_coupling = len(afferent.get(mod, set()))
         m.efferent_coupling = len(efferent.get(mod, set()))
@@ -135,45 +190,12 @@ def analyze_coupling(graph: CodeGraph) -> CouplingReport:
             if m.class_count > 0 else 0.0
         )
         m.distance = abs(m.abstractness + m.instability - 1.0)
-
         total_edges = intra.get(mod, 0) + inter.get(mod, 0)
         m.intra_edges = intra.get(mod, 0)
         m.inter_edges = inter.get(mod, 0)
-        m.cohesion = (
-            m.intra_edges / total_edges
-            if total_edges > 0 else 0.0
-        )
-
+        m.cohesion = m.intra_edges / total_edges if total_edges > 0 else 0.0
         m.depends_on = sorted(efferent.get(mod, set()))
         m.depended_by = sorted(afferent.get(mod, set()))
-
-    # Step 5: Detect cycles
-    cycles = _detect_cycles(efferent)
-
-    # Step 6: Build report
-    modules = sorted(mod_data.values(), key=lambda x: x.name)
-    n = len(modules)
-    avg_inst = sum(m.instability for m in modules) / n if n else 0.0
-    avg_coh = sum(m.cohesion for m in modules) / n if n else 0.0
-    avg_dist = sum(m.distance for m in modules) / n if n else 0.0
-
-    return CouplingReport(
-        total_modules=n,
-        modules=modules,
-        dependency_cycles=cycles,
-        avg_instability=round(avg_inst, 3),
-        avg_cohesion=round(avg_coh, 3),
-        avg_distance=round(avg_dist, 3),
-    )
-
-
-def _assign_modules(graph: CodeGraph) -> dict[str, str]:
-    """Map every symbol fq_name to its module name."""
-    result: dict[str, str] = {}
-    for sym in graph.symbols.values():
-        mod = sym.namespace or _folder_module(sym.file_path)
-        result[sym.fq_name] = mod
-    return result
 
 
 def _folder_module(file_path: str) -> str:

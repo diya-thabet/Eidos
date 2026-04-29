@@ -95,50 +95,9 @@ async def run_indexing(
     # Step 4: Generate embeddings and store in vector DB
     await vector_store.ensure_collection(COLLECTION_NAME, embedder.vector_size)
 
-    records: list[VectorRecord] = []
-    texts: list[str] = []
-
-    for s in symbol_summaries:
-        text = _summary_to_text(s)
-        records.append(
-            VectorRecord(
-                id=uuid.uuid4().hex,
-                snapshot_id=snapshot_id,
-                scope_type="symbol_summary",
-                text=text,
-                refs=[asdict(c) for c in s.citations],
-                metadata={"fq_name": s.fq_name, "kind": s.kind},
-            )
-        )
-        texts.append(text)
-
-    for m in module_summaries:
-        text = _summary_to_text(m)
-        records.append(
-            VectorRecord(
-                id=uuid.uuid4().hex,
-                snapshot_id=snapshot_id,
-                scope_type="module_summary",
-                text=text,
-                refs=[asdict(c) for c in m.citations],
-                metadata={"module_name": m.name},
-            )
-        )
-        texts.append(text)
-
-    for f in file_summaries:
-        text = _summary_to_text(f)
-        records.append(
-            VectorRecord(
-                id=uuid.uuid4().hex,
-                snapshot_id=snapshot_id,
-                scope_type="file_summary",
-                text=text,
-                refs=[asdict(c) for c in f.citations],
-                metadata={"file_path": f.path},
-            )
-        )
-        texts.append(text)
+    records, texts = _build_vector_records(
+        snapshot_id, symbol_summaries, module_summaries, file_summaries,
+    )
 
     # Embed and upsert in batches
     vector_count = 0
@@ -162,6 +121,49 @@ async def run_indexing(
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
+
+def _build_vector_records(
+    snapshot_id: str,
+    symbol_summaries: list[Any],
+    module_summaries: list[Any],
+    file_summaries: list[Any],
+) -> tuple[list[VectorRecord], list[str]]:
+    """Build VectorRecord objects and text list for embedding."""
+    records: list[VectorRecord] = []
+    texts: list[str] = []
+
+    for s in symbol_summaries:
+        text = _summary_to_text(s)
+        records.append(VectorRecord(
+            id=uuid.uuid4().hex, snapshot_id=snapshot_id,
+            scope_type="symbol_summary", text=text,
+            refs=[asdict(c) for c in s.citations],
+            metadata={"fq_name": s.fq_name, "kind": s.kind},
+        ))
+        texts.append(text)
+
+    for m in module_summaries:
+        text = _summary_to_text(m)
+        records.append(VectorRecord(
+            id=uuid.uuid4().hex, snapshot_id=snapshot_id,
+            scope_type="module_summary", text=text,
+            refs=[asdict(c) for c in m.citations],
+            metadata={"module_name": m.name},
+        ))
+        texts.append(text)
+
+    for f in file_summaries:
+        text = _summary_to_text(f)
+        records.append(VectorRecord(
+            id=uuid.uuid4().hex, snapshot_id=snapshot_id,
+            scope_type="file_summary", text=text,
+            refs=[asdict(c) for c in f.citations],
+            metadata={"file_path": f.path},
+        ))
+        texts.append(text)
+
+    return records, texts
 
 
 def _to_db_summary(snapshot_id: str, scope_type: str, scope_id: str, summary: Any) -> Summary:
