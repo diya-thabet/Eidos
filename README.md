@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (72)
+## API Endpoints (76)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -74,6 +74,10 @@ pytest -v
 | GET | `/repos/{id}/snapshots/{sid}/coupling` | Module coupling & cohesion metrics |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
+| POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |
+| GET | `/repos/{id}/snapshots/{sid}/coverage` | Get coverage report (file-level) |
+| DELETE | `/repos/{id}/snapshots/{sid}/coverage` | Delete coverage report |
+| GET | `/repos/{id}/coverage/history` | Coverage history across snapshots |
 | GET | `/repos/{id}/snapshots/{sid}/summaries` | List summaries |
 | GET | `/repos/{id}/snapshots/{sid}/summaries/{type}/{id}` | Get specific summary |
 | POST | `/repos/{id}/snapshots/{sid}/ask` | Ask a question (Q&A engine) |
@@ -135,6 +139,7 @@ backend/
       coupling.py         # Module coupling metrics endpoint
       deps.py             # Dependency list endpoint
       exports.py          # CSV/ZIP, SARIF, Markdown export
+      coverage.py         # pytest-cov upload, get, history
       diagrams.py         # Mermaid class and module diagrams
       trends.py           # Health score trend tracking
       portable.py         # Portable .eidos export/import
@@ -162,6 +167,7 @@ backend/
       dead_code.py        # BFS reachability dead code detection
       clone_detection.py  # AST structural fingerprinting
       coupling.py         # Module coupling & cohesion (Martin metrics)
+      coverage_parser.py   # Parses pytest-cov JSON output
       blame.py            # Git blame extraction
       dependency_parser.py # 7-ecosystem dependency scanner
       csharp_parser.py    # C# parser
@@ -244,14 +250,15 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 49,640 |
-| Application code | 119 files / 23,967 lines |
-| Test code | 87 files / 25,673 lines |
-| Tests (CI-verified) | 2,119 |
-| API endpoints | 72 |
+| Total lines of code | 50,315 |
+| Application code | 121 files / 24,247 lines |
+| Test code | 88 files / 26,068 lines |
+| Tests (CI-verified) | 2,155 |
+| API endpoints | 76 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |
+| Coverage tracking | pytest-cov, line+branch |
 | Test-to-code ratio | 1.07:1 |
 
 ## Documentation

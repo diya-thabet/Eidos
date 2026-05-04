@@ -391,3 +391,20 @@ Refactored the 6 longest functions (all >100 lines) into well-named helpers:
 - New module: `app/exports/generators.py` with `generate_csv_zip`, `generate_sarif`, `generate_markdown_report`
 - New API router: `app/api/exports.py` with 3 endpoints
 - 38 new tests: 7 CSV unit tests, 8 SARIF unit tests, 8 Markdown unit tests, 12 API tests, 3 edge cases
+
+## 23. Test Coverage Tracking (Phase 25 / Phase10.1)
+
+Test coverage measurement integrated end-to-end:
+- Added `pytest-cov>=5.0` to dev deps; added `[tool.coverage.*]` config to `pyproject.toml`
+- Coverage modes: line + branch, fail_under = 60%, omits `__init__.py` and `tests/`
+- New module: `app/analysis/coverage_parser.py` parses coverage.py JSON 3.x output into typed `CoverageData` / `FileCoverage` dataclasses
+- Files in the report are sorted by lowest coverage first (most actionable)
+- New DB model: `CoverageReport` (one per snapshot, unique by snapshot_id, cascades on delete)
+- New API router: `app/api/coverage.py` with 4 endpoints:
+  - `POST /repos/{id}/snapshots/{sid}/coverage` (upload coverage.json body)
+  - `GET /repos/{id}/snapshots/{sid}/coverage` (with `include_files` and `min_percent` filters)
+  - `DELETE /repos/{id}/snapshots/{sid}/coverage`
+  - `GET /repos/{id}/coverage/history` (paginated history)
+- Grades: A (?90), B (?80), C (?70), D (?60), F (<60)
+- Updated `.github/workflows/ci.yml` to run `pytest --cov=app --cov-report=xml --cov-report=json:coverage.json` and upload artifacts
+- 36 new tests: 12 parser unit tests, 5 grade tests, 5 upload tests, 6 GET tests, 2 delete tests, 5 history tests, 1 cascading delete

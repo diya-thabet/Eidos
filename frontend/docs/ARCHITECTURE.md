@@ -2,7 +2,7 @@
 
 > See also: [API_RESPONSE_REFERENCE.md](API_RESPONSE_REFERENCE.md) for every JSON shape, TypeScript interfaces, and copy-paste-ready types.
 
-## Backend API — 72 Endpoints
+## Backend API — 76 Endpoints
 
 The frontend consumes the Eidos backend REST API. Below is the complete endpoint map grouped by feature.
 
@@ -59,6 +59,16 @@ The frontend consumes the Eidos backend REST API. Below is the complete endpoint
 | GET | `/repos/{id}/snapshots/{sid}/fulltext?q=...` | Advanced full-text search page |
 | GET | `/repos/{id}/snapshots/{sid}/diff/{other}` | Snapshot comparison view |
 | GET | `/repos/{id}/snapshots/{sid}/export` | Download JSON export button |
+
+### Test Coverage
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload coverage.json (drag-and-drop or CI integration) |
+| GET | `/repos/{id}/snapshots/{sid}/coverage` | Coverage detail page (file-level breakdown, sortable) |
+| GET | `/repos/{id}/snapshots/{sid}/coverage?min_percent=80` | Filter low-coverage files |
+| DELETE | `/repos/{id}/snapshots/{sid}/coverage` | Remove coverage report |
+| GET | `/repos/{id}/coverage/history` | Coverage trend chart across snapshots |
 
 ### Q&A
 

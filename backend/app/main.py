@@ -10,6 +10,7 @@ from app.api import auth as auth_api
 from app.api import blame as blame_api
 from app.api import clones as clones_api
 from app.api import coupling as coupling_api
+from app.api import coverage as coverage_api
 from app.api import dead_code as dead_code_api
 from app.api import deps as deps_api
 from app.api import diagrams as diagrams_api
@@ -151,6 +152,7 @@ app.include_router(blame_api.router, prefix="/repos", tags=["blame"])
 app.include_router(dead_code_api.router, prefix="/repos", tags=["dead-code"])
 app.include_router(clones_api.router, prefix="/repos", tags=["clones"])
 app.include_router(coupling_api.router, prefix="/repos", tags=["coupling"])
+app.include_router(coverage_api.router, prefix="/repos", tags=["coverage"])
 app.include_router(exports_api.router, prefix="/repos", tags=["exports"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])

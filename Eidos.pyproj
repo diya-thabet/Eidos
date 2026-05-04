@@ -21,7 +21,76 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="backend\alembic\versions\001_initial.py" />
+    <Compile Include="backend\app\analysis\blame.py" />
+    <Compile Include="backend\app\analysis\clone_detection.py" />
+    <Compile Include="backend\app\analysis\complexity.py" />
+    <Compile Include="backend\app\analysis\coupling.py" />
+    <Compile Include="backend\app\analysis\dead_code.py" />
+    <Compile Include="backend\app\analysis\dependency_parser.py" />
+    <Compile Include="backend\app\analysis\health_rules\blame.py" />
+    <Compile Include="backend\app\analysis\health_rules\clones.py" />
+    <Compile Include="backend\app\analysis\health_rules\coupling.py" />
+    <Compile Include="backend\app\analysis\health_rules\dead_code.py" />
+    <Compile Include="backend\app\analysis\health_rules\dependencies.py" />
+    <Compile Include="backend\app\analysis\health_rules\__init__.py" />
+    <Compile Include="backend\app\api\blame.py" />
+    <Compile Include="backend\app\api\clones.py" />
+    <Compile Include="backend\app\api\coupling.py" />
+    <Compile Include="backend\app\api\dead_code.py" />
+    <Compile Include="backend\app\api\deps.py" />
+    <Compile Include="backend\app\api\exports.py" />
+    <Compile Include="backend\app\api\metrics.py" />
+    <Compile Include="backend\app\api\portable.py" />
+    <Compile Include="backend\app\core\incremental.py" />
+    <Compile Include="backend\app\core\retry.py" />
+    <Compile Include="backend\app\exports\generators.py" />
+    <Compile Include="backend\tests\test_api_gaps.py" />
+    <Compile Include="backend\tests\test_api_keys.py" />
+    <Compile Include="backend\tests\test_blame.py" />
+    <Compile Include="backend\tests\test_clone_detection.py" />
+    <Compile Include="backend\tests\test_complexity.py" />
+    <Compile Include="backend\tests\test_coupling.py" />
+    <Compile Include="backend\tests\test_dead_code.py" />
+    <Compile Include="backend\tests\test_deep_languages.py" />
+    <Compile Include="backend\tests\test_dependency_parser.py" />
+    <Compile Include="backend\tests\test_exports.py" />
+    <Compile Include="backend\tests\test_fulltext_search.py" />
+    <Compile Include="backend\tests\test_incremental.py" />
+    <Compile Include="backend\tests\test_logging.py" />
+    <Compile Include="backend\tests\test_multilang_e2e.py" />
+    <Compile Include="backend\tests\test_parallel_parsing.py" />
+    <Compile Include="backend\tests\test_progress.py" />
+    <Compile Include="backend\tests\test_prometheus.py" />
+    <Compile Include="backend\tests\test_real_repo_e2e.py" />
+    <Compile Include="backend\tests\test_retry.py" />
+    <Compile Include="backend\_check_repos.py" />
+    <Compile Include="backend\_check_shapes.py" />
+    <Compile Include="backend\_deep_scan.py" />
+    <Compile Include="backend\_dump_shapes.py" />
+    <Compile Include="backend\_extract.py" />
+    <Compile Include="backend\_fix.py" />
+    <Compile Include="backend\_fix_enc.py" />
+    <Compile Include="backend\_fix_imports.py" />
+    <Compile Include="backend\_fix_long.py" />
+    <Compile Include="backend\_refactor_search.py" />
+    <Compile Include="backend\_split_rules.py" />
+    <Compile Include="backend\_strip_blanks.py" />
+    <Compile Include="backend\_verify_repos.py" />
     <Compile Include="Eidos.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="docs\compExecutionPlan.md" />
+    <Content Include="docs\DEVELOPER_GUIDE.md" />
+    <Content Include="docs\EXECUTION_PLAN.md" />
+    <Content Include="docs\IMPROVEMENT_PLAN.md" />
+    <Content Include="docs\LLM_HANDOFF.md" />
+    <Content Include="docs\PROJECT_STATUS.md" />
+    <Content Include="docs\SYSTEM_OVERVIEW.md" />
+    <Content Include="frontend\docs\API_RESPONSE_REFERENCE.md" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="backend\app\exports\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

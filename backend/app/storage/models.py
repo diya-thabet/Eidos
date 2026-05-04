@@ -174,6 +174,34 @@ class SymbolNote(Base):
     )
 
 
+class CoverageReport(Base):
+    """Test coverage report for a snapshot."""
+
+    __tablename__ = "coverage_reports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"),
+        nullable=False, unique=True,
+    )
+    overall_percent: Mapped[float] = mapped_column(default=0.0)
+    branch_percent: Mapped[float] = mapped_column(default=0.0)
+    covered_lines: Mapped[int] = mapped_column(default=0)
+    missing_lines: Mapped[int] = mapped_column(default=0)
+    num_statements: Mapped[int] = mapped_column(default=0)
+    num_branches: Mapped[int] = mapped_column(default=0)
+    covered_branches: Mapped[int] = mapped_column(default=0)
+    file_count: Mapped[int] = mapped_column(default=0)
+    files_json: Mapped[str] = mapped_column(Text, default="[]")  # Per-file summary list
+    uploaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        Index("ix_coverage_snapshot", "snapshot_id"),
+    )
+
+
 # -------------------------------------------------------------------
 # Plans & Metering
 # -------------------------------------------------------------------

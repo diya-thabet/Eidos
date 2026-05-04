@@ -19,6 +19,7 @@ This folder contains the technical documentation for the Eidos Code Intelligence
 | [IMPROVEMENT_PLAN.md](IMPROVEMENT_PLAN.md) | Prioritized improvement plan with effort estimates and execution timeline |
 | [EXECUTION_PLAN.md](EXECUTION_PLAN.md) | What to build next: 9 phases, 84 hours, from LLM wiring to dependency scanning |
 | [compExecutionPlan.md](compExecutionPlan.md) | Company-constrained plan: 9 phases, 60 hours, no LLM/Docker needed |
+| [PHASE10_BACKEND_FEATURES.md](PHASE10_BACKEND_FEATURES.md) | **Next**: 10 backend features under company constraints, ~52 hours, pure Python |
 | [LLM_HANDOFF.md](LLM_HANDOFF.md) | Lessons learned, gotchas, patterns, and tips for the next developer or LLM |
 
 ## Reference

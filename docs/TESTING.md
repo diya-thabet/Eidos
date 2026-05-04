@@ -27,6 +27,12 @@ pytest tests/test_csharp_parser.py::TestBasicParsing -v
 # Run with coverage (install pytest-cov first)
 pytest --cov=app --cov-report=term-missing
 
+# Run with coverage and JSON output (for upload to /coverage endpoint)
+pytest --cov=app --cov-report=json:coverage.json
+
+# CI command (line + branch coverage, fail if below 60%)
+pytest --cov=app --cov-report=xml --cov-report=term --cov-report=json:coverage.json
+
 # Run only fast tests (skip DB tests)
 pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_points.py tests/test_metrics.py tests/test_ingestion.py -v
 ```
@@ -204,8 +210,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_coupling.py` | 24 | Module coupling: Martin metrics (Ca/Ce/I/A/D), cohesion, cycle detection, 5 health rules (zones of pain/uselessness), API endpoint |
 | `test_api_gaps.py` | 28 | API endpoint gaps: list repos, list snapshots (paginated), delete snapshot, list files (with language filter), get callers, symbol notes CRUD |
 | `test_exports.py` | 38 | Export enhancements: CSV ZIP (valid zip, headers, content, deps), SARIF (structure, rules, locations, serialization), Markdown (structure, findings, severity counts, truncation), 3 API endpoints, edge cases |
+| `test_coverage.py` | 36 | Test coverage tracking: parser (totals, files, sorting, normalization, errors), grade calculation, upload/get/delete API, history endpoint, cascading delete |
 
-### Updated Total: ~2,119 tests (2,113 passed + 6 skipped)
+### Updated Total: ~2,155 tests (2,149 passed + 6 skipped)
 
 ## Test Design Principles
 

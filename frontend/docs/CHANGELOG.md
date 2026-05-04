@@ -4,6 +4,22 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 76 endpoints (Phase 25)
+
+**New endpoints to integrate:**
+- `POST /repos/{id}/snapshots/{sid}/coverage` — upload pytest-cov JSON
+- `GET /repos/{id}/snapshots/{sid}/coverage` — file-level coverage report
+- `DELETE /repos/{id}/snapshots/{sid}/coverage` — delete report
+- `GET /repos/{id}/coverage/history` — trend across snapshots
+
+**Suggested UI:**
+- Add a **Coverage** tab on the snapshot detail page
+- Drag-and-drop upload zone for `coverage.json`
+- File-level table sorted by lowest coverage first (already pre-sorted by API)
+- Per-file expandable row showing missing line numbers
+- Grade badge: A (?0.9), B (?0.8), C (?0.7), D (?0.6), F (<0.6)
+- Coverage history chart on the repo overview page (line chart over time)
+
 ## [0.2.0] - 2025-06-XX - Initial Scaffold
 
 ### Added
