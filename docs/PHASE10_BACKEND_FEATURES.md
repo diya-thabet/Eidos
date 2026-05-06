@@ -46,7 +46,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 2 | Quality Gates / Thresholds | 6h | High (CI integration) | ? DONE |
 | 3 | Audit Log | 5h | High (enterprise/compliance) | ? DONE |
 | 4 | API Key Scoping & Permissions | 6h | High (security) | ? DONE |
-| 5 | Function-Level Cycle Detection | 5h | Medium (architecture) | P1 |
+| 5 | Function-Level Cycle Detection | 5h | Medium (architecture) | ? DONE |
 | 6 | Snapshot Tagging & Search | 4h | Medium (UX) | P1 |
 | 7 | Bulk Operations | 5h | Medium (performance) | P2 |
 | 8 | Health Score & History | 6h | High (trends) | P1 |

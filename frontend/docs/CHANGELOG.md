@@ -4,6 +4,18 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 89 endpoints (Phase 29)
+
+**New endpoint (Call Cycle Detection):**
+- `GET /repos/{id}/snapshots/{sid}/call-cycles` — detect function-level cycles
+
+**Suggested UI:**
+- Add **Call Cycles** section on the Graph/Architecture tab
+- Cycle list with expandable members, highlight files involved
+- Cycle path visualized as a circular arrow diagram
+- Direct recursion listed separately (badge count)
+- Filter by min cycle size
+
 ## Backend API: 88 endpoints (Phase 28)
 
 **Updated endpoints (API Key Scopes):**

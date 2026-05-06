@@ -214,6 +214,7 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_quality_gates.py` | 38 | Quality gates: evaluator unit tests (pass/fail/mixed/empty/blocked rules), config parser, CRUD endpoints (create/list/get/update/delete), evaluation endpoint, schema endpoint |
 | `test_audit.py` | 40 | Audit log: should_audit/classify helpers, record_audit_event, query endpoint (filters, pagination), CSV export, stats, purge |
 | `test_api_key_scopes.py` | 28 | API key scopes: parse/has/validate helpers, create with scopes/expiration, list with scopes, scope enforcement, expiration rejection, usage tracking |
+| `test_call_cycles.py` | 21 | Call cycle detection: Tarjan's SCC (no cycles, direct recursion, mutual 2/3/5, multiple, tail, path, files, empty, disconnected), API endpoint (detect, members, path, files, filter, 404, fields) |
 
 ### Updated Total: ~2,261 tests (2,255 passed + 6 skipped)
 

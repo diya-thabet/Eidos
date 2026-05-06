@@ -9,6 +9,7 @@ from app.api import analysis as analysis_api
 from app.api import audit as audit_api
 from app.api import auth as auth_api
 from app.api import blame as blame_api
+from app.api import call_cycles as call_cycles_api
 from app.api import clones as clones_api
 from app.api import coupling as coupling_api
 from app.api import coverage as coverage_api
@@ -151,6 +152,7 @@ app.include_router(trends_api.router, prefix="/repos", tags=["trends"])
 app.include_router(portable_api.router, prefix="/repos", tags=["portable"])
 app.include_router(deps_api.router, prefix="/repos", tags=["dependencies"])
 app.include_router(blame_api.router, prefix="/repos", tags=["blame"])
+app.include_router(call_cycles_api.router, prefix="/repos", tags=["call-cycles"])
 app.include_router(dead_code_api.router, prefix="/repos", tags=["dead-code"])
 app.include_router(clones_api.router, prefix="/repos", tags=["clones"])
 app.include_router(coupling_api.router, prefix="/repos", tags=["coupling"])

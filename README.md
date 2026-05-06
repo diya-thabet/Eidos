@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (88)
+## API Endpoints (89)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -72,6 +72,7 @@ pytest -v
 | GET | `/repos/{id}/snapshots/{sid}/dead-code` | Dead code detection (BFS) |
 | GET | `/repos/{id}/snapshots/{sid}/clones` | Clone detection (AST fingerprint) |
 | GET | `/repos/{id}/snapshots/{sid}/coupling` | Module coupling & cohesion metrics |
+| GET | `/repos/{id}/snapshots/{sid}/call-cycles` | Function call cycle detection (Tarjan SCC) |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |
@@ -153,6 +154,7 @@ backend/
       coverage.py         # pytest-cov upload, get, history
       quality_gates.py    # Quality gate CRUD + evaluate
       audit.py            # Audit log query, export, stats, purge
+      call_cycles.py      # Function call cycle detection endpoint
       diagrams.py         # Mermaid class and module diagrams
       trends.py           # Health score trend tracking
       portable.py         # Portable .eidos export/import
@@ -182,6 +184,7 @@ backend/
       coupling.py         # Module coupling & cohesion (Martin metrics)
       coverage_parser.py   # Parses pytest-cov JSON output
       gate_evaluator.py    # Quality gate evaluation logic
+      call_cycles.py       # Tarjan's SCC for function cycle detection
       blame.py            # Git blame extraction
       dependency_parser.py # 7-ecosystem dependency scanner
       csharp_parser.py    # C# parser
@@ -264,11 +267,11 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 53,173 |
-| Application code | 126 files / 25,603 lines |
-| Test code | 91 files / 27,570 lines |
-| Tests (CI-verified) | 2,261 |
-| API endpoints | 88 |
+| Total lines of code | 53,728 |
+| Application code | 128 files / 25,883 lines |
+| Test code | 92 files / 27,845 lines |
+| Tests (CI-verified) | 2,282 |
+| API endpoints | 89 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |

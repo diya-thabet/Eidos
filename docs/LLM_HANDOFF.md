@@ -454,3 +454,14 @@ Fine-grained API key permissions:
 - JWT users bypass all scope checks (full access), only API keys are constrained
 - Backward compatible: existing keys default to `scopes="*"` (full access)
 - 28 new tests: 6 parse, 4 has_scope, 3 validate, 4 create, 2 list, 1 scopes endpoint, 4 enforcement, 4 internal
+
+## 27. Function-Level Cycle Detection (Phase 29 / Phase10.5)
+
+Tarjan's SCC algorithm for detecting call graph cycles:
+- New module: `app/analysis/call_cycles.py` — `detect_call_cycles(callees, symbol_files)` returns `CallCycleReport`
+- Algorithm: Tarjan's strongly connected components O(V+E), deterministic (sorted node iteration)
+- Detects: direct recursion (self-loops, counted separately), mutual recursion (size-2+ SCCs)
+- Report includes: cycle members, size, example cycle path (BFS), files involved, sorted by size desc
+- New API router: `app/api/call_cycles.py` — `GET /repos/{id}/snapshots/{sid}/call-cycles`
+- Query param: `min_cycle_size` (default 2, filters small cycles)
+- 21 new tests: 13 algorithm unit tests + 8 API endpoint tests

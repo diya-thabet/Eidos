@@ -270,6 +270,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 25 (Quality Gates) | **2,193** | **123** | **51,794** | **83** |
 | Phase 26 (Audit Log) | **2,233** | **125** | **52,607** | **87** |
 | Phase 27 (API Key Scopes) | **2,261** | **126** | **53,173** | **88** |
+| Phase 28 (Call Cycles) | **2,282** | **128** | **53,728** | **89** |
 
 ---
 
