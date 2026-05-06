@@ -572,3 +572,14 @@ JWT users now have scope restrictions based on their role:
 - Anonymous user (auth disabled) = superadmin role = all checks pass
 - Unknown roles default to `user` scope set
 - 25 new tests: 11 unit (role mapping validation) + 14 integration (JWT role enforcement)
+
+## 35. RBAC Phase 3: Unified `protected()` Decorator (Phase 37)
+
+Single decorator combining scope + role + repo ownership checks:
+- New `protected(scope, roles, require_repo_owner)` in `app/auth/scopes.py`
+- 3 checks in order: role whitelist ? scope check ? repo ownership
+- Superadmin bypasses role whitelist; admin+ bypasses ownership
+- Repo ownership uses `request.path_params["repo_id"]` + DB query
+- Returns 403 for role/scope failures, 404 for ownership (prevents leaking repo existence)
+- Uses FastAPI `Depends(get_db)` for testability (works with test DB overrides)
+- 13 new tests: scope-only, role-only, ownership, combined, no-restrictions

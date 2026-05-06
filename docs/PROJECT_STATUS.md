@@ -278,6 +278,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 33 (Incremental Health) | **2,384** | **136** | **56,752** | **104** |
 | RBAC Phase 1 (Scope Enforcement) | **2,403** | **136** | **57,290** | **104** |
 | RBAC Phase 2 (Role-to-Scope) | **2,428** | **136** | **57,730** | **104** |
+| RBAC Phase 3 (Protected Decorator) | **2,441** | **136** | **58,100** | **104** |
 
 ---
 

@@ -59,6 +59,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 |-------|---------|------|----------|--------|
 | 1 | Enforce Scopes on All Endpoints | 4h | P0 | ? DONE |
 | 2 | Role-to-Scope Mapping | 3h | P0 | ? DONE |
+| 3 | Permission Decorator | 2h | P0 | ? DONE |
 
 **Total: ~52 hours** = ~6.5 working days
 

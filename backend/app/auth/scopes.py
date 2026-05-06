@@ -141,3 +141,102 @@ def require_scope(scope: str) -> Any:
             )
 
     return _check
+
+
+# ---------------------------------------------------------------------------
+# Unified permission decorator
+# ---------------------------------------------------------------------------
+
+
+def protected(
+    scope: str | None = None,
+    roles: list[str] | None = None,
+    require_repo_owner: bool = False,
+) -> Any:
+    """Unified permission dependency combining scope, role, and repo ownership.
+
+    Combines three checks in one dependency:
+    1. Scope check (role-based for JWT, key-based for API keys)
+    2. Role whitelist (optional — only allow specific roles)
+    3. Repo ownership (optional — verify user owns the repo)
+
+    Usage:
+        @router.delete(
+            "/{repo_id}/snapshots/{sid}",
+            dependencies=[Depends(protected(
+                scope="delete:snapshots",
+                roles=["admin", "employee", "user"],
+                require_repo_owner=True,
+            ))],
+        )
+
+    Args:
+        scope: Required scope string (e.g. "write:repos"). None = no scope check.
+        roles: Allowed roles. None = all roles allowed (scope still checked).
+        require_repo_owner: If True, verify user owns the repo (repo_id path param).
+    """
+    from app.auth.dependencies import get_current_user
+    from app.storage.database import get_db
+    from app.storage.models import User
+
+    async def _check(
+        request: Request,
+        _user: Any = Depends(get_current_user),
+        _db: Any = Depends(get_db),
+    ) -> None:
+        # 1. Role whitelist check
+        if roles is not None:
+            user_role = getattr(_user, "role", "user")
+            if user_role not in roles and user_role != "superadmin":
+                raise HTTPException(
+                    status_code=403,
+                    detail="Insufficient role permissions",
+                )
+
+        # 2. Scope check
+        if scope is not None:
+            granted_str = getattr(request.state, "api_key_scopes", None)
+            if granted_str is None:
+                if isinstance(_user, User) and hasattr(_user, "role"):
+                    granted_str = get_role_scopes(_user.role)
+                else:
+                    granted_str = "*"
+
+            granted = parse_scopes(granted_str)
+            if not has_scope(granted, scope):
+                raise HTTPException(
+                    status_code=403,
+                    detail=f"Insufficient permissions: requires scope '{scope}'",
+                )
+
+        # 3. Repo ownership check
+        if require_repo_owner:
+            from app.core.config import settings as app_settings
+
+            if not app_settings.auth_enabled:
+                return
+
+            user_role = getattr(_user, "role", "user")
+            # Admins+ bypass ownership check
+            if user_role in ("superadmin", "admin"):
+                return
+
+            # Extract repo_id from path params
+            repo_id = request.path_params.get("repo_id")
+            if repo_id:
+                from sqlalchemy import select
+
+                from app.storage.models import Repo
+
+                result = await _db.execute(
+                    select(Repo).where(
+                        Repo.id == repo_id,
+                        Repo.owner_id == _user.id,
+                    )
+                )
+                if result.scalar_one_or_none() is None:
+                    raise HTTPException(
+                        status_code=404, detail="Repo not found",
+                    )
+
+    return _check

@@ -149,7 +149,7 @@ Already works — just needs request.state populated for JWT users too.
 
 ---
 
-### Phase 3: Permission Decorator (2h)
+### Phase 3: Permission Decorator (2h) ? DONE
 
 **Goal**: Single decorator that combines role + scope + repo access checks.
 
