@@ -64,6 +64,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 5 | Team / Organization Model | 6h | P1 | ? DONE |
 | 6 | Permission Caching | 3h | P2 | ? DONE |
 | 7 | Audit Integration | 2h | P2 | ? DONE |
+| 8 | Documentation & Developer Experience | 3h | P2 | ? DONE |
 
 **Total: ~52 hours** = ~6.5 working days
 

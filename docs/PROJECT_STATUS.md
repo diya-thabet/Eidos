@@ -283,6 +283,7 @@ Eidos is designed to integrate with external tools at every layer:
 | RBAC Phase 5 (Teams) | **2,477** | **138** | **59,300** | **117** |
 | RBAC Phase 6 (Caching) | **2,489** | **139** | **59,600** | **119** |
 | RBAC Phase 7 (Audit) | **2,495** | **140** | **59,900** | **119** |
+| RBAC Phase 8 (Docs) | **2,495** | **140** | **60,200** | **121** |
 
 ---
 

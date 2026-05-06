@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (117)
+## API Endpoints (121)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -91,6 +91,16 @@ pytest -v
 | POST | `/repos/{id}/permissions` | Grant user access to repo |
 | GET | `/repos/{id}/permissions` | List repo permissions |
 | DELETE | `/repos/{id}/permissions/{user_id}` | Revoke user access |
+| POST | `/teams` | Create a team |
+| GET | `/teams` | List my teams |
+| GET | `/teams/{id}` | Team details |
+| PATCH | `/teams/{id}` | Update team |
+| DELETE | `/teams/{id}` | Delete team |
+| GET | `/teams/{id}/members` | List team members |
+| POST | `/teams/{id}/members` | Add team member |
+| DELETE | `/teams/{id}/members/{uid}` | Remove team member |
+| POST | `/teams/{id}/repos` | Grant team repo access |
+| GET | `/teams/{id}/repos` | List team repo access |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |

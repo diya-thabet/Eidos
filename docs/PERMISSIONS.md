@@ -225,7 +225,42 @@ curl -X POST "/auth/api-keys?name=Compliance&scopes=read:export"
 
 ## Enforcement Implementation
 
-- **Router-level**: Applied to routers where all endpoints share the same scope
-- **Per-endpoint**: Applied via `dependencies=[Depends(require_scope("..."))]` for mixed routers
-- **Mechanism**: `require_scope()` depends on `get_current_user` ? reads `request.state.api_key_scopes`
-- **Bypass**: JWT users have no `api_key_scopes` set ? automatically allowed
+- **Router-level**: Applied to routers where all endpoints share the same scope (14 routers)
+- **Per-endpoint**: Applied via `dependencies=[Depends(require_scope("..."))]` for mixed routers (8 routers)
+- **`protected()` decorator**: Combines scope + role + repo ownership in one dependency
+- **Mechanism**: `require_scope()` depends on `get_current_user` ? reads role or `request.state.api_key_scopes`
+- **Caching**: `require_repo_access()` caches results in a 5-min TTL in-memory cache (10K entries)
+- **Audit**: All 403 denials are logged to the audit trail automatically
+
+## Resource-Level Permissions
+
+| Level | Read | Write | Delete | Share |
+|-------|------|-------|--------|-------|
+| `viewer` | ? | ? | ? | ? |
+| `editor` | ? | ? | ? | ? |
+| `owner` | ? | ? | ? | ? |
+
+### Endpoints
+
+```
+POST   /repos/{id}/permissions           # Grant access
+GET    /repos/{id}/permissions           # List who has access
+DELETE /repos/{id}/permissions/{user_id} # Revoke access
+```
+
+## Team Access
+
+Teams provide group-based repo access:
+
+```
+POST   /teams                    # Create team
+GET    /teams                    # List my teams
+GET    /teams/{id}               # Team details
+PATCH  /teams/{id}               # Update team
+DELETE /teams/{id}               # Delete team
+GET    /teams/{id}/members       # List members
+POST   /teams/{id}/members       # Add member
+DELETE /teams/{id}/members/{uid} # Remove member
+POST   /teams/{id}/repos         # Grant team repo access
+GET    /teams/{id}/repos         # List team repos
+```

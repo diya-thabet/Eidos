@@ -617,3 +617,31 @@ Full team CRUD with members and repo access:
 - Access chain: admin > owner > RepoPermission > TeamRepoAccess
 - App admins bypass team admin checks
 - 20 new tests
+
+## 38. RBAC Phase 6: Permission Caching (Phase 40)
+
+In-memory TTL permission cache:
+- New module: `app/auth/permission_cache.py` (300s TTL, 10K max entries)
+- `require_repo_access()` checks cache before DB queries, caches results on success
+- Cache invalidation on permission grant/revoke
+- Admin endpoints: `GET /admin/cache/stats`, `POST /admin/cache/clear`
+- Auto-eviction: expired entries cleaned up, oldest 10% removed when full
+- 12 new tests
+
+## 39. RBAC Phase 7: Audit Integration (Phase 41)
+
+Permission events logged to audit trail:
+- New module: `app/auth/audit_helpers.py` with `build_permission_denied_event` and `build_permission_change_event`
+- `require_scope()` and `protected()` log all 403 denials (action: `permission.denied`)
+- Permission grant/revoke in `permissions.py` logged (actions: `permission.granted`, `permission.revoked`)
+- Async commit before raising 403 (audit never lost on denial)
+- Best-effort: audit failures never block the request
+- 6 new tests
+
+## 40. RBAC Phase 8: Documentation & Developer Experience (Phase 42)
+
+Full RBAC documentation:
+- New: `docs/AUTHENTICATION.md` — complete auth guide (OAuth, API keys, roles, scopes, security)
+- Updated: `docs/PERMISSIONS.md` — full endpoint?scope matrix, role mapping, resource permissions, team access
+- Updated: all project docs with final endpoint counts (121), test counts (2,284), file counts (138 source + 104 test)
+- All 8 RBAC phases complete ?

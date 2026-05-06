@@ -4,9 +4,9 @@ All notable changes to the Eidos frontend.
 
 ---
 
-## Phase 10 Complete: 104 Backend Endpoints
+## Phase 10 Complete: 121 Backend Endpoints
 
-**RBAC Update**: All 104 endpoints now enforce API key scopes. JWT users are restricted by role (support=read-only, user/employee=full dev, admin=all). API keys with limited scopes will be rejected from unauthorized endpoints (403).
+**RBAC Update**: All 121 endpoints now enforce API key scopes. JWT users are restricted by role (support=read-only, user/employee=full dev, admin=all). API keys with limited scopes will be rejected from unauthorized endpoints (403). Resource-level permissions (viewer/editor/owner) and team-based access are now supported.
 
 **All 10 backend features from Phase 10 are now implemented. Summary of new capabilities to integrate:**
 
@@ -25,7 +25,7 @@ All notable changes to the Eidos frontend.
 
 ---
 
-## Backend API: 104 endpoints (Phase 34)
+## Backend API: 121 endpoints (Phase 34)
 
 **New endpoints (Incremental Health Analysis):**
 - `POST /repos/{id}/snapshots/{sid}/health/findings` — persist health findings

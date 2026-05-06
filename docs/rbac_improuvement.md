@@ -319,7 +319,7 @@ Log all:
 
 ---
 
-### Phase 8: Documentation & Developer Experience (3h)
+### Phase 8: Documentation & Developer Experience (3h) ? DONE
 
 #### 8.1 Create `docs/PERMISSIONS.md`
 
@@ -362,23 +362,23 @@ Week 2 (15h):
   Day 3: Phase 6 — Caching (3h) + Phase 8 — Docs (3h)
 ```
 
-**Total: ~27 hours = 3.4 working days**
+**Total: ~27 hours = 3.4 working days** ? ALL PHASES COMPLETE
 
 ---
 
-## Expected Results
+## Actual Results
 
-| Metric | Before | After |
-|--------|--------|-------|
-| Endpoints with scope enforcement | 0 | 104 |
-| Role-to-scope mapping | None | 5 roles mapped |
-| Resource-level sharing | None | viewer/editor/owner |
-| Team support | None | Full CRUD + access |
-| Permission audit trail | None | All denials + changes logged |
-| Permission cache | None | 5-min TTL, <1ms lookups |
-| Documentation | Minimal | Full matrix + guides |
-| New endpoints | 0 | ~11 (permissions + teams) |
-| New tests | 0 | ~60 |
+| Metric | Before | After | Status |
+|--------|--------|-------|--------|
+| Endpoints with scope enforcement | 0 | 121 | \u2705 |
+| Role-to-scope mapping | None | 5 roles mapped | \u2705 |
+| Resource-level sharing | None | viewer/editor/owner | \u2705 |
+| Team support | None | Full CRUD + access | \u2705 |
+| Permission audit trail | None | All denials + changes logged | \u2705 |
+| Permission cache | None | 5-min TTL, <1ms lookups | \u2705 |
+| Documentation | Minimal | Full matrix + guides | \u2705 |
+| New endpoints | 0 | ~21 (permissions + teams + admin cache) | \u2705 |
+| New tests | 0 | ~92 | \u2705 |
 
 ---
 
