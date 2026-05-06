@@ -515,3 +515,37 @@ Software Bill of Materials in CycloneDX 1.5 and SPDX 2.3 formats:
 - Query params: `format` (cyclonedx default), `include_dev` (bool, default true)
 - Content-Disposition header for download
 - 28 new tests: 7 PURL, 7 CycloneDX, 6 SPDX, 8 API endpoint
+
+## 32. Incremental Health Analysis (Phase 34 / Phase10.10)
+
+Incremental health analysis with fingerprint-based diffing:
+- New DB model: `HealthFindingPersisted` with indexes on (snapshot_id) and (snapshot_id, fingerprint)
+- New module: `app/analysis/incremental_health.py`:
+  - `compute_fingerprint(rule_id, symbol, file, line)` — SHA256-based stable ID
+  - `persist_findings(db, snapshot_id, findings)` — store findings with fingerprints
+  - `compute_health_diff(db, new_sid, prev_sid)` — fingerprint set comparison
+  - `copy_unchanged_findings(db, prev_sid, new_sid, changed_files)` — copies unchanged file findings
+- New API router: `app/api/incremental_health.py` with 3 endpoints:
+  - `POST /repos/{id}/snapshots/{sid}/health/findings` — persist findings
+  - `GET /repos/{id}/snapshots/{sid}/health/findings` — list with severity/file filters
+  - `GET /repos/{id}/snapshots/{sid}/health/diff/{prev_sid}` — diff showing added/fixed/unchanged
+- Diff response includes summary: "+N new, -M fixed, K unchanged"
+- 20 new tests: 5 fingerprint, 3 persist/diff logic, 12 API tests
+
+---
+
+## Phase 10 Summary: All 10 Features Complete
+
+| # | Feature | Tests | Endpoints | Key Files |
+|---|---------|-------|-----------|-----------|
+| 1 | Coverage Tracking | +36 | +4 | coverage_parser.py, coverage.py |
+| 2 | Quality Gates | +38 | +7 | gate_evaluator.py, quality_gates.py |
+| 3 | Audit Log | +40 | +4 | audit.py (core + api) |
+| 4 | API Key Scoping | +28 | +1 | scopes.py, dependencies.py |
+| 5 | Call Cycle Detection | +21 | +1 | call_cycles.py (analysis + api) |
+| 6 | Snapshot Tagging | +17 | +5 | tags.py |
+| 7 | Bulk Operations | +16 | +4 | bulk.py |
+| 8 | Health Score | +21 | +2 | health_score.py (analysis + api) |
+| 9 | SBOM Generation | +28 | +1 | sbom.py (exports + api) |
+| 10 | Incremental Health | +20 | +3 | incremental_health.py (analysis + api) |
+| **Total** | **+265** | **+32** | |

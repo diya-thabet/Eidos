@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (101)
+## API Endpoints (104)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -85,6 +85,9 @@ pytest -v
 | GET | `/repos/{id}/snapshots/{sid}/health-score` | Get/compute health score (0-100) |
 | GET | `/repos/{id}/health-history` | Health score trend across snapshots |
 | GET | `/repos/{id}/snapshots/{sid}/export/sbom` | SBOM export (CycloneDX/SPDX) |
+| POST | `/repos/{id}/snapshots/{sid}/health/findings` | Persist health findings |
+| GET | `/repos/{id}/snapshots/{sid}/health/findings` | List persisted findings (filterable) |
+| GET | `/repos/{id}/snapshots/{sid}/health/diff/{prev}` | Health findings diff between snapshots |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |
@@ -167,6 +170,11 @@ backend/
       quality_gates.py    # Quality gate CRUD + evaluate
       audit.py            # Audit log query, export, stats, purge
       call_cycles.py      # Function call cycle detection endpoint
+      health_score.py     # Health score compute + history endpoints
+      incremental_health.py # Persist findings, list, diff endpoints
+      sbom.py             # SBOM export (CycloneDX/SPDX) endpoint
+      bulk.py             # Bulk delete/tag operations
+      tags.py             # Snapshot tagging & search
       diagrams.py         # Mermaid class and module diagrams
       trends.py           # Health score trend tracking
       portable.py         # Portable .eidos export/import
@@ -197,6 +205,8 @@ backend/
       coverage_parser.py   # Parses pytest-cov JSON output
       gate_evaluator.py    # Quality gate evaluation logic
       call_cycles.py       # Tarjan's SCC for function cycle detection
+      health_score.py      # Weighted 0-100 score with 9 categories
+      incremental_health.py # Fingerprint-based finding persistence & diff
       blame.py            # Git blame extraction
       dependency_parser.py # 7-ecosystem dependency scanner
       csharp_parser.py    # C# parser
@@ -225,6 +235,7 @@ backend/
         dependencies.py   # 10 rules (outdated, missing lock, CVE, etc.)
     exports/
       generators.py       # CSV/ZIP, SARIF 2.1.0, Markdown report generators
+      sbom.py             # CycloneDX 1.5 + SPDX 2.3 SBOM generators
     indexing/
       summary_schema.py   # Summary data classes
       facts_extractor.py  # Deterministic facts from code graph
@@ -279,11 +290,11 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 55,960 |
-| Application code | 134 files / 27,090 lines |
-| Test code | 96 files / 28,870 lines |
-| Tests (CI-verified) | 2,364 |
-| API endpoints | 101 |
+| Total lines of code | 56,752 |
+| Application code | 136 files / 27,799 lines |
+| Test code | 97 files / 28,953 lines |
+| Tests (CI-verified) | 2,384 |
+| API endpoints | 104 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 7 (JSON, .eidos, CSV/ZIP, SARIF, Markdown, CycloneDX, SPDX) |

@@ -51,7 +51,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 7 | Bulk Operations | 5h | Medium (performance) | ? DONE |
 | 8 | Health Score & History | 6h | High (trends) | ? DONE |
 | 9 | SBOM Generation (CycloneDX) | 5h | High (compliance) | ? DONE |
-| 10 | Incremental Health Analysis | 6h | High (perf) | P1 |
+| 10 | Incremental Health Analysis | 6h | High (perf) | ? DONE |
 
 **Total: ~52 hours** = ~6.5 working days
 

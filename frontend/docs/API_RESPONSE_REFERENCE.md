@@ -1495,4 +1495,107 @@ interface GateEvaluation {
 interface GateConfigSchema {
   available_checks: Record<string, string>;
 }
+
+// Snapshot Tags
+interface SnapshotTag {
+  id: number;
+  snapshot_id: string;
+  tag: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+// Health Score
+interface CategoryScore {
+  category: string;
+  score: number;
+  weight: number;
+  weighted_score: number;
+  details: string;
+}
+
+interface HealthScore {
+  snapshot_id: string;
+  overall: number;
+  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  categories: CategoryScore[];
+  total_findings: number;
+  error_count: number;
+  warning_count: number;
+  computed_at: string;
+}
+
+interface HealthHistoryItem {
+  snapshot_id: string;
+  overall: number;
+  grade: string;
+  total_findings: number;
+  computed_at: string;
+}
+
+// SBOM (CycloneDX response shape)
+interface CycloneDXSBOM {
+  bomFormat: 'CycloneDX';
+  specVersion: '1.5';
+  serialNumber: string;
+  version: number;
+  metadata: { timestamp: string; tools: any; component: any };
+  components: Array<{
+    type: 'library';
+    name: string;
+    version: string;
+    purl: string;
+    scope: 'required' | 'optional';
+  }>;
+}
+
+// Incremental Health
+interface HealthFinding {
+  rule_id: string;
+  severity: string;
+  symbol_fq_name: string;
+  file_path: string;
+  line: number;
+  message: string;
+  fingerprint: string;
+}
+
+interface HealthDiff {
+  new_snapshot_id: string;
+  prev_snapshot_id: string;
+  added: HealthFinding[];
+  fixed: HealthFinding[];
+  unchanged_count: number;
+  new_total: number;
+  prev_total: number;
+  summary: string;
+}
+
+// Bulk Operations
+interface BulkDeleteResult {
+  deleted: number;
+  failed: string[];
+}
+
+interface BulkTagResult {
+  tagged: number;
+  skipped: number;
+}
+
+// Audit Log
+interface AuditEvent {
+  id: number;
+  timestamp: string;
+  user_id: string | null;
+  user_email: string;
+  action: string;
+  resource_type: string;
+  resource_id: string;
+  method: string;
+  path: string;
+  status_code: number;
+  ip_address: string;
+  success: boolean;
+  metadata: Record<string, any>;
+}
 ```

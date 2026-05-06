@@ -21,6 +21,7 @@ from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
 from app.api import exports as exports_api
 from app.api import health_score as health_score_api
+from app.api import incremental_health as incremental_health_api
 from app.api import indexing as indexing_api
 from app.api import portable as portable_api
 from app.api import quality_gates as quality_gates_api
@@ -168,6 +169,7 @@ app.include_router(tags_api.router, prefix="/repos", tags=["tags"])
 app.include_router(bulk_api.router, prefix="/repos", tags=["bulk"])
 app.include_router(health_score_api.router, prefix="/repos", tags=["health-score"])
 app.include_router(sbom_api.router, prefix="/repos", tags=["sbom"])
+app.include_router(incremental_health_api.router, prefix="/repos", tags=["incremental-health"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

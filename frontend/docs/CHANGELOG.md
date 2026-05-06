@@ -4,6 +4,39 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Phase 10 Complete: 104 Backend Endpoints
+
+**All 10 backend features from Phase 10 are now implemented. Summary of new capabilities to integrate:**
+
+| Feature | Endpoints | Key UI Suggestion |
+|---------|-----------|-------------------|
+| Coverage Tracking | 4 | Coverage tab with file-level table + grade badge |
+| Quality Gates | 7 | Gate config form + pass/fail badge |
+| Audit Log | 4 | Admin audit table with filters + CSV export |
+| API Key Scoping | 1 | Scope multi-select + expiration picker on key creation |
+| Call Cycle Detection | 1 | Graph/Architecture tab with cycle visualization |
+| Snapshot Tags | 5 | Tag chips with autocomplete |
+| Bulk Operations | 4 | Multi-select toolbar with delete/tag actions |
+| Health Score | 2 | Score gauge (0-100) + 9-category breakdown + history chart |
+| SBOM Export | 1 | Download button with format selector |
+| Incremental Health | 3 | Diff view for PR reviews (+new/-fixed) |
+
+---
+
+## Backend API: 104 endpoints (Phase 34)
+
+**New endpoints (Incremental Health Analysis):**
+- `POST /repos/{id}/snapshots/{sid}/health/findings` — persist health findings
+- `GET /repos/{id}/snapshots/{sid}/health/findings` — list findings (filter by severity, file_path)
+- `GET /repos/{id}/snapshots/{sid}/health/diff/{prev_sid}` — diff between two snapshots
+
+**Suggested UI:**
+- **PR Review integration**: show diff summary badge ("+3 new, -2 fixed")
+- Findings list page with severity/file filters
+- Diff view: two-column comparison (added in red, fixed in green)
+- "Compare with previous" button on snapshot detail page
+- Summary cards: new issues count, fixed count, unchanged count
+
 ## Backend API: 101 endpoints (Phase 33)
 
 **New endpoint (SBOM):**

@@ -2,7 +2,7 @@
 
 > See also: [API_RESPONSE_REFERENCE.md](API_RESPONSE_REFERENCE.md) for every JSON shape, TypeScript interfaces, and copy-paste-ready types.
 
-## Backend API — 101 Endpoints
+## Backend API — 104 Endpoints
 
 The frontend consumes the Eidos backend REST API. Below is the complete endpoint map grouped by feature.
 
@@ -81,6 +81,46 @@ The frontend consumes the Eidos backend REST API. Below is the complete endpoint
 | DELETE | `/repos/{id}/quality-gates/{gid}` | Delete gate button |
 | POST | `/repos/{id}/snapshots/{sid}/evaluate-gate/{gid}` | "Run Gate" button, shows pass/fail badge |
 | GET | `/repos/quality-gates/schema` | Dynamic form builder for gate config |
+
+### Snapshot Tags
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| POST | `/repos/{id}/snapshots/{sid}/tags` | Add tag chip |
+| DELETE | `/repos/{id}/snapshots/{sid}/tags/{tag}` | Remove tag chip |
+| GET | `/repos/{id}/snapshots/{sid}/tags` | Display tag chips |
+| GET | `/repos/{id}/snapshots/by-tag/{tag}` | Filter snapshots by tag |
+| GET | `/repos/tags/stats` | Tag autocomplete suggestions |
+
+### Bulk Operations
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| POST | `/repos/{id}/snapshots/bulk-delete` | Multi-select delete |
+| POST | `/repos/{id}/snapshots/bulk-tag` | Multi-select tag |
+| DELETE | `/repos/{id}/snapshots/older-than/{days}` | Cleanup modal |
+| POST | `/repos/bulk-delete` | Admin bulk repo delete |
+
+### Health Score
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| GET | `/repos/{id}/snapshots/{sid}/health-score` | Score gauge + categories |
+| GET | `/repos/{id}/health-history` | Score trend line chart |
+
+### SBOM Export
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| GET | `/repos/{id}/snapshots/{sid}/export/sbom` | SBOM download button |
+
+### Incremental Health
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| POST | `/repos/{id}/snapshots/{sid}/health/findings` | Store findings after analysis |
+| GET | `/repos/{id}/snapshots/{sid}/health/findings` | Findings list table |
+| GET | `/repos/{id}/snapshots/{sid}/health/diff/{prev}` | PR review diff badge |
 
 ### Q&A
 

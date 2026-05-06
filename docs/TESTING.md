@@ -216,8 +216,12 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_api_key_scopes.py` | 28 | API key scopes: parse/has/validate helpers, create with scopes/expiration, list with scopes, scope enforcement, expiration rejection, usage tracking |
 | `test_call_cycles.py` | 21 | Call cycle detection: Tarjan's SCC (no cycles, direct recursion, mutual 2/3/5, multiple, tail, path, files, empty, disconnected), API endpoint (detect, members, path, files, filter, 404, fields) |
 | `test_tags.py` | 17 | Snapshot tagging: add (normal, lowercase, trim, duplicate 409, empty 400, 404), remove (success, 404), list (empty, with tags, 404), find-by-tag (found, empty, includes all tags), stats (empty, data, limit) |
+| `test_bulk_ops.py` | 16 | Bulk operations: bulk delete snapshots (multiple, invalid, wrong repo, max limit, 404), bulk tag (multiple, duplicates, invalid, empty, normalized), older-than (old, nothing, 404), bulk delete repos (multiple, invalid, max) |
+| `test_health_score.py` | 21 | Health score: algorithm (perfect, complexity, error penalty, grades A/F, 9 categories, weights, coverage, empty, security), API (compute, persist, recompute, grade, categories, 404), history (empty, after compute, multiple, fields, limit) |
+| `test_sbom.py` | 28 | SBOM generation: PURL (pypi, npm, maven, cargo, nuget, go, unknown), CycloneDX (structure, metadata, components, fields, dev scope, purl, empty), SPDX (structure, creation, packages, fields, relationships, empty), API (default, explicit, spdx, exclude_dev, invalid, 404, content-disposition) |
+| `test_incremental_health.py` | 20 | Incremental health: fingerprint (deterministic, different rule/line/file, length), persist+diff (persist, added/fixed, copy unchanged), API persist (single, multiple, 404), list findings (empty, after persist, severity filter, file filter), diff (full, no changes, 404 prev, 404 snapshot, fields) |
 
-### Updated Total: ~2,261 tests (2,255 passed + 6 skipped)
+### Updated Total: ~2,384 tests (2,378 passed + 6 skipped)
 
 ## Test Design Principles
 

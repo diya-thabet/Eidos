@@ -306,6 +306,29 @@ class HealthScoreHistory(Base):
     )
 
 
+class HealthFindingPersisted(Base):
+    """Persisted health finding for incremental analysis."""
+
+    __tablename__ = "health_findings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False,
+    )
+    symbol_fq_name: Mapped[str] = mapped_column(Text, default="")
+    rule_id: Mapped[str] = mapped_column(String(32), nullable=False)
+    severity: Mapped[str] = mapped_column(String(16), nullable=False)
+    message: Mapped[str] = mapped_column(Text, default="")
+    file_path: Mapped[str] = mapped_column(Text, default="")
+    line: Mapped[int] = mapped_column(Integer, default=0)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+
+    __table_args__ = (
+        Index("ix_health_findings_snapshot", "snapshot_id"),
+        Index("ix_health_findings_fingerprint", "snapshot_id", "fingerprint"),
+    )
+
+
 class AuditEvent(Base):
     """Immutable audit log entry for compliance tracking."""
 
