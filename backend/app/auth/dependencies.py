@@ -99,7 +99,7 @@ async def require_repo_access(
     """
     Verify the current user owns (or has access to) the repo.
 
-    Checks: admin role > owner > RepoPermission.
+    Checks: cache > admin role > owner > RepoPermission > TeamRepoAccess.
     Raises 404 (not 403) to avoid leaking existence of other repos.
     """
     if not settings.auth_enabled:
@@ -107,6 +107,13 @@ async def require_repo_access(
 
     # Admins+ can access any repo
     if _role_level(user.role) >= _ROLE_HIERARCHY[UserRole.admin]:
+        return user
+
+    # Check cache first
+    from app.auth.permission_cache import _repo_access_key, permission_cache
+
+    cache_key = _repo_access_key(user.id, repo_id)
+    if permission_cache.get(cache_key) is True:
         return user
 
     # Check ownership
@@ -117,6 +124,7 @@ async def require_repo_access(
         )
     )
     if result.scalar_one_or_none() is not None:
+        permission_cache.set(cache_key, True)
         return user
 
     # Check resource-level permissions
@@ -129,6 +137,7 @@ async def require_repo_access(
         )
     )
     if perm_result.scalar_one_or_none() is not None:
+        permission_cache.set(cache_key, True)
         return user
 
     # Check team-level access
@@ -141,6 +150,7 @@ async def require_repo_access(
         )
     )
     if team_result.scalar_one_or_none() is not None:
+        permission_cache.set(cache_key, True)
         return user
 
     raise HTTPException(status_code=404, detail="Repo not found")

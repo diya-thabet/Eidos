@@ -266,7 +266,7 @@ POST   /teams/{id}/repos              # Grant team repo access
 
 ---
 
-### Phase 6: Permission Caching (3h)
+### Phase 6: Permission Caching (3h) ? DONE
 
 **Goal**: Avoid DB hit on every request for permission checks.
 

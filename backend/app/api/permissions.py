@@ -113,6 +113,10 @@ async def grant_permission(
     await db.commit()
     await db.refresh(existing)
 
+    # Invalidate permission cache for target user
+    from app.auth.permission_cache import permission_cache
+    permission_cache.invalidate_user(body.user_id)
+
     return PermissionOut(
         id=existing.id,
         repo_id=existing.repo_id,
@@ -190,3 +194,7 @@ async def revoke_permission(
         raise HTTPException(status_code=404, detail="Permission not found")
     await db.delete(perm)
     await db.commit()
+
+    # Invalidate permission cache
+    from app.auth.permission_cache import permission_cache
+    permission_cache.invalidate_user(user_id)

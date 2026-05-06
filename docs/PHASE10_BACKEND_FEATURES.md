@@ -62,6 +62,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 3 | Permission Decorator | 2h | P0 | ? DONE |
 | 4 | Resource-Level Permissions | 6h | P1 | ? DONE |
 | 5 | Team / Organization Model | 6h | P1 | ? DONE |
+| 6 | Permission Caching | 3h | P2 | ? DONE |
 
 **Total: ~52 hours** = ~6.5 working days
 
