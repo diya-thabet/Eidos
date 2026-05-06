@@ -117,11 +117,13 @@ def require_scope(scope: str) -> Any:
         )
     """
     from app.auth.dependencies import get_current_user
+    from app.storage.database import get_db
     from app.storage.models import User
 
     async def _check(
         request: Request,
         _user: Any = Depends(get_current_user),
+        _db: Any = Depends(get_db),
     ) -> None:
         # Determine granted scopes
         granted_str = getattr(request.state, "api_key_scopes", None)
@@ -135,6 +137,7 @@ def require_scope(scope: str) -> Any:
 
         granted = parse_scopes(granted_str)
         if not has_scope(granted, scope):
+            await _log_denial_async(_db, request, _user, "scope_check_failed", scope)
             raise HTTPException(
                 status_code=403,
                 detail=f"Insufficient permissions: requires scope '{scope}'",
@@ -188,6 +191,7 @@ def protected(
         if roles is not None:
             user_role = getattr(_user, "role", "user")
             if user_role not in roles and user_role != "superadmin":
+                await _log_denial_async(_db, request, _user, "role_check_failed", scope)
                 raise HTTPException(
                     status_code=403,
                     detail="Insufficient role permissions",
@@ -204,6 +208,7 @@ def protected(
 
             granted = parse_scopes(granted_str)
             if not has_scope(granted, scope):
+                await _log_denial_async(_db, request, _user, "scope_check_failed", scope)
                 raise HTTPException(
                     status_code=403,
                     detail=f"Insufficient permissions: requires scope '{scope}'",
@@ -240,3 +245,26 @@ def protected(
                     )
 
     return _check
+
+
+# ---------------------------------------------------------------------------
+# Audit logging helper
+# ---------------------------------------------------------------------------
+
+
+async def _log_denial_async(
+    db: Any, request: Request, user: Any, reason: str, scope: str | None,
+) -> None:
+    """Log a permission denial to the audit trail (commits immediately)."""
+    try:
+        from app.auth.audit_helpers import build_permission_denied_event
+
+        user_id = getattr(user, "id", None)
+        event = build_permission_denied_event(request, user_id, reason, scope)
+        db.add(event)
+        await db.commit()
+    except Exception:
+        try:
+            await db.rollback()
+        except Exception:
+            pass

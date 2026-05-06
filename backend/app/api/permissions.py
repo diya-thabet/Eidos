@@ -117,6 +117,17 @@ async def grant_permission(
     from app.auth.permission_cache import permission_cache
     permission_cache.invalidate_user(body.user_id)
 
+    # Audit log
+    from app.auth.audit_helpers import build_permission_change_event
+    db.add(build_permission_change_event(
+        user_id=user.id,
+        action="permission.granted",
+        resource_type="repo",
+        resource_id=repo_id,
+        metadata={"target_user": body.user_id, "level": body.level},
+    ))
+    await db.commit()
+
     return PermissionOut(
         id=existing.id,
         repo_id=existing.repo_id,
@@ -198,3 +209,14 @@ async def revoke_permission(
     # Invalidate permission cache
     from app.auth.permission_cache import permission_cache
     permission_cache.invalidate_user(user_id)
+
+    # Audit log
+    from app.auth.audit_helpers import build_permission_change_event
+    db.add(build_permission_change_event(
+        user_id=user_id,
+        action="permission.revoked",
+        resource_type="repo",
+        resource_id=repo_id,
+        metadata={"revoked_user": user_id},
+    ))
+    await db.commit()

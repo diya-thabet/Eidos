@@ -296,7 +296,7 @@ Invalidate on:
 
 ---
 
-### Phase 7: Audit Integration (2h)
+### Phase 7: Audit Integration (2h) ? DONE
 
 **Goal**: All permission denials are logged to audit trail.
 
