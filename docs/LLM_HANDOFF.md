@@ -490,3 +490,16 @@ Batch endpoints for managing large numbers of resources:
 - Safety: max batch size enforced (100 snapshots, 50 repos)
 - Tags normalized to lowercase
 - 16 new tests
+
+## 30. Health Score & History (Phase 32 / Phase10.8)
+
+Weighted 0-100 health score with 9 category breakdown:
+- New module: `app/analysis/health_score.py` — `compute_health_score(metrics)` returns `HealthScore`
+- 9 categories: complexity(20%), design(20%), duplication(10%), dead_code(10%), documentation(5%), naming(5%), security(15%), dependencies(10%), testing(5%)
+- Each category: 100 minus penalties, capped at 0; final = weighted sum
+- Grades: A(?90), B(?80), C(?70), D(?60), F(<60)
+- New DB model: `HealthScoreHistory` (persisted per snapshot, computed on first access)
+- New API router: `app/api/health_score.py`:
+  - `GET /repos/{id}/snapshots/{sid}/health-score` — compute+persist or return cached (supports `?recompute=true`)
+  - `GET /repos/{id}/health-history` — time-series for charts
+- 21 new tests: 10 algorithm + 11 API tests

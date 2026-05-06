@@ -4,6 +4,19 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 100 endpoints (Phase 32)
+
+**New endpoints (Health Score):**
+- `GET /repos/{id}/snapshots/{sid}/health-score` — weighted 0-100 score with 9 categories
+- `GET /repos/{id}/health-history` — score trend over time
+
+**Suggested UI:**
+- Health score gauge on snapshot overview (big number + grade badge)
+- 9-category radar/bar chart
+- Per-category details expandable
+- Health history line chart on repo overview page
+- Color: A=green, B=blue, C=yellow, D=orange, F=red
+
 ## Backend API: 98 endpoints (Phase 31)
 
 **New endpoints (Bulk Operations):**

@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (98)
+## API Endpoints (100)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -82,6 +82,8 @@ pytest -v
 | POST | `/repos/{id}/snapshots/bulk-tag` | Bulk tag snapshots |
 | DELETE | `/repos/{id}/snapshots/older-than/{days}` | Delete old snapshots |
 | POST | `/repos/bulk-delete` | Bulk delete repos |
+| GET | `/repos/{id}/snapshots/{sid}/health-score` | Get/compute health score (0-100) |
+| GET | `/repos/{id}/health-history` | Health score trend across snapshots |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |
@@ -276,11 +278,11 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 54,730 |
-| Application code | 130 files / 26,310 lines |
-| Test code | 94 files / 28,420 lines |
-| Tests (CI-verified) | 2,315 |
-| API endpoints | 98 |
+| Total lines of code | 55,350 |
+| Application code | 132 files / 26,780 lines |
+| Test code | 95 files / 28,570 lines |
+| Tests (CI-verified) | 2,336 |
+| API endpoints | 100 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |

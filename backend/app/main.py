@@ -20,6 +20,7 @@ from app.api import diagrams as diagrams_api
 from app.api import docgen as docgen_api
 from app.api import evaluations as eval_api
 from app.api import exports as exports_api
+from app.api import health_score as health_score_api
 from app.api import indexing as indexing_api
 from app.api import portable as portable_api
 from app.api import quality_gates as quality_gates_api
@@ -164,6 +165,7 @@ app.include_router(quality_gates_api.router, prefix="/repos", tags=["quality-gat
 app.include_router(audit_api.router, tags=["audit"])
 app.include_router(tags_api.router, prefix="/repos", tags=["tags"])
 app.include_router(bulk_api.router, prefix="/repos", tags=["bulk"])
+app.include_router(health_score_api.router, prefix="/repos", tags=["health-score"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

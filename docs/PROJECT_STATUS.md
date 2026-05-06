@@ -273,6 +273,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 28 (Call Cycles) | **2,282** | **128** | **53,728** | **89** |
 | Phase 29 (Snapshot Tags) | **2,299** | **129** | **54,265** | **94** |
 | Phase 30 (Bulk Ops) | **2,315** | **130** | **54,730** | **98** |
+| Phase 31 (Health Score) | **2,336** | **132** | **55,350** | **100** |
 
 ---
 

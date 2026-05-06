@@ -281,6 +281,31 @@ class SnapshotTag(Base):
     )
 
 
+class HealthScoreHistory(Base):
+    """Persisted health score for a snapshot."""
+
+    __tablename__ = "health_scores"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"),
+        nullable=False, unique=True,
+    )
+    overall: Mapped[float] = mapped_column(default=0.0)
+    grade: Mapped[str] = mapped_column(String(2), default="F")
+    category_scores_json: Mapped[str] = mapped_column(Text, default="{}")
+    total_findings: Mapped[int] = mapped_column(Integer, default=0)
+    error_count: Mapped[int] = mapped_column(Integer, default=0)
+    warning_count: Mapped[int] = mapped_column(Integer, default=0)
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        Index("ix_health_scores_snapshot", "snapshot_id"),
+    )
+
+
 class AuditEvent(Base):
     """Immutable audit log entry for compliance tracking."""
 
