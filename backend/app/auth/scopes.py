@@ -35,6 +35,49 @@ SCOPES: dict[str, str] = {
     "*": "Full access (all scopes)",
 }
 
+# ---------------------------------------------------------------------------
+# Role-to-Scope mapping
+# ---------------------------------------------------------------------------
+
+ROLE_SCOPES: dict[str, set[str]] = {
+    "superadmin": {"*"},
+    "admin": {
+        "read:repos", "write:repos",
+        "read:snapshots", "write:snapshots", "delete:snapshots",
+        "read:analysis", "read:coverage", "write:coverage",
+        "read:gates", "write:gates",
+        "write:reviews", "write:docs", "read:export",
+        "admin:users", "admin:plans", "admin:audit",
+    },
+    "employee": {
+        "read:repos", "write:repos",
+        "read:snapshots", "write:snapshots", "delete:snapshots",
+        "read:analysis", "read:coverage", "write:coverage",
+        "read:gates", "write:gates",
+        "write:reviews", "write:docs", "read:export",
+    },
+    "support": {
+        "read:repos", "read:snapshots", "read:analysis",
+        "read:coverage", "read:gates", "read:export",
+        "admin:audit",
+    },
+    "user": {
+        "read:repos", "write:repos",
+        "read:snapshots", "write:snapshots", "delete:snapshots",
+        "read:analysis", "read:coverage", "write:coverage",
+        "read:gates", "write:gates",
+        "write:reviews", "write:docs", "read:export",
+    },
+}
+
+
+def get_role_scopes(role: str) -> str:
+    """Get comma-separated scopes for a role."""
+    scopes = ROLE_SCOPES.get(role, ROLE_SCOPES["user"])
+    if "*" in scopes:
+        return "*"
+    return ",".join(sorted(scopes))
+
 
 def parse_scopes(scopes_str: str | None) -> set[str]:
     """Parse a comma-separated scopes string into a set."""
@@ -63,10 +106,9 @@ def validate_scopes(scopes: list[str]) -> list[str]:
 def require_scope(scope: str) -> Any:
     """FastAPI dependency that enforces a scope on the current request.
 
-    If the request came via JWT (not API key), all scopes are granted.
-    If via API key, check the key's scopes.
-
-    This dependency depends on get_current_user to ensure auth runs first.
+    For API key auth: checks the key's assigned scopes.
+    For JWT auth: checks the user's role-based scopes.
+    Superadmins and anonymous (auth disabled) bypass all checks.
 
     Usage:
         @router.delete(
@@ -75,21 +117,27 @@ def require_scope(scope: str) -> Any:
         )
     """
     from app.auth.dependencies import get_current_user
+    from app.storage.models import User
 
     async def _check(
         request: Request,
         _user: Any = Depends(get_current_user),
     ) -> None:
-        # After get_current_user runs, api_key_scopes is set for API keys
+        # Determine granted scopes
         granted_str = getattr(request.state, "api_key_scopes", None)
+
         if granted_str is None:
-            return  # JWT users have full access
+            # JWT user — apply role-based scopes
+            if isinstance(_user, User) and hasattr(_user, "role"):
+                granted_str = get_role_scopes(_user.role)
+            else:
+                return  # Unknown user type, allow (safety fallback)
 
         granted = parse_scopes(granted_str)
         if not has_scope(granted, scope):
             raise HTTPException(
                 status_code=403,
-                detail=f"API key missing required scope: {scope}",
+                detail=f"Insufficient permissions: requires scope '{scope}'",
             )
 
     return _check

@@ -194,9 +194,19 @@ Complete endpoint ? scope mapping for the Eidos API.
 
 ## How Scopes Work
 
-1. **JWT users**: All scopes granted (no restrictions — role-based restrictions come in Phase 2)
+1. **JWT users**: Scopes determined by role (see Role?Scope table below)
 2. **API key users**: Only scopes assigned at key creation are allowed
-3. **Auth disabled**: All checks bypassed (development mode)
+3. **Auth disabled**: Anonymous user gets superadmin role = all scopes
+
+## Role ? Scope Mapping
+
+| Role | Scopes |
+|------|--------|
+| `superadmin` | `*` (all) |
+| `admin` | All 16 scopes (read/write/delete + admin) |
+| `employee` | All non-admin scopes (read/write/delete) |
+| `support` | `read:repos`, `read:snapshots`, `read:analysis`, `read:coverage`, `read:gates`, `read:export`, `admin:audit` |
+| `user` | All non-admin scopes (same as employee) |
 
 ### Creating a Least-Privilege API Key
 

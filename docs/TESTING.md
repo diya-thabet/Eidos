@@ -221,8 +221,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_sbom.py` | 28 | SBOM generation: PURL (pypi, npm, maven, cargo, nuget, go, unknown), CycloneDX (structure, metadata, components, fields, dev scope, purl, empty), SPDX (structure, creation, packages, fields, relationships, empty), API (default, explicit, spdx, exclude_dev, invalid, 404, content-disposition) |
 | `test_incremental_health.py` | 20 | Incremental health: fingerprint (deterministic, different rule/line/file, length), persist+diff (persist, added/fixed, copy unchanged), API persist (single, multiple, 404), list findings (empty, after persist, severity filter, file filter), diff (full, no changes, 404 prev, 404 snapshot, fields) |
 | `test_scope_enforcement.py` | 19 | RBAC scope enforcement: read-only key (can read, blocked from create/delete/ingest), write key (can create/delete, blocked from read/audit), full key (unrestricted), coverage/gates/bulk/tags/sbom/findings scope checks |
+| `test_role_scopes.py` | 25 | Role-to-scope mapping: unit (superadmin/admin/employee/support/user scopes, get_role_scopes, unknown defaults, all valid), integration (support read-only, cannot write/admin, can audit; user can write, cannot admin; admin full access) |
 
-### Updated Total: ~2,403 tests (2,397 passed + 6 skipped)
+### Updated Total: ~2,428 tests (2,422 passed + 6 skipped)
 
 ## Test Design Principles
 

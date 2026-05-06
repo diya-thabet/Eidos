@@ -97,7 +97,7 @@ async def delete_snapshot(...): ...
 
 ---
 
-### Phase 2: Role-to-Scope Mapping (3h)
+### Phase 2: Role-to-Scope Mapping (3h) ? DONE
 
 **Goal**: JWT users also get scope restrictions based on their role.
 

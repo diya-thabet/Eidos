@@ -561,3 +561,14 @@ Applied `require_scope()` to all 104 endpoints:
 - New doc: `docs/PERMISSIONS.md` — full endpoint?scope matrix
 - 19 new integration tests verifying scope enforcement with real API keys
 - Backward compatible: JWT users bypass all scope checks, existing `*` keys unaffected
+
+## 34. RBAC Phase 2: Role-to-Scope Mapping (Phase 36)
+
+JWT users now have scope restrictions based on their role:
+- New `ROLE_SCOPES` dict in `app/auth/scopes.py` mapping 5 roles to scope sets
+- `get_role_scopes(role)` helper returns comma-separated scopes for a role
+- `require_scope()` now checks JWT users' role scopes (not just API keys)
+- Superadmin = `*` (unrestricted), Admin = all scopes, Employee = all non-admin, Support = read-only + audit, User = standard dev access
+- Anonymous user (auth disabled) = superadmin role = all checks pass
+- Unknown roles default to `user` scope set
+- 25 new tests: 11 unit (role mapping validation) + 14 integration (JWT role enforcement)
