@@ -281,7 +281,7 @@ Each rule gives a severity (info, warning, error) and a suggestion for how to fi
 | Application files | 121 |
 | Test files | 88 |
 | Automated tests | 2,155 |
-| API endpoints | 76 |
+| API endpoints | 83 |
 | Language parsers | 9 (all deeply validated) |
 | Code health rules | 66 |
 | Export formats | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |

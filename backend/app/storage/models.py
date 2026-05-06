@@ -202,6 +202,55 @@ class CoverageReport(Base):
     )
 
 
+class QualityGate(Base):
+    """Configurable quality gate thresholds for a repo."""
+
+    __tablename__ = "quality_gates"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    repo_id: Mapped[str] = mapped_column(
+        ForeignKey("repos.id", ondelete="CASCADE"), nullable=False,
+    )
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    config_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        Index("ix_quality_gates_repo", "repo_id"),
+    )
+
+
+class QualityGateResult(Base):
+    """Result of evaluating a quality gate against a snapshot."""
+
+    __tablename__ = "quality_gate_results"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    gate_id: Mapped[int] = mapped_column(
+        ForeignKey("quality_gates.id", ondelete="CASCADE"), nullable=False,
+    )
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False,
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)  # "passed" | "failed"
+    violations_json: Mapped[str] = mapped_column(Text, default="[]")
+    summary: Mapped[str] = mapped_column(Text, default="")
+    evaluated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        Index("ix_gate_results_snapshot", "snapshot_id", "gate_id"),
+    )
+
+
 # -------------------------------------------------------------------
 # Plans & Metering
 # -------------------------------------------------------------------

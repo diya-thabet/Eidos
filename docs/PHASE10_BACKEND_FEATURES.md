@@ -42,8 +42,8 @@ This plan adds **9 high-value backend features** that are achievable under compa
 
 | # | Feature | Effort | Impact | Priority |
 |---|---------|--------|--------|----------|
-| 1 | Test Coverage Tracking | 4h | High (quality visibility) | P0 |
-| 2 | Quality Gates / Thresholds | 6h | High (CI integration) | P0 |
+| 1 | Test Coverage Tracking | 4h | High (quality visibility) | ? DONE |
+| 2 | Quality Gates / Thresholds | 6h | High (CI integration) | ? DONE |
 | 3 | Audit Log | 5h | High (enterprise/compliance) | P0 |
 | 4 | API Key Scoping & Permissions | 6h | High (security) | P1 |
 | 5 | Function-Level Cycle Detection | 5h | Medium (architecture) | P1 |

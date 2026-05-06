@@ -19,6 +19,7 @@ from app.api import evaluations as eval_api
 from app.api import exports as exports_api
 from app.api import indexing as indexing_api
 from app.api import portable as portable_api
+from app.api import quality_gates as quality_gates_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
 from app.api import reviews as reviews_api
@@ -154,6 +155,7 @@ app.include_router(clones_api.router, prefix="/repos", tags=["clones"])
 app.include_router(coupling_api.router, prefix="/repos", tags=["coupling"])
 app.include_router(coverage_api.router, prefix="/repos", tags=["coverage"])
 app.include_router(exports_api.router, prefix="/repos", tags=["exports"])
+app.include_router(quality_gates_api.router, prefix="/repos", tags=["quality-gates"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

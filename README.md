@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (76)
+## API Endpoints (83)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -78,6 +78,12 @@ pytest -v
 | GET | `/repos/{id}/snapshots/{sid}/coverage` | Get coverage report (file-level) |
 | DELETE | `/repos/{id}/snapshots/{sid}/coverage` | Delete coverage report |
 | GET | `/repos/{id}/coverage/history` | Coverage history across snapshots |
+| POST | `/repos/{id}/quality-gates` | Create quality gate |
+| GET | `/repos/{id}/quality-gates` | List quality gates |
+| GET | `/repos/{id}/quality-gates/{gid}` | Get gate details |
+| PATCH | `/repos/{id}/quality-gates/{gid}` | Update gate |
+| DELETE | `/repos/{id}/quality-gates/{gid}` | Delete gate |
+| POST | `/repos/{id}/snapshots/{sid}/evaluate-gate/{gid}` | Evaluate snapshot against gate |
 | GET | `/repos/{id}/snapshots/{sid}/summaries` | List summaries |
 | GET | `/repos/{id}/snapshots/{sid}/summaries/{type}/{id}` | Get specific summary |
 | POST | `/repos/{id}/snapshots/{sid}/ask` | Ask a question (Q&A engine) |
@@ -140,6 +146,7 @@ backend/
       deps.py             # Dependency list endpoint
       exports.py          # CSV/ZIP, SARIF, Markdown export
       coverage.py         # pytest-cov upload, get, history
+      quality_gates.py    # Quality gate CRUD + evaluate
       diagrams.py         # Mermaid class and module diagrams
       trends.py           # Health score trend tracking
       portable.py         # Portable .eidos export/import
@@ -168,6 +175,7 @@ backend/
       clone_detection.py  # AST structural fingerprinting
       coupling.py         # Module coupling & cohesion (Martin metrics)
       coverage_parser.py   # Parses pytest-cov JSON output
+      gate_evaluator.py    # Quality gate evaluation logic
       blame.py            # Git blame extraction
       dependency_parser.py # 7-ecosystem dependency scanner
       csharp_parser.py    # C# parser
@@ -250,15 +258,16 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 50,315 |
-| Application code | 121 files / 24,247 lines |
-| Test code | 88 files / 26,068 lines |
-| Tests (CI-verified) | 2,155 |
-| API endpoints | 76 |
+| Total lines of code | 51,794 |
+| Application code | 123 files / 25,163 lines |
+| Test code | 89 files / 26,631 lines |
+| Tests (CI-verified) | 2,193 |
+| API endpoints | 83 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |
 | Coverage tracking | pytest-cov, line+branch |
+| Quality gates | Configurable per-repo CI/CD gates |
 | Test-to-code ratio | 1.07:1 |
 
 ## Documentation

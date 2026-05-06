@@ -4,6 +4,24 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 83 endpoints (Phase 26)
+
+**New endpoints to integrate (Quality Gates):**
+- `POST /repos/{id}/quality-gates` — create with configurable thresholds
+- `GET /repos/{id}/quality-gates` — list (filter by active_only)
+- `GET /repos/{id}/quality-gates/{gid}` — gate detail
+- `PATCH /repos/{id}/quality-gates/{gid}` — update
+- `DELETE /repos/{id}/quality-gates/{gid}` — delete
+- `POST /repos/{id}/snapshots/{sid}/evaluate-gate/{gid}` — evaluate
+- `GET /repos/quality-gates/schema` — dynamic config form builder
+
+**Suggested UI:**
+- Add a **Quality Gates** page under repo settings
+- Dynamic form from `/quality-gates/schema` for config (renders input per available check)
+- Big pass/fail badge on evaluation result
+- Per-check breakdown table with green/red indicators
+- "Run Gate" button on snapshot detail page
+
 ## Backend API: 76 endpoints (Phase 25)
 
 **New endpoints to integrate:**

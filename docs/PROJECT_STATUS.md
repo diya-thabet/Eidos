@@ -2,7 +2,7 @@
 
 > Generated: July 2025
 > Version: 0.2.0
-> Status: **Production-ready backend** — SaaS-deployable
+> Status: **Production-ready backend**  SaaS-deployable
 
 ---
 
@@ -17,11 +17,11 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 | **Test code** | 88 files / 26,068 lines |
 | **Total lines of code** | 50,315 |
 | **Test-to-code ratio** | 1.07:1 (tests exceed code) |
-| **Tests (CI-verified)** | 2,155 (2,149 passed, 6 skipped, 0 failed) |
+| **Tests (CI-verified)** | 2,155 (2,187 passed, 6 skipped, 0 failed) |
 | **Lint (ruff)** | 0 errors |
 | **Type checking (mypy)** | 0 errors across 119 files |
 | **Test coverage** | Tracked via pytest-cov, enforced ?1% in CI |
-| **API endpoints** | 76 |
+| **API endpoints** | 83 |
 | **Language parsers** | 9 -- all validated on real repos |
 | **Code health rules** | 66 (across 13 category modules) |
 | **Export formats** | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |
@@ -36,16 +36,16 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Module | Lines | Files | Purpose |
 |--------|-------|-------|---------|
-| `analysis` | 7,100 | 27 | Static analysis — 9 tree-sitter parsers, parallel parsing (ProcessPoolExecutor), graph builder, 40 health rules (8 modules), metrics |
-| `api` | 4,000 | 17 | REST API — 72 endpoints: repos, analysis, search, fulltext, Q&A, reviews, docs, diagrams, trends, portable, webhooks, auth, admin, Prometheus metrics |
-| `guardrails` | 1,170 | 6 | Output evaluation — hallucination detection, PII sanitizer, review/doc/answer evaluators |
-| `reviews` | 1,064 | 5 | PR review engine — unified diff parser, 8 behavioral heuristics, blast radius analysis |
-| `docgen` | 1,063 | 5 | Documentation generator — templates, section builder, markdown renderer with citations |
-| `indexing` | 1,061 | 5 | Summarization & vector indexing — facts extractor, summarizer, embedder, vector store |
-| `reasoning` | 1,012 | 5 | Q&A engine — question classification, hybrid retrieval (vector + graph), answer builder |
-| `storage` | 830 | 4 | Database layer — 15 SQLAlchemy models (incl. ApiKey), Pydantic schemas, async engine |
-| `auth` | 720 | 5 | Authentication — GitHub + Google OAuth, JWT, API keys (SHA-256), RBAC (5 roles), AES encryption, metering |
-| `core` | 780 | 7 | Infrastructure — config, Git ingestion, background tasks, retry with backoff, incremental ingestion, middleware |
+| `analysis` | 7,100 | 27 | Static analysis  9 tree-sitter parsers, parallel parsing (ProcessPoolExecutor), graph builder, 40 health rules (8 modules), metrics |
+| `api` | 4,000 | 17 | REST API  72 endpoints: repos, analysis, search, fulltext, Q&A, reviews, docs, diagrams, trends, portable, webhooks, auth, admin, Prometheus metrics |
+| `guardrails` | 1,170 | 6 | Output evaluation  hallucination detection, PII sanitizer, review/doc/answer evaluators |
+| `reviews` | 1,064 | 5 | PR review engine  unified diff parser, 8 behavioral heuristics, blast radius analysis |
+| `docgen` | 1,063 | 5 | Documentation generator  templates, section builder, markdown renderer with citations |
+| `indexing` | 1,061 | 5 | Summarization & vector indexing  facts extractor, summarizer, embedder, vector store |
+| `reasoning` | 1,012 | 5 | Q&A engine  question classification, hybrid retrieval (vector + graph), answer builder |
+| `storage` | 830 | 4 | Database layer  15 SQLAlchemy models (incl. ApiKey), Pydantic schemas, async engine |
+| `auth` | 720 | 5 | Authentication  GitHub + Google OAuth, JWT, API keys (SHA-256), RBAC (5 roles), AES encryption, metering |
+| `core` | 780 | 7 | Infrastructure  config, Git ingestion, background tasks, retry with backoff, incremental ingestion, middleware |
 | **Total** | **~19,413** | **100** | |
 
 ### Test Code by Category
@@ -81,9 +81,9 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Area | Assessment | Evidence |
 |------|-----------|----------|
-| **Test coverage** | ? Excellent | 2,155 tests (CI-verified), 1.07:1 test-to-code ratio, 18 real repos validated, line+branch coverage tracked via pytest-cov |
+| **Test coverage** | ? Excellent | 2,193 tests (CI-verified), 1.07:1 test-to-code ratio, 18 real repos validated, line+branch coverage tracked via pytest-cov |
 | **Type safety** | ? Excellent | mypy strict mode, 0 errors across 119 files |
-| **Lint cleanliness** | ? Excellent | ruff with E, F, I, UP rules — 0 violations |
+| **Lint cleanliness** | ? Excellent | ruff with E, F, I, UP rules  0 violations |
 | **Extensibility** | ? Excellent | ABC parser pattern, registry, adding a language = 1 file + 2 lines |
 | **Separation of concerns** | ? Good | Clear module boundaries: analysis, indexing, reasoning, reviews, docgen |
 | **API design** | ? Good | Consistent REST, pagination, OpenAPI tags, proper HTTP status codes |
@@ -95,13 +95,13 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 
 | Issue | Severity | Status |
 |-------|----------|--------|
-| **Long functions (>60 lines)** | Medium | ? Fixed — extracted into helpers |
-| **`code_health.py` was 1,905 lines** | Medium | ? Fixed — split into 8 modules in `health_rules/` |
-| **3 TODO comments** | Low | ? Fixed — all resolved |
-| **LLM prompts said "legacy C#"** | Low | ? Fixed — now language-agnostic |
-| **Circular imports** | Low | Known — `auth <-> core`, `core <-> storage`. Works via lazy imports. |
-| **Q&A empty without LLM** | Medium | By design — needs OpenAI/Ollama for real answers |
-| **Doc generation empty without LLM** | Medium | By design — needs LLM-powered summarization pipeline |
+| **Long functions (>60 lines)** | Medium | ? Fixed  extracted into helpers |
+| **`code_health.py` was 1,905 lines** | Medium | ? Fixed  split into 8 modules in `health_rules/` |
+| **3 TODO comments** | Low | ? Fixed  all resolved |
+| **LLM prompts said "legacy C#"** | Low | ? Fixed  now language-agnostic |
+| **Circular imports** | Low | Known  `auth <-> core`, `core <-> storage`. Works via lazy imports. |
+| **Q&A empty without LLM** | Medium | By design  needs OpenAI/Ollama for real answers |
+| **Doc generation empty without LLM** | Medium | By design  needs LLM-powered summarization pipeline |
 
 ### Dependency Graph
 
@@ -117,8 +117,8 @@ api ??????????? analysis ??? storage ??? core
 ```
 
 **Two circular dependencies exist:**
-- `auth <-> core` — Auth reads settings from config; core/tasks imports auth for user context. Resolved via lazy imports.
-- `core <-> storage` — Storage reads config for DB URL; core uses storage models. Resolved via lazy imports.
+- `auth <-> core`  Auth reads settings from config; core/tasks imports auth for user context. Resolved via lazy imports.
+- `core <-> storage`  Storage reads config for DB URL; core uses storage models. Resolved via lazy imports.
 
 These are **functional** and don't cause runtime issues, but ideally `core/config.py` should have no dependencies on other app modules.
 
@@ -132,7 +132,7 @@ These are **functional** and don't cause runtime issues, but ideally `core/confi
 |---------|--------|-----------|-------|
 | Repository CRUD | ? Complete | POST, GET, PATCH, DELETE | 12 |
 | Git clone + ingestion | ? Complete | POST /ingest, background task | ~25 |
-| Multi-language parsing (9 langs) | ? Complete | — (internal) | ~450 |
+| Multi-language parsing (9 langs) | ? Complete |  (internal) | ~450 |
 | Code graph (symbols + edges) | ? Complete | GET symbols, edges, graph | ~60 |
 | Code health (66 rules) | ? Complete | POST health, GET rules | 95 |
 | Summaries (symbol/module/file) | ? Complete | GET summaries | ~20 |
@@ -150,13 +150,13 @@ These are **functional** and don't cause runtime issues, but ideally `core/confi
 | Auth (GitHub + Google OAuth) | ? Complete | GET login, callback | ~15 |
 | RBAC (5 roles) | ? Complete | PUT role, admin endpoints | ~20 |
 | Usage metering | ? Complete | GET usage | ~10 |
-| Middleware stack | ? Complete | — (transparent) | ~20 |
+| Middleware stack | ? Complete |  (transparent) | ~20 |
 
 ### What's Not Built
 
 | Feature | Priority | Why It Matters for SaaS |
 |---------|----------|------------------------|
-| Background job queue (Celery/ARQ) | Medium | Current `BackgroundTasks` runs in-process — won't scale to multiple workers |
+| Background job queue (Celery/ARQ) | Medium | Current `BackgroundTasks` runs in-process  won't scale to multiple workers |
 | Rate limiting per user (not just IP) | Medium | SaaS needs per-account quotas, not just IP-based |
 | Billing integration (Stripe) | Medium | SaaS monetization |
 | Frontend | Medium | Next.js plan exists, no implementation |
@@ -166,7 +166,7 @@ These are **functional** and don't cause runtime issues, but ideally `core/confi
 
 ## Scalability Assessment
 
-### Current Architecture — Single-Process Design
+### Current Architecture  Single-Process Design
 
 ```
 ????????????????????????????????????????????????
@@ -192,11 +192,11 @@ PostgreSQL   Qdrant    Redis
 | Component | Why |
 |-----------|-----|
 | **Database** | PostgreSQL with async driver, connection pooling, indexed queries |
-| **Vector search** | Qdrant is a standalone service — can be clustered independently |
-| **API layer** | Stateless FastAPI — can run N replicas behind a load balancer |
-| **Parsers** | CPU-bound but isolated per file — easy to parallelize |
-| **Authentication** | JWT-based, stateless — works across replicas |
-| **Storage** | All state in PostgreSQL + Qdrant — no in-memory state between requests |
+| **Vector search** | Qdrant is a standalone service  can be clustered independently |
+| **API layer** | Stateless FastAPI  can run N replicas behind a load balancer |
+| **Parsers** | CPU-bound but isolated per file  easy to parallelize |
+| **Authentication** | JWT-based, stateless  works across replicas |
+| **Storage** | All state in PostgreSQL + Qdrant  no in-memory state between requests |
 
 ### What Needs Work for Scale
 
@@ -229,14 +229,14 @@ Eidos is designed to integrate with external tools at every layer:
 
 | Integration Point | How | What To Build |
 |-------------------|-----|---------------|
-| **LLM providers** | `LLMConfig` + `create_llm_client()` — any OpenAI-compatible endpoint | Already supports OpenAI, Ollama, vLLM, LM Studio |
+| **LLM providers** | `LLMConfig` + `create_llm_client()`  any OpenAI-compatible endpoint | Already supports OpenAI, Ollama, vLLM, LM Studio |
 | **Git providers** | `_inject_token()` in `ingestion.py` | GitHub, GitLab, Azure DevOps, Bitbucket already supported |
 | **New languages** | `LanguageParser` ABC + `parser_registry.py` | 1 file + 2 lines of registration |
 | **Vector DBs** | `VectorStore` ABC in `vector_store.py` | In-memory and Qdrant implemented; add Pinecone/Weaviate |
-| **Databases** | SQLAlchemy async — driver is configurable | PostgreSQL, SQLite, MySQL, Oracle, MSSQL all work |
-| **CI/CD** | Webhook endpoints + portable export/import | GitHub Actions, GitLab CI, Jenkins — push triggers analysis |
+| **Databases** | SQLAlchemy async  driver is configurable | PostgreSQL, SQLite, MySQL, Oracle, MSSQL all work |
+| **CI/CD** | Webhook endpoints + portable export/import | GitHub Actions, GitLab CI, Jenkins  push triggers analysis |
 | **Monitoring** | Prometheus `/metrics` endpoint + structured JSON logging | Already built -- request counts, latency, ingestion counters |
-| **Notifications** | Webhook-based architecture | Slack, email, Teams — add a notification dispatcher |
+| **Notifications** | Webhook-based architecture | Slack, email, Teams  add a notification dispatcher |
 
 ---
 
@@ -267,6 +267,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 22 (Refactor + API Gaps) | **2,081** | **116** | **48,716** | **69** |
 | Phase 23 (Export Enhancements) | **2,119** | **119** | **49,640** | **72** |
 | Phase 24 (Coverage Tracking) | **2,155** | **121** | **50,315** | **76** |
+| Phase 25 (Quality Gates) | **2,193** | **123** | **51,794** | **83** |
 
 ---
 
@@ -321,6 +322,6 @@ Every parser was tested against challenging open-source repos:
 
 ## Conclusion
 
-The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 76 API endpoints, 9 language parsers, 66 health rules (complexity, deps, blame, dead code, clones, coupling/cohesion), 5 export formats (JSON, .eidos, CSV/ZIP, SARIF, Markdown), CI-enforced coverage tracking, and **2,155 CI-verified tests** at a 1.07:1 test-to-code ratio, the system is fully production-ready.
+The Eidos backend is a **complete, tested, production-ready** code intelligence platform. With 76 API endpoints, 9 language parsers, 66 health rules (complexity, deps, blame, dead code, clones, coupling/cohesion), 5 export formats (JSON, .eidos, CSV/ZIP, SARIF, Markdown), CI-enforced coverage tracking, and **2,193 CI-verified tests** at a 1.07:1 test-to-code ratio, the system is fully production-ready.
 
-All improvement plan items (P0 through P3) have been completed. The **remaining steps for SaaS launch** are: the frontend (Next.js), billing integration (Stripe), and — when scaling beyond a single process — a Redis-backed job queue.
+All improvement plan items (P0 through P3) have been completed. The **remaining steps for SaaS launch** are: the frontend (Next.js), billing integration (Stripe), and  when scaling beyond a single process  a Redis-backed job queue.

@@ -11,6 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>Eidos</Name>
     <RootNamespace>Eidos</RootNamespace>
+    <TestFramework>Pytest</TestFramework>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -26,6 +27,7 @@
     <Compile Include="backend\app\analysis\clone_detection.py" />
     <Compile Include="backend\app\analysis\complexity.py" />
     <Compile Include="backend\app\analysis\coupling.py" />
+    <Compile Include="backend\app\analysis\coverage_parser.py" />
     <Compile Include="backend\app\analysis\dead_code.py" />
     <Compile Include="backend\app\analysis\dependency_parser.py" />
     <Compile Include="backend\app\analysis\health_rules\blame.py" />
@@ -37,6 +39,7 @@
     <Compile Include="backend\app\api\blame.py" />
     <Compile Include="backend\app\api\clones.py" />
     <Compile Include="backend\app\api\coupling.py" />
+    <Compile Include="backend\app\api\coverage.py" />
     <Compile Include="backend\app\api\dead_code.py" />
     <Compile Include="backend\app\api\deps.py" />
     <Compile Include="backend\app\api\exports.py" />
@@ -51,6 +54,7 @@
     <Compile Include="backend\tests\test_clone_detection.py" />
     <Compile Include="backend\tests\test_complexity.py" />
     <Compile Include="backend\tests\test_coupling.py" />
+    <Compile Include="backend\tests\test_coverage.py" />
     <Compile Include="backend\tests\test_dead_code.py" />
     <Compile Include="backend\tests\test_deep_languages.py" />
     <Compile Include="backend\tests\test_dependency_parser.py" />
@@ -80,17 +84,31 @@
     <Compile Include="Eidos.py" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include=".github\workflows\ci.yml.tmp" />
     <Content Include="docs\compExecutionPlan.md" />
     <Content Include="docs\DEVELOPER_GUIDE.md" />
     <Content Include="docs\EXECUTION_PLAN.md" />
     <Content Include="docs\IMPROVEMENT_PLAN.md" />
     <Content Include="docs\LLM_HANDOFF.md" />
+    <Content Include="docs\PHASE10_BACKEND_FEATURES.md" />
     <Content Include="docs\PROJECT_STATUS.md" />
     <Content Include="docs\SYSTEM_OVERVIEW.md" />
     <Content Include="frontend\docs\API_RESPONSE_REFERENCE.md" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="backend\" />
+    <Folder Include="backend\alembic\" />
+    <Folder Include="backend\alembic\versions\" />
+    <Folder Include="backend\app\" />
+    <Folder Include="backend\app\analysis\" />
+    <Folder Include="backend\app\analysis\health_rules\" />
+    <Folder Include="backend\app\api\" />
+    <Folder Include="backend\app\core\" />
     <Folder Include="backend\app\exports\" />
+    <Folder Include="backend\tests\" />
+    <Folder Include="docs\" />
+    <Folder Include="frontend\" />
+    <Folder Include="frontend\docs\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in

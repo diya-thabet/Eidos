@@ -909,6 +909,64 @@ Returns a `text/markdown` health report with:
 
 ---
 
+## Quality Gates
+
+### POST /repos/{id}/quality-gates
+
+Request:
+```json
+{ "name": "CI Gate", "config": { "max_errors": 0, "min_coverage_percent": 80 } }
+```
+
+Response (201):
+```json
+{
+  "id": 1,
+  "repo_id": "r1",
+  "name": "CI Gate",
+  "config": { "max_errors": 0, "min_coverage_percent": 80 },
+  "is_active": true,
+  "created_at": "2026-01-01T12:00:00+00:00",
+  "updated_at": "2026-01-01T12:00:00+00:00"
+}
+```
+
+### POST /repos/{id}/snapshots/{sid}/evaluate-gate/{gate_id}
+
+Response:
+```json
+{
+  "gate_id": 1,
+  "gate_name": "CI Gate",
+  "snapshot_id": "s1",
+  "status": "failed",
+  "checks": [
+    { "check": "max_errors", "description": "Error findings", "expected": "<= 0", "actual": 3, "passed": false },
+    { "check": "min_coverage_percent", "description": "Test coverage", "expected": ">= 80%", "actual": 75.0, "passed": false }
+  ],
+  "total_checks": 2,
+  "passed_checks": 0,
+  "failed_checks": 2,
+  "summary": "0 of 2 checks passed"
+}
+```
+
+### GET /repos/quality-gates/schema
+
+Returns available config keys for building dynamic forms:
+```json
+{
+  "available_checks": {
+    "max_errors": "Maximum number of error-severity findings",
+    "max_warnings": "Maximum number of warning-severity findings",
+    "min_coverage_percent": "Minimum test coverage percentage",
+    "blocked_rules": "List of rule IDs that must have 0 findings"
+  }
+}
+```
+
+---
+
 ## Export & Portable
 
 ### GET /repos/{id}/snapshots/{sid}/export
@@ -1401,5 +1459,40 @@ interface SymbolNoteOut {
   author: string;
   created_at: string;
   updated_at: string;
+}
+
+// Quality Gates
+interface QualityGate {
+  id: number;
+  repo_id: string;
+  name: string;
+  config: Record<string, any>;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+interface GateCheck {
+  check: string;
+  description: string;
+  expected: any;
+  actual: any;
+  passed: boolean;
+}
+
+interface GateEvaluation {
+  gate_id: number;
+  gate_name: string;
+  snapshot_id: string;
+  status: 'passed' | 'failed';
+  checks: GateCheck[];
+  total_checks: number;
+  passed_checks: number;
+  failed_checks: number;
+  summary: string;
+}
+
+interface GateConfigSchema {
+  available_checks: Record<string, string>;
 }
 ```

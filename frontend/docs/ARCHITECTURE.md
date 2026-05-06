@@ -2,7 +2,7 @@
 
 > See also: [API_RESPONSE_REFERENCE.md](API_RESPONSE_REFERENCE.md) for every JSON shape, TypeScript interfaces, and copy-paste-ready types.
 
-## Backend API — 76 Endpoints
+## Backend API — 83 Endpoints
 
 The frontend consumes the Eidos backend REST API. Below is the complete endpoint map grouped by feature.
 
@@ -69,6 +69,18 @@ The frontend consumes the Eidos backend REST API. Below is the complete endpoint
 | GET | `/repos/{id}/snapshots/{sid}/coverage?min_percent=80` | Filter low-coverage files |
 | DELETE | `/repos/{id}/snapshots/{sid}/coverage` | Remove coverage report |
 | GET | `/repos/{id}/coverage/history` | Coverage trend chart across snapshots |
+
+### Quality Gates
+
+| Method | Endpoint | Frontend Usage |
+|--------|----------|---------------|
+| POST | `/repos/{id}/quality-gates` | Create quality gate form |
+| GET | `/repos/{id}/quality-gates` | Quality gates list page |
+| GET | `/repos/{id}/quality-gates/{gid}` | Gate detail page |
+| PATCH | `/repos/{id}/quality-gates/{gid}` | Edit gate form |
+| DELETE | `/repos/{id}/quality-gates/{gid}` | Delete gate button |
+| POST | `/repos/{id}/snapshots/{sid}/evaluate-gate/{gid}` | "Run Gate" button, shows pass/fail badge |
+| GET | `/repos/quality-gates/schema` | Dynamic form builder for gate config |
 
 ### Q&A
 

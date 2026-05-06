@@ -408,3 +408,21 @@ Test coverage measurement integrated end-to-end:
 - Grades: A (?90), B (?80), C (?70), D (?60), F (<60)
 - Updated `.github/workflows/ci.yml` to run `pytest --cov=app --cov-report=xml --cov-report=json:coverage.json` and upload artifacts
 - 36 new tests: 12 parser unit tests, 5 grade tests, 5 upload tests, 6 GET tests, 2 delete tests, 5 history tests, 1 cascading delete
+
+## 24. Quality Gates / Thresholds (Phase 26 / Phase10.2)
+
+Configurable quality gates that CI/CD can evaluate against:
+- New DB models: `QualityGate` (config per repo) + `QualityGateResult` (evaluation history)
+- New module: `app/analysis/gate_evaluator.py` — pure logic evaluator with 10 numeric checks + coverage check + blocked-rules check
+- Config schema includes: max_errors, max_warnings, max_findings, min_coverage_percent, max_avg/max_cyclomatic_complexity, max_long_functions, max_clone_groups, max_dead_functions, max_module_cycles, max_instability_violations, blocked_rules
+- 7 new API endpoints:
+  - `POST /repos/{id}/quality-gates` — create gate
+  - `GET /repos/{id}/quality-gates` — list (with active_only filter)
+  - `GET /repos/{id}/quality-gates/{gate_id}` — get details
+  - `PATCH /repos/{id}/quality-gates/{gate_id}` — update name/config/active
+  - `DELETE /repos/{id}/quality-gates/{gate_id}` — delete
+  - `POST /repos/{id}/snapshots/{sid}/evaluate-gate/{gate_id}` — evaluate snapshot
+  - `GET /repos/quality-gates/schema` — list available config keys
+- Evaluation persists result in `QualityGateResult` for history
+- Returns "passed"/"failed" status with per-check breakdown
+- 38 new tests: 11 evaluator unit tests, 5 config parser tests, 22 API tests
