@@ -4,6 +4,21 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 94 endpoints (Phase 30)
+
+**New endpoints (Snapshot Tags):**
+- `POST /repos/{id}/snapshots/{sid}/tags` — add tag
+- `DELETE /repos/{id}/snapshots/{sid}/tags/{tag}` — remove tag
+- `GET /repos/{id}/snapshots/{sid}/tags` — list snapshot tags
+- `GET /repos/{id}/snapshots/by-tag/{tag}` — find snapshots by tag
+- `GET /repos/tags/stats` — tag usage stats
+
+**Suggested UI:**
+- Tag chips on snapshot cards (colored badges)
+- Tag input with autocomplete (from /tags/stats)
+- Filter snapshots by tag in the snapshot list
+- Tag management modal on snapshot detail page
+
 ## Backend API: 89 endpoints (Phase 29)
 
 **New endpoint (Call Cycle Detection):**

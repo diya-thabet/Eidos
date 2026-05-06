@@ -12,6 +12,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -256,6 +257,27 @@ class QualityGateResult(Base):
 
     __table_args__ = (
         Index("ix_gate_results_snapshot", "snapshot_id", "gate_id"),
+    )
+
+
+class SnapshotTag(Base):
+    """Tag attached to a snapshot for organization and filtering."""
+
+    __tablename__ = "snapshot_tags"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    snapshot_id: Mapped[str] = mapped_column(
+        ForeignKey("repo_snapshots.id", ondelete="CASCADE"), nullable=False,
+    )
+    tag: Mapped[str] = mapped_column(String(128), nullable=False)
+    created_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("snapshot_id", "tag", name="uq_snapshot_tag"),
+        Index("ix_snapshot_tags_tag", "tag"),
     )
 
 

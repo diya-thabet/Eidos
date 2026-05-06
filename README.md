@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (89)
+## API Endpoints (94)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -73,6 +73,11 @@ pytest -v
 | GET | `/repos/{id}/snapshots/{sid}/clones` | Clone detection (AST fingerprint) |
 | GET | `/repos/{id}/snapshots/{sid}/coupling` | Module coupling & cohesion metrics |
 | GET | `/repos/{id}/snapshots/{sid}/call-cycles` | Function call cycle detection (Tarjan SCC) |
+| POST | `/repos/{id}/snapshots/{sid}/tags` | Add tag to snapshot |
+| DELETE | `/repos/{id}/snapshots/{sid}/tags/{tag}` | Remove tag |
+| GET | `/repos/{id}/snapshots/{sid}/tags` | List snapshot tags |
+| GET | `/repos/{id}/snapshots/by-tag/{tag}` | Find snapshots by tag |
+| GET | `/repos/tags/stats` | Global tag usage stats |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |
@@ -267,11 +272,11 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 53,728 |
-| Application code | 128 files / 25,883 lines |
-| Test code | 92 files / 27,845 lines |
-| Tests (CI-verified) | 2,282 |
-| API endpoints | 89 |
+| Total lines of code | 54,265 |
+| Application code | 129 files / 26,090 lines |
+| Test code | 93 files / 28,175 lines |
+| Tests (CI-verified) | 2,299 |
+| API endpoints | 94 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |

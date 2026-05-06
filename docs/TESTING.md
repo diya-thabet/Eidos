@@ -215,6 +215,7 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_audit.py` | 40 | Audit log: should_audit/classify helpers, record_audit_event, query endpoint (filters, pagination), CSV export, stats, purge |
 | `test_api_key_scopes.py` | 28 | API key scopes: parse/has/validate helpers, create with scopes/expiration, list with scopes, scope enforcement, expiration rejection, usage tracking |
 | `test_call_cycles.py` | 21 | Call cycle detection: Tarjan's SCC (no cycles, direct recursion, mutual 2/3/5, multiple, tail, path, files, empty, disconnected), API endpoint (detect, members, path, files, filter, 404, fields) |
+| `test_tags.py` | 17 | Snapshot tagging: add (normal, lowercase, trim, duplicate 409, empty 400, 404), remove (success, 404), list (empty, with tags, 404), find-by-tag (found, empty, includes all tags), stats (empty, data, limit) |
 
 ### Updated Total: ~2,261 tests (2,255 passed + 6 skipped)
 

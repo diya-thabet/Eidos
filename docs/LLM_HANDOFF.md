@@ -465,3 +465,16 @@ Tarjan's SCC algorithm for detecting call graph cycles:
 - New API router: `app/api/call_cycles.py` — `GET /repos/{id}/snapshots/{sid}/call-cycles`
 - Query param: `min_cycle_size` (default 2, filters small cycles)
 - 21 new tests: 13 algorithm unit tests + 8 API endpoint tests
+
+## 28. Snapshot Tagging & Search (Phase 30 / Phase10.6)
+
+Tags for organizing and filtering snapshots:
+- New DB model: `SnapshotTag` with unique constraint (snapshot_id, tag) + index on tag
+- Tags normalized to lowercase and trimmed
+- 5 new API endpoints in `app/api/tags.py`:
+  - `POST /repos/{id}/snapshots/{sid}/tags` — add tag (409 on duplicate, 400 on empty)
+  - `DELETE /repos/{id}/snapshots/{sid}/tags/{tag}` — remove tag
+  - `GET /repos/{id}/snapshots/{sid}/tags` — list tags for snapshot
+  - `GET /repos/{id}/snapshots/by-tag/{tag}` — find snapshots with tag (includes all tags per snapshot)
+  - `GET /repos/tags/stats` — global tag usage counts (sorted desc)
+- 17 new tests

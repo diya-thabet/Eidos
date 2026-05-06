@@ -47,7 +47,7 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 3 | Audit Log | 5h | High (enterprise/compliance) | ? DONE |
 | 4 | API Key Scoping & Permissions | 6h | High (security) | ? DONE |
 | 5 | Function-Level Cycle Detection | 5h | Medium (architecture) | ? DONE |
-| 6 | Snapshot Tagging & Search | 4h | Medium (UX) | P1 |
+| 6 | Snapshot Tagging & Search | 4h | Medium (UX) | ? DONE |
 | 7 | Bulk Operations | 5h | Medium (performance) | P2 |
 | 8 | Health Score & History | 6h | High (trends) | P1 |
 | 9 | SBOM Generation (CycloneDX) | 5h | High (compliance) | P0 |
