@@ -272,6 +272,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 27 (API Key Scopes) | **2,261** | **126** | **53,173** | **88** |
 | Phase 28 (Call Cycles) | **2,282** | **128** | **53,728** | **89** |
 | Phase 29 (Snapshot Tags) | **2,299** | **129** | **54,265** | **94** |
+| Phase 30 (Bulk Ops) | **2,315** | **130** | **54,730** | **98** |
 
 ---
 

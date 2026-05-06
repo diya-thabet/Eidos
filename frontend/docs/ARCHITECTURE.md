@@ -2,7 +2,7 @@
 
 > See also: [API_RESPONSE_REFERENCE.md](API_RESPONSE_REFERENCE.md) for every JSON shape, TypeScript interfaces, and copy-paste-ready types.
 
-## Backend API — 94 Endpoints
+## Backend API — 98 Endpoints
 
 The frontend consumes the Eidos backend REST API. Below is the complete endpoint map grouped by feature.
 

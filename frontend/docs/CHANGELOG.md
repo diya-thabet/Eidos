@@ -4,6 +4,20 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 98 endpoints (Phase 31)
+
+**New endpoints (Bulk Operations):**
+- `POST /repos/{id}/snapshots/bulk-delete` — delete multiple snapshots
+- `POST /repos/{id}/snapshots/bulk-tag` — tag multiple snapshots
+- `DELETE /repos/{id}/snapshots/older-than/{days}` — cleanup old snapshots
+- `POST /repos/bulk-delete` — delete multiple repos (admin)
+
+**Suggested UI:**
+- Multi-select checkboxes on snapshot list
+- "Delete Selected" + "Tag Selected" buttons in toolbar
+- "Cleanup" modal with days slider for older-than deletion
+- Confirmation dialogs for destructive actions
+
 ## Backend API: 94 endpoints (Phase 30)
 
 **New endpoints (Snapshot Tags):**

@@ -9,6 +9,7 @@ from app.api import analysis as analysis_api
 from app.api import audit as audit_api
 from app.api import auth as auth_api
 from app.api import blame as blame_api
+from app.api import bulk as bulk_api
 from app.api import call_cycles as call_cycles_api
 from app.api import clones as clones_api
 from app.api import coupling as coupling_api
@@ -162,6 +163,7 @@ app.include_router(exports_api.router, prefix="/repos", tags=["exports"])
 app.include_router(quality_gates_api.router, prefix="/repos", tags=["quality-gates"])
 app.include_router(audit_api.router, tags=["audit"])
 app.include_router(tags_api.router, prefix="/repos", tags=["tags"])
+app.include_router(bulk_api.router, prefix="/repos", tags=["bulk"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

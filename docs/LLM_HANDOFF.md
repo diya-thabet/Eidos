@@ -478,3 +478,15 @@ Tags for organizing and filtering snapshots:
   - `GET /repos/{id}/snapshots/by-tag/{tag}` — find snapshots with tag (includes all tags per snapshot)
   - `GET /repos/tags/stats` — global tag usage counts (sorted desc)
 - 17 new tests
+
+## 29. Bulk Operations (Phase 31 / Phase10.7)
+
+Batch endpoints for managing large numbers of resources:
+- New router: `app/api/bulk.py` with 4 endpoints:
+  - `POST /repos/{id}/snapshots/bulk-delete` — delete up to 100 snapshots, returns per-item success/failure
+  - `POST /repos/{id}/snapshots/bulk-tag` — tag up to 100 snapshots, skips duplicates
+  - `DELETE /repos/{id}/snapshots/older-than/{days}` — time-based cleanup, returns deleted + remaining counts
+  - `POST /repos/bulk-delete` — delete up to 50 repos (admin)
+- Safety: max batch size enforced (100 snapshots, 50 repos)
+- Tags normalized to lowercase
+- 16 new tests
