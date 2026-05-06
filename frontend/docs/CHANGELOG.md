@@ -4,6 +4,17 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 101 endpoints (Phase 33)
+
+**New endpoint (SBOM):**
+- `GET /repos/{id}/snapshots/{sid}/export/sbom?format=cyclonedx|spdx` — SBOM download
+
+**Suggested UI:**
+- Add SBOM download button on snapshot export section
+- Format selector dropdown (CycloneDX / SPDX)
+- "Include dev deps" checkbox
+- File downloads as .json with proper naming
+
 ## Backend API: 100 endpoints (Phase 32)
 
 **New endpoints (Health Score):**

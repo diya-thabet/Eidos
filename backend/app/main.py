@@ -27,6 +27,7 @@ from app.api import quality_gates as quality_gates_api
 from app.api import reasoning as reasoning_api
 from app.api import repos
 from app.api import reviews as reviews_api
+from app.api import sbom as sbom_api
 from app.api import search as search_api
 from app.api import tags as tags_api
 from app.api import trends as trends_api
@@ -166,6 +167,7 @@ app.include_router(audit_api.router, tags=["audit"])
 app.include_router(tags_api.router, prefix="/repos", tags=["tags"])
 app.include_router(bulk_api.router, prefix="/repos", tags=["bulk"])
 app.include_router(health_score_api.router, prefix="/repos", tags=["health-score"])
+app.include_router(sbom_api.router, prefix="/repos", tags=["sbom"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

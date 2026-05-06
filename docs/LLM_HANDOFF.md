@@ -503,3 +503,15 @@ Weighted 0-100 health score with 9 category breakdown:
   - `GET /repos/{id}/snapshots/{sid}/health-score` — compute+persist or return cached (supports `?recompute=true`)
   - `GET /repos/{id}/health-history` — time-series for charts
 - 21 new tests: 10 algorithm + 11 API tests
+
+## 31. SBOM Generation (Phase 33 / Phase10.9)
+
+Software Bill of Materials in CycloneDX 1.5 and SPDX 2.3 formats:
+- New module: `app/exports/sbom.py` — `generate_cyclonedx()` + `generate_spdx()` + `_to_purl()`
+- PURL support for 8 ecosystems: pypi, npm, maven, crates, nuget, go, gem, composer
+- CycloneDX: full spec 1.5 with metadata (tools, component), scoped components, properties
+- SPDX: spec 2.3 with packages, external refs, DESCRIBES relationships
+- New API endpoint: `GET /repos/{id}/snapshots/{sid}/export/sbom?format=cyclonedx|spdx`
+- Query params: `format` (cyclonedx default), `include_dev` (bool, default true)
+- Content-Disposition header for download
+- 28 new tests: 7 PURL, 7 CycloneDX, 6 SPDX, 8 API endpoint
