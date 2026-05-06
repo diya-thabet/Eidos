@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.exports.generators import (
     generate_csv_zip,
     generate_markdown_report,
@@ -18,7 +19,7 @@ from app.exports.generators import (
 from app.storage.database import get_db
 from app.storage.models import Edge, File, Repo, RepoSnapshot, Symbol
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:export"))])
 
 
 async def _load_export_data(

@@ -9,10 +9,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import Repo, RepoSnapshot, SnapshotTag
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("write:snapshots"))])
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +150,7 @@ async def bulk_tag_snapshots(
     "/{repo_id}/snapshots/older-than/{days}",
     response_model=OlderThanResult,
     summary="Delete snapshots older than N days",
+    dependencies=[Depends(require_scope("delete:snapshots"))],
 )
 async def delete_older_than(
     repo_id: str,
@@ -202,6 +204,7 @@ async def delete_older_than(
     "/bulk-delete",
     response_model=BulkDeleteResult,
     summary="Bulk delete repos (admin)",
+    dependencies=[Depends(require_scope("admin:users"))],
 )
 async def bulk_delete_repos(
     body: BulkDeleteReposRequest,

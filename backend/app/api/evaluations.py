@@ -12,12 +12,13 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.guardrails.runner import run_snapshot_evaluation
 from app.storage.database import get_db
 from app.storage.models import Evaluation, RepoSnapshot
 from app.storage.schemas import EvalCheckOut, EvalReportOut
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 @router.post(

@@ -14,6 +14,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.docgen.models import DocType
 from app.docgen.orchestrator import generate_all_docs, generate_single_doc
@@ -26,7 +27,7 @@ from app.storage.schemas import (
     GenerateDocsResponse,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("write:docs"))])
 
 
 @router.post(

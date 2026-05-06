@@ -34,6 +34,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import (
     Edge,
@@ -47,7 +48,7 @@ from app.storage.models import (
     Symbol,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:export"))])
 
 # Schema version -- bump when the export format changes
 
@@ -135,6 +136,7 @@ async def export_portable(
     status_code=201,
     summary="Import a portable .eidos file",
     description="Upload a .eidos file to restore a snapshot without re-running ingestion.",
+    dependencies=[Depends(require_scope("write:repos"))],
 )
 
 async def import_portable(

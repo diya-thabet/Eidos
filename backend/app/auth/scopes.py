@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import HTTPException, Request
+from fastapi import Depends, HTTPException, Request
 
 # ---------------------------------------------------------------------------
 # Scope catalog
@@ -66,15 +66,21 @@ def require_scope(scope: str) -> Any:
     If the request came via JWT (not API key), all scopes are granted.
     If via API key, check the key's scopes.
 
+    This dependency depends on get_current_user to ensure auth runs first.
+
     Usage:
         @router.delete(
             "/{repo_id}/snapshots/{sid}",
             dependencies=[Depends(require_scope("delete:snapshots"))],
         )
     """
+    from app.auth.dependencies import get_current_user
 
-    async def _check(request: Request) -> None:
-        # If no scopes are set on request (JWT auth), allow everything
+    async def _check(
+        request: Request,
+        _user: Any = Depends(get_current_user),
+    ) -> None:
+        # After get_current_user runs, api_key_scopes is set for API keys
         granted_str = getattr(request.state, "api_key_scopes", None)
         if granted_str is None:
             return  # JWT users have full access

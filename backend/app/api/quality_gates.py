@@ -15,6 +15,7 @@ from app.analysis.gate_evaluator import (
     evaluate_gate,
     parse_gate_config,
 )
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import (
     CoverageReport,
@@ -25,7 +26,7 @@ from app.storage.models import (
     Symbol,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:gates"))])
 
 
 # ---------------------------------------------------------------------------
@@ -152,6 +153,7 @@ async def _get_snapshot_metrics(
     response_model=GateOut,
     status_code=201,
     summary="Create a quality gate",
+    dependencies=[Depends(require_scope("write:gates"))],
 )
 async def create_gate(
     repo_id: str,
@@ -215,6 +217,7 @@ async def get_gate(
     "/{repo_id}/quality-gates/{gate_id}",
     response_model=GateOut,
     summary="Update a quality gate",
+    dependencies=[Depends(require_scope("write:gates"))],
 )
 async def update_gate(
     repo_id: str,
@@ -243,6 +246,7 @@ async def update_gate(
     "/{repo_id}/quality-gates/{gate_id}",
     status_code=204,
     summary="Delete a quality gate",
+    dependencies=[Depends(require_scope("write:gates"))],
 )
 async def delete_gate(
     repo_id: str,
@@ -266,6 +270,7 @@ async def delete_gate(
     "/{repo_id}/snapshots/{snapshot_id}/evaluate-gate/{gate_id}",
     response_model=GateEvaluationOut,
     summary="Evaluate a snapshot against a quality gate",
+    dependencies=[Depends(require_scope("write:gates"))],
 )
 async def evaluate_snapshot_gate(
     repo_id: str,

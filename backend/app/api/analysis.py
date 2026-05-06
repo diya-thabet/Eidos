@@ -15,6 +15,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import Edge, RepoSnapshot, Symbol
 from app.storage.schemas import (
@@ -25,7 +26,7 @@ from app.storage.schemas import (
     SymbolOut,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 @router.get(

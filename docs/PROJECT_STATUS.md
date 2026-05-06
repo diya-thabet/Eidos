@@ -276,6 +276,7 @@ Eidos is designed to integrate with external tools at every layer:
 | Phase 31 (Health Score) | **2,336** | **132** | **55,350** | **100** |
 | Phase 32 (SBOM) | **2,364** | **134** | **55,960** | **101** |
 | Phase 33 (Incremental Health) | **2,384** | **136** | **56,752** | **104** |
+| RBAC Phase 1 (Scope Enforcement) | **2,403** | **136** | **57,290** | **104** |
 
 ---
 

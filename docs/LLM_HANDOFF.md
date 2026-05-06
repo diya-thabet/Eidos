@@ -549,3 +549,15 @@ Incremental health analysis with fingerprint-based diffing:
 | 9 | SBOM Generation | +28 | +1 | sbom.py (exports + api) |
 | 10 | Incremental Health | +20 | +3 | incremental_health.py (analysis + api) |
 | **Total** | **+265** | **+32** | |
+
+## 33. RBAC Phase 1: Scope Enforcement (Phase 35)
+
+Applied `require_scope()` to all 104 endpoints:
+- `require_scope()` now depends on `get_current_user` (ensures auth runs first, populates `request.state.api_key_scopes`)
+- **Router-level** scopes on 14 simple routers (analysis, search, diagrams, trends, deps, blame, call_cycles, dead_code, clones, coupling, exports, sbom, health_score)
+- **Per-endpoint** scopes on 8 mixed routers (repos, coverage, quality_gates, tags, bulk, incremental_health, portable, indexing)
+- All GET endpoints: `read:*` scopes; POST/PATCH: `write:*`; DELETE: `delete:*` or `write:*`; Admin: `admin:*`
+- Auth endpoints (`/auth/*`) have no scope requirement
+- New doc: `docs/PERMISSIONS.md` — full endpoint?scope matrix
+- 19 new integration tests verifying scope enforcement with real API keys
+- Backward compatible: JWT users bypass all scope checks, existing `*` keys unaffected

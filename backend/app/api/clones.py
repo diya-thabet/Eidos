@@ -13,10 +13,11 @@ from app.analysis.clone_detection import (
     detect_clones,
 )
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot, Symbol
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 # -----------------------------------------------------------------------

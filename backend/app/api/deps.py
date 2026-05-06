@@ -10,10 +10,11 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import Dependency, RepoSnapshot
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 class DependencyOut(BaseModel):

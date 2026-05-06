@@ -14,6 +14,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.reasoning.answer_builder import build_answer
 from app.reasoning.llm_client import LLMConfig, create_llm_client
@@ -22,7 +23,7 @@ from app.reasoning.retriever import retrieve_context
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 # ---------------------------------------------------------------------------

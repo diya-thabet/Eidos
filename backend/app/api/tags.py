@@ -7,10 +7,11 @@ from pydantic import BaseModel
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot, SnapshotTag
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:snapshots"))])
 
 
 # ---------------------------------------------------------------------------
@@ -55,6 +56,7 @@ class SnapshotWithTagsOut(BaseModel):
     response_model=TagOut,
     status_code=201,
     summary="Add a tag to a snapshot",
+    dependencies=[Depends(require_scope("write:snapshots"))],
 )
 async def add_tag(
     repo_id: str,
@@ -104,6 +106,7 @@ async def add_tag(
     "/{repo_id}/snapshots/{snapshot_id}/tags/{tag}",
     status_code=204,
     summary="Remove a tag from a snapshot",
+    dependencies=[Depends(require_scope("write:snapshots"))],
 )
 async def remove_tag(
     repo_id: str,

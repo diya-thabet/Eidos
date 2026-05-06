@@ -8,11 +8,12 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.exports.sbom import generate_cyclonedx, generate_spdx
 from app.storage.database import get_db
 from app.storage.models import Dependency, Repo, RepoSnapshot
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:export"))])
 
 
 @router.get(

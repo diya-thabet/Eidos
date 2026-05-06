@@ -53,6 +53,12 @@ This plan adds **9 high-value backend features** that are achievable under compa
 | 9 | SBOM Generation (CycloneDX) | 5h | High (compliance) | ? DONE |
 | 10 | Incremental Health Analysis | 6h | High (perf) | ? DONE |
 
+### RBAC Improvements
+
+| Phase | Feature | Est. | Priority | Status |
+|-------|---------|------|----------|--------|
+| 1 | Enforce Scopes on All Endpoints | 4h | P0 | ? DONE |
+
 **Total: ~52 hours** = ~6.5 working days
 
 ---

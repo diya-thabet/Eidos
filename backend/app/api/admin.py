@@ -16,11 +16,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.dependencies import require_role
+from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.storage.database import get_db
 from app.storage.models import Plan, UsageRecord, User, UserRole, UserSubscription
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("admin:users"))])
 
 
 # -------------------------------------------------------------------

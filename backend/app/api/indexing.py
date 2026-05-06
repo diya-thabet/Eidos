@@ -15,11 +15,12 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import RepoSnapshot, Summary
 from app.storage.schemas import PaginatedResponse, SummaryOut
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("write:snapshots"))])
 
 
 @router.get(

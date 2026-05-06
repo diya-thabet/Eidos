@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.reasoning.llm_client import LLMConfig, create_llm_client
 from app.reviews.reviewer import review_diff
@@ -29,7 +30,7 @@ from app.storage.schemas import (
     ReviewRequest,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("write:reviews"))])
 
 
 @router.post(

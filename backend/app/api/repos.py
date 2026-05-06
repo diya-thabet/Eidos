@@ -10,6 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.auth.crypto import encrypt
 from app.auth.dependencies import get_current_user
+from app.auth.scopes import require_scope
 from app.core.tasks import run_ingestion
 from app.storage.database import get_db
 from app.storage.models import (
@@ -41,7 +42,8 @@ from app.storage.schemas import (
 router = APIRouter()
 
 
-@router.post("", response_model=RepoOut, status_code=201)
+@router.post("", response_model=RepoOut, status_code=201,
+             dependencies=[Depends(require_scope("write:repos"))])
 async def create_repo(
     body: RepoCreate,
     db: AsyncSession = Depends(get_db),
@@ -69,7 +71,8 @@ async def create_repo(
     )
 
 
-@router.post("/{repo_id}/ingest", response_model=IngestOut, status_code=202)
+@router.post("/{repo_id}/ingest", response_model=IngestOut, status_code=202,
+             dependencies=[Depends(require_scope("write:snapshots"))])
 async def ingest_repo(
     repo_id: str,
     background: BackgroundTasks,
@@ -98,7 +101,8 @@ async def _run_ingestion_wrapper(snapshot_id: str) -> None:
     await run_ingestion(snapshot_id)
 
 
-@router.get("/{repo_id}/status", response_model=RepoStatus)
+@router.get("/{repo_id}/status", response_model=RepoStatus,
+            dependencies=[Depends(require_scope("read:repos"))])
 async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)) -> Any:
     repo = await db.get(Repo, repo_id)
     if repo is None:
@@ -131,7 +135,8 @@ async def repo_status(repo_id: str, db: AsyncSession = Depends(get_db)) -> Any:
     )
 
 
-@router.get("/{repo_id}/snapshots/{snapshot_id}", response_model=SnapshotDetail)
+@router.get("/{repo_id}/snapshots/{snapshot_id}", response_model=SnapshotDetail,
+            dependencies=[Depends(require_scope("read:snapshots"))])
 async def snapshot_detail(
     repo_id: str, snapshot_id: str, db: AsyncSession = Depends(get_db)
 ) -> Any:
@@ -166,7 +171,8 @@ async def snapshot_detail(
     )
 
 
-@router.delete("/{repo_id}", status_code=204)
+@router.delete("/{repo_id}", status_code=204,
+               dependencies=[Depends(require_scope("write:repos"))])
 async def delete_repo(
     repo_id: str,
     db: AsyncSession = Depends(get_db),
@@ -180,7 +186,8 @@ async def delete_repo(
     await db.commit()
 
 
-@router.patch("/{repo_id}", response_model=RepoOut)
+@router.patch("/{repo_id}", response_model=RepoOut,
+              dependencies=[Depends(require_scope("write:repos"))])
 async def update_repo(
     repo_id: str,
     body: RepoUpdate,
@@ -214,7 +221,8 @@ async def update_repo(
 # ---------------------------------------------------------------------------
 
 
-@router.get("", response_model=list[RepoOut])
+@router.get("", response_model=list[RepoOut],
+            dependencies=[Depends(require_scope("read:repos"))])
 async def list_repos(
     db: AsyncSession = Depends(get_db),
 ) -> Any:
@@ -245,6 +253,7 @@ async def list_repos(
     "/{repo_id}/snapshots",
     response_model=list[SnapshotOut],
     summary="List snapshots for a repo",
+    dependencies=[Depends(require_scope("read:snapshots"))],
 )
 async def list_snapshots(
     repo_id: str,
@@ -284,7 +293,8 @@ async def list_snapshots(
 # ---------------------------------------------------------------------------
 
 
-@router.delete("/{repo_id}/snapshots/{snapshot_id}", status_code=204)
+@router.delete("/{repo_id}/snapshots/{snapshot_id}", status_code=204,
+               dependencies=[Depends(require_scope("delete:snapshots"))])
 async def delete_snapshot(
     repo_id: str,
     snapshot_id: str,
@@ -308,6 +318,7 @@ async def delete_snapshot(
     "/{repo_id}/snapshots/{snapshot_id}/files",
     response_model=list[FileOut],
     summary="List all files in a snapshot",
+    dependencies=[Depends(require_scope("read:analysis"))],
 )
 async def list_files(
     repo_id: str,
@@ -344,6 +355,7 @@ async def list_files(
     "/{repo_id}/snapshots/{snapshot_id}/symbols/{fq_name:path}/callers",
     response_model=CallersResponse,
     summary="Get all callers of a symbol",
+    dependencies=[Depends(require_scope("read:analysis"))],
 )
 async def get_callers(
     repo_id: str,
@@ -393,6 +405,7 @@ async def get_callers(
     "/{repo_id}/snapshots/{snapshot_id}/symbols/{fq_name:path}/notes",
     response_model=SymbolNoteOut,
     summary="Add or update a note on a symbol",
+    dependencies=[Depends(require_scope("write:snapshots"))],
 )
 async def upsert_symbol_note(
     repo_id: str,
@@ -442,6 +455,7 @@ async def upsert_symbol_note(
     "/{repo_id}/snapshots/{snapshot_id}/symbols/{fq_name:path}/notes",
     response_model=list[SymbolNoteOut],
     summary="Get notes for a symbol",
+    dependencies=[Depends(require_scope("read:analysis"))],
 )
 async def get_symbol_notes(
     repo_id: str,

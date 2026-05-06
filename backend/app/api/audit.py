@@ -12,10 +12,11 @@ from pydantic import BaseModel
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import AuditEvent
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("admin:audit"))])
 
 
 # ---------------------------------------------------------------------------

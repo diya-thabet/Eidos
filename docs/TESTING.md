@@ -220,8 +220,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_health_score.py` | 21 | Health score: algorithm (perfect, complexity, error penalty, grades A/F, 9 categories, weights, coverage, empty, security), API (compute, persist, recompute, grade, categories, 404), history (empty, after compute, multiple, fields, limit) |
 | `test_sbom.py` | 28 | SBOM generation: PURL (pypi, npm, maven, cargo, nuget, go, unknown), CycloneDX (structure, metadata, components, fields, dev scope, purl, empty), SPDX (structure, creation, packages, fields, relationships, empty), API (default, explicit, spdx, exclude_dev, invalid, 404, content-disposition) |
 | `test_incremental_health.py` | 20 | Incremental health: fingerprint (deterministic, different rule/line/file, length), persist+diff (persist, added/fixed, copy unchanged), API persist (single, multiple, 404), list findings (empty, after persist, severity filter, file filter), diff (full, no changes, 404 prev, 404 snapshot, fields) |
+| `test_scope_enforcement.py` | 19 | RBAC scope enforcement: read-only key (can read, blocked from create/delete/ingest), write key (can create/delete, blocked from read/audit), full key (unrestricted), coverage/gates/bulk/tags/sbom/findings scope checks |
 
-### Updated Total: ~2,384 tests (2,378 passed + 6 skipped)
+### Updated Total: ~2,403 tests (2,397 passed + 6 skipped)
 
 ## Test Design Principles
 

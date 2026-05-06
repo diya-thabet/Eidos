@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.analysis.health_score import compute_health_score
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import (
     CoverageReport,
@@ -20,7 +21,7 @@ from app.storage.models import (
     Symbol,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:analysis"))])
 
 
 # ---------------------------------------------------------------------------

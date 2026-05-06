@@ -6,6 +6,8 @@ All notable changes to the Eidos frontend.
 
 ## Phase 10 Complete: 104 Backend Endpoints
 
+**RBAC Update**: All 104 endpoints now enforce API key scopes. API keys with limited scopes will be rejected from unauthorized endpoints (403). JWT users unaffected.
+
 **All 10 backend features from Phase 10 are now implemented. Summary of new capabilities to integrate:**
 
 | Feature | Endpoints | Key UI Suggestion |

@@ -16,10 +16,11 @@ from app.analysis.coverage_parser import (
     parse_coverage_json,
 )
 from app.api.dependencies import verify_snapshot
+from app.auth.scopes import require_scope
 from app.storage.database import get_db
 from app.storage.models import CoverageReport, RepoSnapshot
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scope("read:coverage"))])
 
 
 # ---------------------------------------------------------------------------
@@ -139,6 +140,7 @@ def _persist_coverage(
     response_model=CoverageSummaryOut,
     summary="Upload a coverage.py JSON report",
     status_code=201,
+    dependencies=[Depends(require_scope("write:coverage"))],
 )
 async def upload_coverage(
     repo_id: str,
@@ -246,6 +248,7 @@ async def get_coverage(
     "/{repo_id}/snapshots/{snapshot_id}/coverage",
     status_code=204,
     summary="Delete the coverage report for a snapshot",
+    dependencies=[Depends(require_scope("write:coverage"))],
 )
 async def delete_coverage(
     repo_id: str,
