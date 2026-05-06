@@ -251,6 +251,35 @@ class QualityGateResult(Base):
     )
 
 
+class AuditEvent(Base):
+    """Immutable audit log entry for compliance tracking."""
+
+    __tablename__ = "audit_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+    user_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    user_email: Mapped[str] = mapped_column(String(256), default="")
+    action: Mapped[str] = mapped_column(String(64), nullable=False)
+    resource_type: Mapped[str] = mapped_column(String(64), nullable=False)
+    resource_id: Mapped[str] = mapped_column(String(256), default="")
+    method: Mapped[str] = mapped_column(String(10), default="")
+    path: Mapped[str] = mapped_column(Text, default="")
+    status_code: Mapped[int] = mapped_column(Integer, default=200)
+    ip_address: Mapped[str] = mapped_column(String(64), default="")
+    user_agent: Mapped[str] = mapped_column(Text, default="")
+    metadata_json: Mapped[str] = mapped_column(Text, default="{}")
+    success: Mapped[bool] = mapped_column(Boolean, default=True)
+
+    __table_args__ = (
+        Index("ix_audit_user_time", "user_id", "timestamp"),
+        Index("ix_audit_action_time", "action", "timestamp"),
+        Index("ix_audit_resource", "resource_type", "resource_id"),
+    )
+
+
 # -------------------------------------------------------------------
 # Plans & Metering
 # -------------------------------------------------------------------

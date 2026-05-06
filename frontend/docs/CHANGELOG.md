@@ -4,6 +4,21 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 87 endpoints (Phase 27)
+
+**New endpoints to integrate (Audit Log):**
+- `GET /admin/audit-log` — paginated query with filters (user_id, action, resource_type, success, method)
+- `GET /admin/audit-log/export` — CSV download
+- `GET /admin/audit-log/stats` — total events, unique users, top actions, failures
+- `DELETE /admin/audit-log/purge?older_than_days=90` — retention management
+
+**Suggested UI:**
+- Add **Audit Log** page under admin section
+- Filterable table with columns: timestamp, user, action, resource, method, status (success/fail badge)
+- CSV export button
+- Stats cards at top (total events, unique users, recent failures)
+- Purge form with days input + confirmation dialog
+
 ## Backend API: 83 endpoints (Phase 26)
 
 **New endpoints to integrate (Quality Gates):**

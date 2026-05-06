@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (83)
+## API Endpoints (87)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -84,6 +84,10 @@ pytest -v
 | PATCH | `/repos/{id}/quality-gates/{gid}` | Update gate |
 | DELETE | `/repos/{id}/quality-gates/{gid}` | Delete gate |
 | POST | `/repos/{id}/snapshots/{sid}/evaluate-gate/{gid}` | Evaluate snapshot against gate |
+| GET | `/admin/audit-log` | Query audit events (filters, pagination) |
+| GET | `/admin/audit-log/export` | Export audit log as CSV |
+| GET | `/admin/audit-log/stats` | Audit statistics |
+| DELETE | `/admin/audit-log/purge` | Purge old events |
 | GET | `/repos/{id}/snapshots/{sid}/summaries` | List summaries |
 | GET | `/repos/{id}/snapshots/{sid}/summaries/{type}/{id}` | Get specific summary |
 | POST | `/repos/{id}/snapshots/{sid}/ask` | Ask a question (Q&A engine) |
@@ -147,6 +151,7 @@ backend/
       exports.py          # CSV/ZIP, SARIF, Markdown export
       coverage.py         # pytest-cov upload, get, history
       quality_gates.py    # Quality gate CRUD + evaluate
+      audit.py            # Audit log query, export, stats, purge
       diagrams.py         # Mermaid class and module diagrams
       trends.py           # Health score trend tracking
       portable.py         # Portable .eidos export/import
@@ -258,16 +263,17 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 51,794 |
-| Application code | 123 files / 25,163 lines |
-| Test code | 89 files / 26,631 lines |
-| Tests (CI-verified) | 2,193 |
-| API endpoints | 83 |
+| Total lines of code | 52,607 |
+| Application code | 125 files / 25,603 lines |
+| Test code | 90 files / 27,004 lines |
+| Tests (CI-verified) | 2,233 |
+| API endpoints | 87 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |
 | Coverage tracking | pytest-cov, line+branch |
 | Quality gates | Configurable per-repo CI/CD gates |
+| Audit log | Full mutation trail, CSV export, stats |
 | Test-to-code ratio | 1.07:1 |
 
 ## Documentation

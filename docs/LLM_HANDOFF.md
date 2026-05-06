@@ -426,3 +426,18 @@ Configurable quality gates that CI/CD can evaluate against:
 - Evaluation persists result in `QualityGateResult` for history
 - Returns "passed"/"failed" status with per-check breakdown
 - 38 new tests: 11 evaluator unit tests, 5 config parser tests, 22 API tests
+
+## 25. Audit Log (Phase 27 / Phase10.3)
+
+Immutable audit trail for enterprise compliance (SOC 2, ISO 27001):
+- New DB model: `AuditEvent` with indexes on (user_id, timestamp), (action, timestamp), (resource_type, resource_id)
+- New module: `app/core/audit.py` — helpers for recording events, classifying requests, and filtering
+- `should_audit(method, path)` — skips GETs and noise paths (/health, /metrics)
+- `_classify_request(method, path)` — regex-based classifier returns (action, resource_type, resource_id)
+- `record_audit_event(db, ...)` — writes an audit row (called from endpoints or middleware)
+- New API router: `app/api/audit.py` with 4 endpoints:
+  - `GET /admin/audit-log` — paginated query with 7 filters (user_id, action, resource_type, resource_id, success, method, limit/offset)
+  - `GET /admin/audit-log/export` — CSV download (up to 10k rows)
+  - `GET /admin/audit-log/stats` — total events, unique users, top actions, failure count
+  - `DELETE /admin/audit-log/purge?older_than_days=90` — retention management
+- 40 new tests: 9 should_audit, 11 classify, 2 record, 8 query, 4 export, 2 stats, 4 purge

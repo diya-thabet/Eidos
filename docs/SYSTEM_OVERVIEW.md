@@ -280,8 +280,8 @@ Each rule gives a severity (info, warning, error) and a suggestion for how to fi
 | Python source lines | 50,315 |
 | Application files | 121 |
 | Test files | 88 |
-| Automated tests | 2,155 |
-| API endpoints | 83 |
+| Automated tests | 2,233 |
+| API endpoints | 87 |
 | Language parsers | 9 (all deeply validated) |
 | Code health rules | 66 |
 | Export formats | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |

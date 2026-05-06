@@ -212,8 +212,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_exports.py` | 38 | Export enhancements: CSV ZIP (valid zip, headers, content, deps), SARIF (structure, rules, locations, serialization), Markdown (structure, findings, severity counts, truncation), 3 API endpoints, edge cases |
 | `test_coverage.py` | 36 | Test coverage tracking: parser (totals, files, sorting, normalization, errors), grade calculation, upload/get/delete API, history endpoint, cascading delete |
 | `test_quality_gates.py` | 38 | Quality gates: evaluator unit tests (pass/fail/mixed/empty/blocked rules), config parser, CRUD endpoints (create/list/get/update/delete), evaluation endpoint, schema endpoint |
+| `test_audit.py` | 40 | Audit log: should_audit/classify helpers, record_audit_event, query endpoint (filters, pagination), CSV export, stats, purge |
 
-### Updated Total: ~2,193 tests (2,187 passed + 6 skipped)
+### Updated Total: ~2,233 tests (2,227 passed + 6 skipped)
 
 ## Test Design Principles
 
