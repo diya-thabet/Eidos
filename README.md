@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (87)
+## API Endpoints (88)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -118,6 +118,7 @@ pytest -v
 | POST | `/auth/api-keys` | Create API key |
 | GET | `/auth/api-keys` | List API keys |
 | DELETE | `/auth/api-keys/{id}` | Revoke API key |
+| GET | `/auth/api-keys/scopes` | List available scopes |
 | POST | `/webhooks/github` | GitHub push webhook |
 | POST | `/webhooks/gitlab` | GitLab push webhook |
 | POST | `/webhooks/push` | Generic push webhook |
@@ -263,11 +264,11 @@ frontend/                 # Next.js frontend (in development)
 
 | Metric | Value |
 |--------|-------|
-| Total lines of code | 52,607 |
-| Application code | 125 files / 25,603 lines |
-| Test code | 90 files / 27,004 lines |
-| Tests (CI-verified) | 2,233 |
-| API endpoints | 87 |
+| Total lines of code | 53,173 |
+| Application code | 126 files / 25,603 lines |
+| Test code | 91 files / 27,570 lines |
+| Tests (CI-verified) | 2,261 |
+| API endpoints | 88 |
 | Language parsers | 9 |
 | Code health rules | 66 |
 | Export formats | 5 |

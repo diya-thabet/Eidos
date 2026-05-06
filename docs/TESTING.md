@@ -213,8 +213,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_coverage.py` | 36 | Test coverage tracking: parser (totals, files, sorting, normalization, errors), grade calculation, upload/get/delete API, history endpoint, cascading delete |
 | `test_quality_gates.py` | 38 | Quality gates: evaluator unit tests (pass/fail/mixed/empty/blocked rules), config parser, CRUD endpoints (create/list/get/update/delete), evaluation endpoint, schema endpoint |
 | `test_audit.py` | 40 | Audit log: should_audit/classify helpers, record_audit_event, query endpoint (filters, pagination), CSV export, stats, purge |
+| `test_api_key_scopes.py` | 28 | API key scopes: parse/has/validate helpers, create with scopes/expiration, list with scopes, scope enforcement, expiration rejection, usage tracking |
 
-### Updated Total: ~2,233 tests (2,227 passed + 6 skipped)
+### Updated Total: ~2,261 tests (2,255 passed + 6 skipped)
 
 ## Test Design Principles
 

@@ -52,7 +52,8 @@ async def get_current_user(
     # Try API key first (for CI/CD)
     api_key = request.headers.get("X-API-Key")
     if api_key:
-        return await _authenticate_api_key(api_key, db)
+        user = await _authenticate_api_key(api_key, request, db)
+        return user
 
     # Fall back to JWT
     token = _extract_token(request)
@@ -70,11 +71,11 @@ async def get_current_user(
     if not user_id:
         raise HTTPException(status_code=401, detail="Invalid token payload")
 
-    user = await db.get(User, user_id)
-    if user is None:
+    found_user = await db.get(User, user_id)
+    if found_user is None:
         raise HTTPException(status_code=401, detail="User not found")
 
-    return user
+    return found_user
 
 
 async def get_optional_user(
@@ -198,9 +199,10 @@ def _anonymous_user() -> User:
     return u
 
 
-async def _authenticate_api_key(raw_key: str, db: AsyncSession) -> User:
-    """Validate an API key and return the owning user."""
+async def _authenticate_api_key(raw_key: str, request: Request, db: AsyncSession) -> User:
+    """Validate an API key, store scopes on request, track usage."""
     import hashlib
+    from datetime import UTC, datetime
 
     from app.storage.models import ApiKey
 
@@ -211,6 +213,24 @@ async def _authenticate_api_key(raw_key: str, db: AsyncSession) -> User:
     api_key = result.scalar_one_or_none()
     if api_key is None:
         raise HTTPException(status_code=401, detail="Invalid API key")
+
+    # Check expiration
+    if api_key.expires_at is not None:
+        now = datetime.now(UTC)
+        if api_key.expires_at.tzinfo is None:
+            # Naive datetime comparison
+            exp = api_key.expires_at.replace(tzinfo=UTC)
+        else:
+            exp = api_key.expires_at
+        if now > exp:
+            raise HTTPException(status_code=401, detail="API key expired")
+
+    # Store scopes on request state for scope checking
+    request.state.api_key_scopes = api_key.scopes or "*"
+
+    # Track usage
+    api_key.last_used_at = datetime.now(UTC)
+    api_key.usage_count = (api_key.usage_count or 0) + 1
 
     user = await db.get(User, api_key.user_id)
     if user is None:

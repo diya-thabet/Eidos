@@ -236,19 +236,43 @@ async def logout() -> Any:
 )
 async def create_api_key(
     name: str = Query(description="A label for this key (e.g. 'CI pipeline')"),
+    scopes: str = Query(
+        default="*",
+        description="Comma-separated scopes (e.g. 'read:repos,read:analysis'). '*' = full access.",
+    ),
+    expires_in_days: int | None = Query(
+        default=None, ge=1, le=365,
+        description="Key expires after N days. Null = never expires.",
+    ),
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Any:
-    """Create a new API key. The raw key is returned only once."""
+    """Create a new API key with optional scopes and expiration."""
     import hashlib
     import uuid
+    from datetime import timedelta
 
+    from app.auth.scopes import validate_scopes
     from app.storage.models import ApiKey
+
+    # Validate scopes
+    scope_list = [s.strip() for s in scopes.split(",") if s.strip()]
+    invalid = validate_scopes(scope_list)
+    if invalid:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid scopes: {', '.join(invalid)}",
+        )
 
     key_id = uuid.uuid4().hex[:12]
     raw_key = f"eidos_{secrets.token_urlsafe(32)}"
     prefix = raw_key[:12]
     key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+
+    expires_at = None
+    if expires_in_days:
+        from datetime import UTC, datetime
+        expires_at = datetime.now(UTC) + timedelta(days=expires_in_days)
 
     db.add(ApiKey(
         id=key_id,
@@ -256,10 +280,19 @@ async def create_api_key(
         name=name,
         key_hash=key_hash,
         prefix=prefix,
+        scopes=",".join(scope_list),
+        expires_at=expires_at,
     ))
     await db.commit()
 
-    return {"id": key_id, "name": name, "key": raw_key, "prefix": prefix}
+    return {
+        "id": key_id,
+        "name": name,
+        "key": raw_key,
+        "prefix": prefix,
+        "scopes": scope_list,
+        "expires_at": expires_at.isoformat() if expires_at else None,
+    }
 
 
 @router.get(
@@ -285,6 +318,10 @@ async def list_api_keys(
             "id": k.id,
             "name": k.name,
             "prefix": k.prefix,
+            "scopes": (k.scopes or "*").split(","),
+            "expires_at": k.expires_at.isoformat() if k.expires_at else None,
+            "last_used_at": k.last_used_at.isoformat() if k.last_used_at else None,
+            "usage_count": k.usage_count or 0,
             "created_at": k.created_at.isoformat() if k.created_at else "",
         }
         for k in keys
@@ -314,3 +351,14 @@ async def revoke_api_key(
     key.is_active = False
     await db.commit()
     return {"detail": "API key revoked"}
+
+
+@router.get(
+    "/api-keys/scopes",
+    summary="List available API key scopes",
+    description="Returns all valid scopes that can be assigned to API keys.",
+)
+async def list_scopes() -> Any:
+    """Return the scope catalog."""
+    from app.auth.scopes import SCOPES
+    return {"scopes": SCOPES}

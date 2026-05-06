@@ -441,3 +441,16 @@ Immutable audit trail for enterprise compliance (SOC 2, ISO 27001):
   - `GET /admin/audit-log/stats` — total events, unique users, top actions, failure count
   - `DELETE /admin/audit-log/purge?older_than_days=90` — retention management
 - 40 new tests: 9 should_audit, 11 classify, 2 record, 8 query, 4 export, 2 stats, 4 purge
+
+## 26. API Key Scoping & Permissions (Phase 28 / Phase10.4)
+
+Fine-grained API key permissions:
+- Extended `ApiKey` model with: `scopes` (comma-separated), `expires_at`, `last_used_at`, `usage_count`
+- New module: `app/auth/scopes.py` — 17 defined scopes, `parse_scopes`, `has_scope`, `validate_scopes`, `require_scope` dependency
+- `_authenticate_api_key` now: checks expiration, stores scopes on `request.state.api_key_scopes`, increments usage_count + last_used_at
+- `create_api_key` now accepts `scopes` (comma-separated, validated) and `expires_in_days` (1-365)
+- `list_api_keys` now returns: scopes[], expires_at, last_used_at, usage_count
+- New endpoint: `GET /auth/api-keys/scopes` — returns full scope catalog for UI
+- JWT users bypass all scope checks (full access), only API keys are constrained
+- Backward compatible: existing keys default to `scopes="*"` (full access)
+- 28 new tests: 6 parse, 4 has_scope, 3 validate, 4 create, 2 list, 1 scopes endpoint, 4 enforcement, 4 internal

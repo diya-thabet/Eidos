@@ -4,6 +4,18 @@ All notable changes to the Eidos frontend.
 
 ---
 
+## Backend API: 88 endpoints (Phase 28)
+
+**Updated endpoints (API Key Scopes):**
+- `POST /auth/api-keys` — now accepts `scopes` (comma-separated) and `expires_in_days` params
+- `GET /auth/api-keys` — now returns scopes[], expires_at, last_used_at, usage_count
+- `GET /auth/api-keys/scopes` — **NEW** returns scope catalog for dynamic form
+
+**Suggested UI:**
+- Update API key creation form: multi-select for scopes (from /scopes endpoint), optional expiration date picker
+- API key list table: add columns for scopes (badge chips), expires_at, last_used, usage count
+- Scope chips with tooltips showing description
+
 ## Backend API: 87 endpoints (Phase 27)
 
 **New endpoints to integrate (Audit Log):**
