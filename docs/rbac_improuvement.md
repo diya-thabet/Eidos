@@ -224,7 +224,7 @@ Check `RepoPermission` table in addition to ownership.
 
 ---
 
-### Phase 5: Team / Organization Model (6h)
+### Phase 5: Team / Organization Model (6h) ? DONE
 
 **Goal**: Group users into teams, assign team-level repo access.
 

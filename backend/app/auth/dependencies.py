@@ -120,7 +120,7 @@ async def require_repo_access(
         return user
 
     # Check resource-level permissions
-    from app.storage.models import RepoPermission
+    from app.storage.models import RepoPermission, TeamMember, TeamRepoAccess
 
     perm_result = await db.execute(
         select(RepoPermission).where(
@@ -129,6 +129,18 @@ async def require_repo_access(
         )
     )
     if perm_result.scalar_one_or_none() is not None:
+        return user
+
+    # Check team-level access
+    team_result = await db.execute(
+        select(TeamRepoAccess)
+        .join(TeamMember, TeamMember.team_id == TeamRepoAccess.team_id)
+        .where(
+            TeamRepoAccess.repo_id == repo_id,
+            TeamMember.user_id == user.id,
+        )
+    )
+    if team_result.scalar_one_or_none() is not None:
         return user
 
     raise HTTPException(status_code=404, detail="Repo not found")

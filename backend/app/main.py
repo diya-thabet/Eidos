@@ -32,6 +32,7 @@ from app.api import reviews as reviews_api
 from app.api import sbom as sbom_api
 from app.api import search as search_api
 from app.api import tags as tags_api
+from app.api import teams as teams_api
 from app.api import trends as trends_api
 from app.api import webhooks as webhook_api
 from app.api.metrics import MetricsMiddleware
@@ -172,6 +173,7 @@ app.include_router(health_score_api.router, prefix="/repos", tags=["health-score
 app.include_router(sbom_api.router, prefix="/repos", tags=["sbom"])
 app.include_router(incremental_health_api.router, prefix="/repos", tags=["incremental-health"])
 app.include_router(permissions_api.router, prefix="/repos", tags=["permissions"])
+app.include_router(teams_api.router, prefix="/teams", tags=["teams"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
 app.include_router(metrics_router, tags=["monitoring"])

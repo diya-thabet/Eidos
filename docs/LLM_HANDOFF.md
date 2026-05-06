@@ -597,3 +597,23 @@ Repo sharing with viewer/editor/owner access levels:
 - Access chain: admin role > repo owner > RepoPermission entry
 - Validation: invalid level 400, self-grant 400, target not found 404
 - 16 new tests
+
+## 37. RBAC Phase 5: Team / Organization Model (Phase 39)
+
+Full team CRUD with members and repo access:
+- 3 new DB models: `Team`, `TeamMember`, `TeamRepoAccess` + `TeamRole` enum
+- New API router: `app/api/teams.py` with 10 endpoints:
+  - `POST /teams` — create (creator becomes admin member)
+  - `GET /teams` — list my teams
+  - `GET /teams/{id}` — details (members only)
+  - `PATCH /teams/{id}` — update (team admin only)
+  - `DELETE /teams/{id}` — delete (team admin only)
+  - `GET /teams/{id}/members` — list members
+  - `POST /teams/{id}/members` — add member (team admin)
+  - `DELETE /teams/{id}/members/{uid}` — remove member (team admin)
+  - `POST /teams/{id}/repos` — grant team repo access (team admin)
+  - `GET /teams/{id}/repos` — list team repo access
+- Updated `require_repo_access()` to check team-level access
+- Access chain: admin > owner > RepoPermission > TeamRepoAccess
+- App admins bypass team admin checks
+- 20 new tests

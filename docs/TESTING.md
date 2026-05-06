@@ -224,8 +224,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_role_scopes.py` | 25 | Role-to-scope mapping: unit (superadmin/admin/employee/support/user scopes, get_role_scopes, unknown defaults, all valid), integration (support read-only, cannot write/admin, can audit; user can write, cannot admin; admin full access) |
 | `test_protected_decorator.py` | 13 | Unified protected() decorator: scope-only (admin allowed, user/support blocked), role-only (admin allowed, user/support blocked), repo ownership (owner allowed, non-owner 404, admin bypasses, support blocked by scope), no-restrictions, combined checks |
 | `test_permissions.py` | 16 | Resource-level permissions: grant (viewer, editor, admin can, non-owner blocked, invalid level, self blocked, target not found, update), list (empty, after grant, non-owner blocked), revoke (success, not found, non-owner blocked), repo access integration (viewer can read) |
+| `test_teams.py` | 20 | Teams: CRUD (create, empty name, list, list only mine, get, get non-member, update, update non-admin, delete, delete non-admin), members (add, duplicate, list, remove, not found), repo access (grant, invalid level, list, team grants read), admin bypass |
 
-### Updated Total: ~2,457 tests (2,451 passed + 6 skipped)
+### Updated Total: ~2,477 tests (2,471 passed + 6 skipped)
 
 ## Test Design Principles
 

@@ -360,6 +360,76 @@ class RepoPermission(Base):
     )
 
 
+class TeamRole(enum.StrEnum):
+    admin = "admin"
+    member = "member"
+
+
+class Team(Base):
+    """A team/organization grouping users."""
+
+    __tablename__ = "teams"
+
+    id: Mapped[str] = mapped_column(String(48), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="")
+    created_by: Mapped[str] = mapped_column(String(48), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+
+
+class TeamMember(Base):
+    """Membership link between a user and a team."""
+
+    __tablename__ = "team_members"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    team_id: Mapped[str] = mapped_column(
+        ForeignKey("teams.id", ondelete="CASCADE"), nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    role: Mapped[str] = mapped_column(String(16), default="member")
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    team = relationship("Team", back_populates="members")
+
+    __table_args__ = (
+        UniqueConstraint("team_id", "user_id", name="uq_team_user"),
+        Index("ix_team_member_user", "user_id"),
+    )
+
+
+class TeamRepoAccess(Base):
+    """Grants a team access to a repo at a specific level."""
+
+    __tablename__ = "team_repo_access"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    team_id: Mapped[str] = mapped_column(
+        ForeignKey("teams.id", ondelete="CASCADE"), nullable=False,
+    )
+    repo_id: Mapped[str] = mapped_column(
+        ForeignKey("repos.id", ondelete="CASCADE"), nullable=False,
+    )
+    level: Mapped[str] = mapped_column(String(16), default="viewer")
+    granted_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("team_id", "repo_id", name="uq_team_repo"),
+        Index("ix_team_repo_team", "team_id"),
+    )
+
+
 class AuditEvent(Base):
     """Immutable audit log entry for compliance tracking."""
 
