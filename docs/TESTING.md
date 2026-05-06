@@ -223,8 +223,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_scope_enforcement.py` | 19 | RBAC scope enforcement: read-only key (can read, blocked from create/delete/ingest), write key (can create/delete, blocked from read/audit), full key (unrestricted), coverage/gates/bulk/tags/sbom/findings scope checks |
 | `test_role_scopes.py` | 25 | Role-to-scope mapping: unit (superadmin/admin/employee/support/user scopes, get_role_scopes, unknown defaults, all valid), integration (support read-only, cannot write/admin, can audit; user can write, cannot admin; admin full access) |
 | `test_protected_decorator.py` | 13 | Unified protected() decorator: scope-only (admin allowed, user/support blocked), role-only (admin allowed, user/support blocked), repo ownership (owner allowed, non-owner 404, admin bypasses, support blocked by scope), no-restrictions, combined checks |
+| `test_permissions.py` | 16 | Resource-level permissions: grant (viewer, editor, admin can, non-owner blocked, invalid level, self blocked, target not found, update), list (empty, after grant, non-owner blocked), revoke (success, not found, non-owner blocked), repo access integration (viewer can read) |
 
-### Updated Total: ~2,441 tests (2,435 passed + 6 skipped)
+### Updated Total: ~2,457 tests (2,451 passed + 6 skipped)
 
 ## Test Design Principles
 

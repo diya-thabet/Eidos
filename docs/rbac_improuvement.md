@@ -179,7 +179,7 @@ This eliminates the need to stack multiple `Depends(...)` calls.
 
 ---
 
-### Phase 4: Resource-Level Permissions (6h)
+### Phase 4: Resource-Level Permissions (6h) ? DONE
 
 **Goal**: Share repos with specific users with specific access levels.
 

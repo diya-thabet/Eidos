@@ -583,3 +583,17 @@ Single decorator combining scope + role + repo ownership checks:
 - Returns 403 for role/scope failures, 404 for ownership (prevents leaking repo existence)
 - Uses FastAPI `Depends(get_db)` for testability (works with test DB overrides)
 - 13 new tests: scope-only, role-only, ownership, combined, no-restrictions
+
+## 36. RBAC Phase 4: Resource-Level Permissions (Phase 38)
+
+Repo sharing with viewer/editor/owner access levels:
+- New DB model: `RepoPermission` with unique constraint (repo_id, user_id)
+- New enum: `RepoPermissionLevel` (viewer, editor, owner)
+- New API router: `app/api/permissions.py` with 3 endpoints:
+  - `POST /repos/{id}/permissions` — grant/update access (protected: write:repos + repo owner)
+  - `GET /repos/{id}/permissions` — list permissions (protected: read:repos + repo owner)
+  - `DELETE /repos/{id}/permissions/{user_id}` — revoke (protected: write:repos + repo owner)
+- Updated `require_repo_access()` in dependencies.py to check `RepoPermission` table
+- Access chain: admin role > repo owner > RepoPermission entry
+- Validation: invalid level 400, self-grant 400, target not found 404
+- 16 new tests

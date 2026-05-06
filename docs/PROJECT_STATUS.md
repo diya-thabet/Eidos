@@ -279,6 +279,7 @@ Eidos is designed to integrate with external tools at every layer:
 | RBAC Phase 1 (Scope Enforcement) | **2,403** | **136** | **57,290** | **104** |
 | RBAC Phase 2 (Role-to-Scope) | **2,428** | **136** | **57,730** | **104** |
 | RBAC Phase 3 (Protected Decorator) | **2,441** | **136** | **58,100** | **104** |
+| RBAC Phase 4 (Resource Permissions) | **2,457** | **137** | **58,650** | **107** |
 
 ---
 

@@ -99,7 +99,7 @@ async def require_repo_access(
     """
     Verify the current user owns (or has access to) the repo.
 
-    Superadmins and admins can access any repo.
+    Checks: admin role > owner > RepoPermission.
     Raises 404 (not 403) to avoid leaking existence of other repos.
     """
     if not settings.auth_enabled:
@@ -109,15 +109,29 @@ async def require_repo_access(
     if _role_level(user.role) >= _ROLE_HIERARCHY[UserRole.admin]:
         return user
 
+    # Check ownership
     result = await db.execute(
         select(Repo).where(
             Repo.id == repo_id,
             Repo.owner_id == user.id,
         )
     )
-    if result.scalar_one_or_none() is None:
-        raise HTTPException(status_code=404, detail="Repo not found")
-    return user
+    if result.scalar_one_or_none() is not None:
+        return user
+
+    # Check resource-level permissions
+    from app.storage.models import RepoPermission
+
+    perm_result = await db.execute(
+        select(RepoPermission).where(
+            RepoPermission.repo_id == repo_id,
+            RepoPermission.user_id == user.id,
+        )
+    )
+    if perm_result.scalar_one_or_none() is not None:
+        return user
+
+    raise HTTPException(status_code=404, detail="Repo not found")
 
 
 def require_role(*allowed_roles: str) -> Any:

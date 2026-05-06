@@ -40,7 +40,7 @@ pytest -v
 | **Q&A engine** | Ask natural language questions about the codebase |
 | **Export** | JSON, .eidos, CSV/ZIP, SARIF (GitHub Code Scanning), Markdown report |
 
-## API Endpoints (104)
+## API Endpoints (107)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -88,6 +88,9 @@ pytest -v
 | POST | `/repos/{id}/snapshots/{sid}/health/findings` | Persist health findings |
 | GET | `/repos/{id}/snapshots/{sid}/health/findings` | List persisted findings (filterable) |
 | GET | `/repos/{id}/snapshots/{sid}/health/diff/{prev}` | Health findings diff between snapshots |
+| POST | `/repos/{id}/permissions` | Grant user access to repo |
+| GET | `/repos/{id}/permissions` | List repo permissions |
+| DELETE | `/repos/{id}/permissions/{user_id}` | Revoke user access |
 | GET | `/repos/{id}/snapshots/{sid}/contributors` | Git blame contributors |
 | GET | `/repos/{id}/snapshots/{sid}/hotspots` | Churn × complexity hotspots |
 | POST | `/repos/{id}/snapshots/{sid}/coverage` | Upload pytest-cov JSON report |

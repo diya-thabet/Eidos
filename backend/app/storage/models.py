@@ -329,6 +329,37 @@ class HealthFindingPersisted(Base):
     )
 
 
+class RepoPermissionLevel(enum.StrEnum):
+    viewer = "viewer"
+    editor = "editor"
+    owner = "owner"
+
+
+class RepoPermission(Base):
+    """Resource-level permission granting a user access to a repo."""
+
+    __tablename__ = "repo_permissions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    repo_id: Mapped[str] = mapped_column(
+        ForeignKey("repos.id", ondelete="CASCADE"), nullable=False,
+    )
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), nullable=False,
+    )
+    level: Mapped[str] = mapped_column(String(16), nullable=False, default="viewer")
+    granted_by: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    granted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC),
+    )
+
+    __table_args__ = (
+        UniqueConstraint("repo_id", "user_id", name="uq_repo_user_perm"),
+        Index("ix_repo_perm_user", "user_id"),
+        Index("ix_repo_perm_repo", "repo_id"),
+    )
+
+
 class AuditEvent(Base):
     """Immutable audit log entry for compliance tracking."""
 
