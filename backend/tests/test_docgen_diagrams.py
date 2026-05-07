@@ -7,8 +7,6 @@ Tests all 5 Mermaid diagram generators + config + simplification.
 
 from __future__ import annotations
 
-import pytest
-
 from app.docgen.diagrams import (
     DiagramConfig,
     DiagramType,
@@ -19,7 +17,6 @@ from app.docgen.diagrams import (
     generate_flowchart,
     generate_sequence_diagram,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test data

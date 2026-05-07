@@ -8,8 +8,6 @@ GitHub Wiki exporter, and the export API endpoint.
 
 from __future__ import annotations
 
-import pytest
-
 from app.docgen.formats.confluence import render_confluence
 from app.docgen.formats.docusaurus import (
     build_docusaurus_structure,
@@ -22,7 +20,6 @@ from app.docgen.formats.github_wiki import (
 )
 from app.docgen.formats.html_renderer import render_html
 from app.docgen.models import DocSection, DocType, GeneratedDocument
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -244,10 +241,10 @@ class TestGitHubWiki:
 class TestFormatSelection:
 
     def test_all_formats_importable(self):
-        from app.docgen.formats.html_renderer import render_html
-        from app.docgen.formats.docusaurus import render_docusaurus
         from app.docgen.formats.confluence import render_confluence
+        from app.docgen.formats.docusaurus import render_docusaurus
         from app.docgen.formats.github_wiki import render_github_wiki
+        from app.docgen.formats.html_renderer import render_html
         assert all([render_html, render_docusaurus, render_confluence, render_github_wiki])
 
     def test_markdown_still_works(self):
