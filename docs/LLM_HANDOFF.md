@@ -658,3 +658,17 @@ Full RBAC documentation:
 - Updated orchestrator.py to generate new types in `generate_all_docs` and `generate_single_doc`
 - New API endpoint: `POST /repos/{id}/snapshots/{sid}/docs/changelog?previous_snapshot_id=...`
 - 42 new tests (all pure unit, no DB needed)
+
+## 42. DocGen Phase 2: Diagram Embedding (Phase 44)
+
+Mermaid diagram generators for documentation:
+- New module: `app/docgen/diagrams.py` with 5 generators:
+  - `generate_dependency_graph()` — module-level flowchart with auto-simplification
+  - `generate_class_diagram()` — UML class diagram per module (classes, methods, inheritance)
+  - `generate_sequence_diagram()` — call sequence from entry point (BFS traversal)
+  - `generate_flowchart()` — call tree flowchart from any function
+  - `generate_er_diagram()` — entity-relationship from class relationships
+- `DiagramConfig` dataclass: max_nodes(25), max_edges(50), collapse_threshold(3), direction(TD/LR)
+- `MermaidDiagram` dataclass with `.to_markdown()` renderer
+- Auto-simplification: collapses small modules, limits nodes/edges, BFS traversal with depth limits
+- 42 new tests

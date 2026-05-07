@@ -228,8 +228,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_permission_cache.py` | 12 | Permission cache: set/get, missing key, TTL expiry, invalidate key/user/repo, clear, maxsize eviction, stats, key format, global singleton |
 | `test_audit_integration.py` | 6 | Audit integration: helpers (build denied/change events), denial logging (scope denial logged, role denial logged), permission change logging (grant logged, revoke logged) |
 | `test_docgen_enhanced.py` | 42 | Enhanced doc types: API Reference (10 tests: doc type, title, scope, sections, overview, classes, methods, metadata, render, empty), Onboarding (11 tests: type, title, sections, welcome, setup, structure, entry points, flows, where, first steps, render), Changelog (10 tests: type, scope, sections, added, removed, modified, breaking, metadata, no changes, render), Dependency Map (11 tests: type, sections, overview, external, internal, circular detection, no circular, metrics, metadata, render, empty) |
+| `test_docgen_diagrams.py` | 42 | Mermaid diagrams: Dependency graph (9: type, header, nodes, edges, markdown, max_nodes, direction, empty, title), Class diagram (9: type, header, classes, methods, private, inheritance, empty, title, max_nodes), Sequence diagram (8: type, header, participants, messages, chain, no self-calls, empty, title), Flowchart (8: type, header, nodes, edges, bfs, max_edges, empty, direction), ER diagram (6: type, header, entities, relationships, max_nodes, empty), Model (2: markdown, config) |
 
-### Updated Total: ~2,537 tests (2,531 passed + 6 skipped)
+### Updated Total: ~2,579 tests (2,573 passed + 6 skipped)
 
 ## Test Design Principles
 
