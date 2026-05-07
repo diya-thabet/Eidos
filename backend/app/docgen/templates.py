@@ -29,6 +29,22 @@ SEC_CONFIGURATION = "configuration"
 SEC_KNOWN_RISKS = "known_risks"
 SEC_HOTSPOTS = "hotspots"
 
+# New section keys for enhanced doc types
+SEC_CLASSES_DETAIL = "classes_detail"
+SEC_METHODS = "methods"
+SEC_PARAMETERS = "parameters"
+SEC_SETUP = "setup"
+SEC_PROJECT_STRUCTURE = "project_structure"
+SEC_WHERE_TO_FIND = "where_to_find"
+SEC_FIRST_STEPS = "first_steps"
+SEC_ADDED = "added"
+SEC_REMOVED = "removed"
+SEC_MODIFIED = "modified"
+SEC_BREAKING_CHANGES = "breaking_changes"
+SEC_EXTERNAL_DEPS = "external_deps"
+SEC_INTERNAL_DEPS = "internal_deps"
+SEC_CIRCULAR_DEPS = "circular_deps"
+
 
 TEMPLATE_SECTIONS: dict[DocType, list[tuple[str, str]]] = {
     DocType.README: [
@@ -68,6 +84,35 @@ TEMPLATE_SECTIONS: dict[DocType, list[tuple[str, str]]] = {
         (SEC_ENTRY_POINTS, "Entry Points"),
         (SEC_CONFIGURATION, "Configuration"),
         (SEC_KNOWN_RISKS, "Known Risks & Hotspots"),
+    ],
+    DocType.API_REFERENCE: [
+        (SEC_OVERVIEW, "API Reference Overview"),
+        (SEC_CLASSES_DETAIL, "Classes & Types"),
+        (SEC_METHODS, "Public Methods"),
+        (SEC_PARAMETERS, "Parameters & Return Types"),
+    ],
+    DocType.ONBOARDING: [
+        (SEC_OVERVIEW, "Welcome"),
+        (SEC_SETUP, "Setup & Installation"),
+        (SEC_PROJECT_STRUCTURE, "Project Structure"),
+        (SEC_ENTRY_POINTS, "Entry Points"),
+        (SEC_KEY_FLOWS, "Key Flows"),
+        (SEC_WHERE_TO_FIND, "Where to Find Things"),
+        (SEC_FIRST_STEPS, "First Steps for Contributors"),
+    ],
+    DocType.CHANGELOG: [
+        (SEC_OVERVIEW, "Change Summary"),
+        (SEC_ADDED, "Added"),
+        (SEC_REMOVED, "Removed"),
+        (SEC_MODIFIED, "Modified"),
+        (SEC_BREAKING_CHANGES, "Breaking Changes"),
+    ],
+    DocType.DEPENDENCY_MAP: [
+        (SEC_OVERVIEW, "Dependency Overview"),
+        (SEC_EXTERNAL_DEPS, "External Dependencies"),
+        (SEC_INTERNAL_DEPS, "Internal Module Dependencies"),
+        (SEC_CIRCULAR_DEPS, "Circular Dependencies"),
+        (SEC_METRICS, "Dependency Metrics"),
     ],
 }
 

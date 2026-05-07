@@ -645,3 +645,16 @@ Full RBAC documentation:
 - Updated: `docs/PERMISSIONS.md` — full endpoint?scope matrix, role mapping, resource permissions, team access
 - Updated: all project docs with final endpoint counts (121), test counts (2,284), file counts (138 source + 104 test)
 - All 8 RBAC phases complete ?
+
+## 41. DocGen Phase 1: Enhanced Doc Types (Phase 43)
+
+4 new documentation generators:
+- `generate_api_reference(snapshot_id, module_name, symbols, edges, summaries)` — public API docs per module
+- `generate_onboarding(snapshot_id, symbols, edges, modules, summaries, entry_points, metrics)` — getting-started guide
+- `generate_changelog(snapshot_id, prev_id, cur_symbols, prev_symbols, cur_edges, prev_edges)` — diff-based changelog
+- `generate_dependency_map(snapshot_id, symbols, edges, modules)` — internal/external dep graph + circular detection
+- New DocType enum values: `api_reference`, `onboarding`, `changelog`, `dependency_map`
+- Updated templates.py with 4 new section sets
+- Updated orchestrator.py to generate new types in `generate_all_docs` and `generate_single_doc`
+- New API endpoint: `POST /repos/{id}/snapshots/{sid}/docs/changelog?previous_snapshot_id=...`
+- 42 new tests (all pure unit, no DB needed)

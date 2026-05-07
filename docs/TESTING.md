@@ -227,8 +227,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_teams.py` | 20 | Teams: CRUD (create, empty name, list, list only mine, get, get non-member, update, update non-admin, delete, delete non-admin), members (add, duplicate, list, remove, not found), repo access (grant, invalid level, list, team grants read), admin bypass |
 | `test_permission_cache.py` | 12 | Permission cache: set/get, missing key, TTL expiry, invalidate key/user/repo, clear, maxsize eviction, stats, key format, global singleton |
 | `test_audit_integration.py` | 6 | Audit integration: helpers (build denied/change events), denial logging (scope denial logged, role denial logged), permission change logging (grant logged, revoke logged) |
+| `test_docgen_enhanced.py` | 42 | Enhanced doc types: API Reference (10 tests: doc type, title, scope, sections, overview, classes, methods, metadata, render, empty), Onboarding (11 tests: type, title, sections, welcome, setup, structure, entry points, flows, where, first steps, render), Changelog (10 tests: type, scope, sections, added, removed, modified, breaking, metadata, no changes, render), Dependency Map (11 tests: type, sections, overview, external, internal, circular detection, no circular, metrics, metadata, render, empty) |
 
-### Updated Total: ~2,495 tests (2,489 passed + 6 skipped)
+### Updated Total: ~2,537 tests (2,531 passed + 6 skipped)
 
 ## Test Design Principles
 

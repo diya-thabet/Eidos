@@ -159,6 +159,121 @@ async def get_doc(
 
 
 # -------------------------------------------------------------------
+# Changelog
+# -------------------------------------------------------------------
+
+
+@router.post(
+    "/{repo_id}/snapshots/{snapshot_id}/docs/changelog",
+    response_model=GeneratedDocOut,
+    summary="Generate changelog between two snapshots",
+)
+async def generate_changelog_endpoint(
+    repo_id: str,
+    snapshot_id: str,
+    previous_snapshot_id: str,
+    db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
+) -> Any:
+    """Generate a changelog comparing current snapshot with a previous one."""
+    import json
+
+    from app.docgen.generator import generate_changelog
+    from app.docgen.renderer import render_markdown
+    from app.storage.models import Edge, GeneratedDoc, Symbol
+
+    # Fetch current snapshot data
+    cur_result = await db.execute(
+        select(Symbol).where(Symbol.snapshot_id == snapshot_id)
+    )
+    cur_symbols = [
+        {
+            "fq_name": s.fq_name, "name": s.name, "kind": s.kind,
+            "signature": s.signature or "", "modifiers": s.modifiers or "",
+            "file_path": s.file_path, "start_line": s.start_line,
+            "namespace": s.namespace or "",
+        }
+        for s in cur_result.scalars().all()
+    ]
+    cur_edges_result = await db.execute(
+        select(Edge).where(Edge.snapshot_id == snapshot_id)
+    )
+    cur_edges = [
+        {
+            "source_fq_name": e.source_fq_name,
+            "target_fq_name": e.target_fq_name,
+            "edge_type": e.edge_type,
+        }
+        for e in cur_edges_result.scalars().all()
+    ]
+
+    # Fetch previous snapshot
+    prev_snap = await db.get(RepoSnapshot, previous_snapshot_id)
+    if prev_snap is None or prev_snap.repo_id != repo_id:
+        from fastapi import HTTPException
+
+        raise HTTPException(
+            status_code=404, detail="Previous snapshot not found",
+        )
+
+    prev_result = await db.execute(
+        select(Symbol).where(Symbol.snapshot_id == previous_snapshot_id)
+    )
+    prev_symbols = [
+        {
+            "fq_name": s.fq_name, "name": s.name, "kind": s.kind,
+            "signature": s.signature or "", "modifiers": s.modifiers or "",
+            "file_path": s.file_path, "start_line": s.start_line,
+            "namespace": s.namespace or "",
+        }
+        for s in prev_result.scalars().all()
+    ]
+    prev_edges_result = await db.execute(
+        select(Edge).where(Edge.snapshot_id == previous_snapshot_id)
+    )
+    prev_edges = [
+        {
+            "source_fq_name": e.source_fq_name,
+            "target_fq_name": e.target_fq_name,
+            "edge_type": e.edge_type,
+        }
+        for e in prev_edges_result.scalars().all()
+    ]
+
+    doc = generate_changelog(
+        snapshot_id=snapshot_id,
+        previous_snapshot_id=previous_snapshot_id,
+        current_symbols=cur_symbols,
+        previous_symbols=prev_symbols,
+        current_edges=cur_edges,
+        previous_edges=prev_edges,
+    )
+
+    markdown = render_markdown(doc)
+    db_doc = GeneratedDoc(
+        snapshot_id=snapshot_id,
+        doc_type=doc.doc_type.value,
+        scope_id=doc.scope_id,
+        title=doc.title,
+        markdown=markdown,
+        llm_narrative="",
+        metadata_json=json.dumps(doc.metadata, default=str),
+    )
+    db.add(db_doc)
+    await db.commit()
+    await db.refresh(db_doc)
+
+    return GeneratedDocOut(
+        id=db_doc.id,
+        doc_type=db_doc.doc_type,
+        title=db_doc.title,
+        scope_id=db_doc.scope_id,
+        markdown=markdown,
+        llm_narrative="",
+    )
+
+
+# -------------------------------------------------------------------
 # Helpers
 # -------------------------------------------------------------------
 

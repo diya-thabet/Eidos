@@ -17,6 +17,10 @@ class DocType(enum.StrEnum):
     MODULE = "module"
     FLOW = "flow"
     RUNBOOK = "runbook"
+    API_REFERENCE = "api_reference"
+    ONBOARDING = "onboarding"
+    CHANGELOG = "changelog"
+    DEPENDENCY_MAP = "dependency_map"
 
 
 @dataclass
