@@ -159,6 +159,104 @@ async def get_doc(
 
 
 # -------------------------------------------------------------------
+# Export (multi-format)
+# -------------------------------------------------------------------
+
+
+@router.get(
+    "/{repo_id}/snapshots/{snapshot_id}/docs/export",
+    summary="Export all docs in a specific format",
+)
+async def export_docs(
+    repo_id: str,
+    snapshot_id: str,
+    format: str = "markdown",
+    db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
+) -> Any:
+    """Export all generated docs for a snapshot in the requested format.
+
+    Supported formats: markdown, html, docusaurus, confluence, github_wiki.
+    Returns a JSON object with file paths and content for each doc.
+    """
+    from fastapi import HTTPException as _HTTPException
+
+    valid_formats = {"markdown", "html", "docusaurus", "confluence", "github_wiki"}
+    if format not in valid_formats:
+        raise _HTTPException(
+            status_code=400,
+            detail=f"Invalid format. Must be one of: {', '.join(sorted(valid_formats))}",
+        )
+
+    # Fetch all generated docs for this snapshot
+    result = await db.execute(
+        select(GeneratedDoc).where(GeneratedDoc.snapshot_id == snapshot_id)
+    )
+    db_docs = result.scalars().all()
+
+    if not db_docs:
+        return {"format": format, "files": {}, "total": 0}
+
+    # Convert DB docs to GeneratedDocument objects for rendering
+    from app.docgen.models import DocSection, DocType, GeneratedDocument
+
+    documents: list[GeneratedDocument] = []
+    for d in db_docs:
+        try:
+            doc_type = DocType(d.doc_type)
+        except ValueError:
+            continue
+        doc = GeneratedDocument(
+            doc_type=doc_type,
+            title=d.title,
+            snapshot_id=d.snapshot_id,
+            scope_id=d.scope_id or "",
+        )
+        # We only have rendered markdown, create a single-section doc
+        doc.sections = [DocSection(heading="Content", body=d.markdown or "")]
+        documents.append(doc)
+
+    # Render in requested format
+    files: dict[str, str] = {}
+
+    if format == "markdown":
+        for d in db_docs:
+            fname = _export_filename(d.doc_type, d.scope_id, ".md")
+            files[fname] = d.markdown or ""
+
+    elif format == "html":
+        from app.docgen.formats.html_renderer import render_html
+        for doc in documents:
+            fname = _export_filename(doc.doc_type, doc.scope_id, ".html")
+            files[fname] = render_html(doc)
+
+    elif format == "docusaurus":
+        from app.docgen.formats.docusaurus import build_docusaurus_structure
+        files = build_docusaurus_structure(documents)
+
+    elif format == "confluence":
+        from app.docgen.formats.confluence import render_confluence
+        for doc in documents:
+            fname = _export_filename(doc.doc_type, doc.scope_id, ".xhtml")
+            files[fname] = render_confluence(doc)
+
+    elif format == "github_wiki":
+        from app.docgen.formats.github_wiki import build_wiki_structure
+        files = build_wiki_structure(documents)
+
+    return {"format": format, "files": files, "total": len(files)}
+
+
+def _export_filename(doc_type: str, scope_id: str | None, ext: str) -> str:
+    """Generate a filename for export."""
+    if scope_id:
+        name = f"{doc_type}-{scope_id}"
+    else:
+        name = doc_type
+    return name.replace(".", "-").replace("/", "-").replace(" ", "-") + ext
+
+
+# -------------------------------------------------------------------
 # Changelog
 # -------------------------------------------------------------------
 

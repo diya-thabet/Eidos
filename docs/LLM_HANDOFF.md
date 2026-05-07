@@ -672,3 +672,16 @@ Mermaid diagram generators for documentation:
 - `MermaidDiagram` dataclass with `.to_markdown()` renderer
 - Auto-simplification: collapses small modules, limits nodes/edges, BFS traversal with depth limits
 - 42 new tests
+
+## 43. DocGen Phase 3: Multi-Format Output (Phase 45)
+
+Multi-format documentation export:
+- New package: `app/docgen/formats/` with 4 renderers:
+  - `html_renderer.py` — standalone HTML with CSS, TOC, Mermaid JS, print-friendly, XSS-safe
+  - `docusaurus.py` — MDX with frontmatter, category structure, sidebars.js generation
+  - `confluence.py` — Confluence Storage Format (XHTML) with ac:structured-macro
+  - `github_wiki.py` — GitHub Wiki MD with _Sidebar.md and [[wiki links]]
+- New API endpoint: `GET /repos/{id}/snapshots/{sid}/docs/export?format=...`
+  - Formats: markdown, html, docusaurus, confluence, github_wiki
+  - Returns JSON with file paths ? content (ready for ZIP or Git push)
+- 27 new tests

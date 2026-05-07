@@ -286,6 +286,7 @@ Eidos is designed to integrate with external tools at every layer:
 | RBAC Phase 8 (Docs) | **2,495** | **140** | **60,200** | **121** |
 | DocGen Phase 1 (Enhanced Types) | **2,537** | **139** | **61,000** | **122** |
 | DocGen Phase 2 (Diagrams) | **2,579** | **140** | **61,500** | **122** |
+| DocGen Phase 3 (Multi-Format) | **2,606** | **144** | **62,200** | **123** |
 
 ---
 

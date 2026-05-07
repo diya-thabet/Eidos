@@ -186,7 +186,7 @@ For large codebases, auto-simplify:
 
 ---
 
-### Phase 3: Multi-Format Output (5h)
+### Phase 3: Multi-Format Output (5h) ? DONE
 
 **Goal**: Generate docs in multiple formats beyond Markdown.
 
