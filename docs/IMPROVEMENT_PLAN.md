@@ -274,6 +274,32 @@ This document lists every concrete improvement identified during a full project 
 
 ---
 
+## Additional Improvements (Post-Plan)
+
+### 17. In-Memory Database Mode
+
+**What was done**:
+- Added `EIDOS_IN_MEMORY_DB=true` flag to `Settings` in `app/core/config.py`
+- When set, `database.py` overrides `database_url` to `sqlite+aiosqlite://` (in-memory)
+- `main.py` lifespan detects both `in_memory_db` flag and `sqlite://` URL for `create_all`
+- Enables running the full backend without any external database (demos, testing, CI)
+
+**Files changed**: `app/core/config.py`, `app/storage/database.py`, `app/main.py`
+
+---
+
+### 18. Comprehensive E2E Integration Test
+
+**What was done**:
+- New `tests/test_e2e_full.py` with 54 tests covering all major endpoint groups
+- Uses in-memory SQLite via ASGI transport (no server needed)
+- Seeds real data: 13 symbols, 7 edges, 4 files, 3 summaries
+- Tests: health (4), repos (2), snapshots (2), files (1), symbols (4), edges (1), graph (1), summaries (2), search (2), docgen (10), diagrams (1), analysis (11), exports (5), portable (1), tags (3), quality gates (2), diff (1), errors (3)
+
+**Files changed**: `tests/test_e2e_full.py`
+
+---
+
 ## How to Use This Plan
 
 1. Pick the highest-priority item you haven't done

@@ -685,3 +685,15 @@ Multi-format documentation export:
   - Formats: markdown, html, docusaurus, confluence, github_wiki
   - Returns JSON with file paths ? content (ready for ZIP or Git push)
 - 27 new tests
+
+## 44. In-Memory Database Mode + E2E Integration Test (Phase 46)
+
+- `EIDOS_IN_MEMORY_DB=true` env var enables full backend without PostgreSQL
+- `app/core/config.py`: new `in_memory_db: bool = False` setting
+- `app/storage/database.py`: overrides URL to `sqlite+aiosqlite://` when flag is set
+- `app/main.py`: lifespan checks both `in_memory_db` and `sqlite://` for `create_all`
+- `tests/test_e2e_full.py`: 54 comprehensive E2E tests covering all endpoint groups
+  - Health, Repos, Snapshots, Files, Symbols, Edges, Graph, Summaries, Search,
+    DocGen (all formats), Diagrams, Analysis (10 endpoints), Exports, Portable,
+    Tags, Quality Gates, Diff, Error handling
+- All 54 pass in 5s with in-memory DB

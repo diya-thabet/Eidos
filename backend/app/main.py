@@ -77,7 +77,7 @@ _configure_logging()
 async def lifespan(app: FastAPI) -> Any:
     logger = logging.getLogger(__name__)
     try:
-        if settings.database_url.startswith("sqlite"):
+        if settings.in_memory_db or settings.database_url.startswith("sqlite"):
             # SQLite (tests/dev): use create_all since Alembic doesn't support async SQLite well
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)

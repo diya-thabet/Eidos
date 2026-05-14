@@ -3,6 +3,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://eidos:eidos@localhost:5432/eidos"
+    in_memory_db: bool = False  # set True to use SQLite in-memory (demo/testing)
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
     openai_api_key: str = ""

@@ -125,45 +125,6 @@ async def list_docs(
 
 
 @router.get(
-    "/{repo_id}/snapshots/{snapshot_id}/docs/{doc_id}",
-    response_model=GeneratedDocOut,
-    summary="Get a specific generated document",
-)
-async def get_doc(
-    repo_id: str,
-    snapshot_id: str,
-    doc_id: int,
-    db: AsyncSession = Depends(get_db),
-    _snap: RepoSnapshot = Depends(verify_snapshot),
-) -> Any:
-    """Retrieve a specific generated document by ID."""
-
-    result = await db.execute(
-        select(GeneratedDoc).where(
-            GeneratedDoc.id == doc_id,
-            GeneratedDoc.snapshot_id == snapshot_id,
-        )
-    )
-    doc = result.scalar_one_or_none()
-    if doc is None:
-        raise HTTPException(status_code=404, detail="Document not found")
-
-    return GeneratedDocOut(
-        id=doc.id,
-        doc_type=doc.doc_type,
-        title=doc.title,
-        scope_id=doc.scope_id,
-        markdown=doc.markdown,
-        llm_narrative=doc.llm_narrative,
-    )
-
-
-# -------------------------------------------------------------------
-# Export (multi-format)
-# -------------------------------------------------------------------
-
-
-@router.get(
     "/{repo_id}/snapshots/{snapshot_id}/docs/export",
     summary="Export all docs in a specific format",
 )
@@ -259,6 +220,48 @@ def _export_filename(doc_type: str, scope_id: str | None, ext: str) -> str:
 # -------------------------------------------------------------------
 # Changelog
 # -------------------------------------------------------------------
+
+
+@router.get(
+    "/{repo_id}/snapshots/{snapshot_id}/docs/{doc_id}",
+    response_model=GeneratedDocOut,
+    summary="Get a specific generated document",
+)
+async def get_doc(
+    repo_id: str,
+    snapshot_id: str,
+    doc_id: int,
+    db: AsyncSession = Depends(get_db),
+    _snap: RepoSnapshot = Depends(verify_snapshot),
+) -> Any:
+    """Retrieve a specific generated document by ID."""
+
+    result = await db.execute(
+        select(GeneratedDoc).where(
+            GeneratedDoc.id == doc_id,
+            GeneratedDoc.snapshot_id == snapshot_id,
+        )
+    )
+    doc = result.scalar_one_or_none()
+    if doc is None:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    return GeneratedDocOut(
+        id=doc.id,
+        doc_type=doc.doc_type,
+        title=doc.title,
+        scope_id=doc.scope_id,
+        markdown=doc.markdown,
+        llm_narrative=doc.llm_narrative,
+    )
+
+
+# -------------------------------------------------------------------
+# Export (multi-format)
+# -------------------------------------------------------------------
+
+
+
 
 
 @router.post(

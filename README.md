@@ -42,6 +42,13 @@ pytest -v
 
 ## API Endpoints (123)
 
+### Configuration
+
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `EIDOS_DATABASE_URL` | `postgresql+asyncpg://...` | Database connection URL |
+| `EIDOS_IN_MEMORY_DB` | `false` | Use SQLite in-memory (no external DB needed) |
+
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Liveness check |

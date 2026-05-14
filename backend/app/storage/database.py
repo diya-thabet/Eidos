@@ -24,15 +24,22 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# If in_memory_db is True, override database_url to use SQLite in-memory
+_effective_url = (
+    "sqlite+aiosqlite://"
+    if settings.in_memory_db
+    else settings.database_url
+)
+
 # SQLite doesn't support pool_size / max_overflow
-_is_sqlite = settings.database_url.startswith("sqlite")
+_is_sqlite = _effective_url.startswith("sqlite")
 
 _engine_kwargs: dict[str, Any] = {"echo": settings.db_echo}
 if not _is_sqlite:
     _engine_kwargs["pool_size"] = settings.db_pool_size
     _engine_kwargs["max_overflow"] = settings.db_max_overflow
 
-engine = create_async_engine(settings.database_url, **_engine_kwargs)
+engine = create_async_engine(_effective_url, **_engine_kwargs)
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

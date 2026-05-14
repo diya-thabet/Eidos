@@ -231,7 +231,9 @@ pytest tests/test_csharp_parser.py tests/test_graph_builder.py tests/test_entry_
 | `test_docgen_diagrams.py` | 42 | Mermaid diagrams: Dependency graph (9: type, header, nodes, edges, markdown, max_nodes, direction, empty, title), Class diagram (9: type, header, classes, methods, private, inheritance, empty, title, max_nodes), Sequence diagram (8: type, header, participants, messages, chain, no self-calls, empty, title), Flowchart (8: type, header, nodes, edges, bfs, max_edges, empty, direction), ER diagram (6: type, header, entities, relationships, max_nodes, empty), Model (2: markdown, config) |
 | `test_docgen_formats.py` | 27 | Multi-format output: HTML (10: valid html, title, toc, toc disabled, css, mermaid, sections, body, snapshot, xss escape), Docusaurus (7: frontmatter, strips h1, tags, sidebars, structure, module category, api category), Confluence (4: xhtml, title, info macro, sections), GitHub Wiki (4: markdown, structure, sidebar links, safe filenames), Integration (2: importable, markdown works) |
 
-### Updated Total: ~2,606 tests (2,600 passed + 6 skipped)
+| `test_e2e_full.py` | 54 | Comprehensive E2E: Health (4), Repos (2), Snapshots (2), Files (1), Symbols (4), Edges (1), Graph (1), Summaries (2), Search (2), DocGen (10: generate, list, get, export md/html/docusaurus/wiki/confluence/invalid), Diagrams (1), Analysis (11: complexity, hotspots, deps, dead-code, clones, coupling, cycles, health run/rules/findings), Exports (5: json/csv/sarif/md/sbom), Portable (1), Tags (3), Quality Gates (2), Diff (1), Errors (3) |
+
+### Updated Total: ~2,660 tests (2,654 passed + 6 skipped)
 
 ## Test Design Principles
 

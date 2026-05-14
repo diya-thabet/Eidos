@@ -287,6 +287,7 @@ Eidos is designed to integrate with external tools at every layer:
 | DocGen Phase 1 (Enhanced Types) | **2,537** | **139** | **61,000** | **122** |
 | DocGen Phase 2 (Diagrams) | **2,579** | **140** | **61,500** | **122** |
 | DocGen Phase 3 (Multi-Format) | **2,606** | **144** | **62,200** | **123** |
+| In-Memory DB + E2E Test | **2,660** | **144** | **62,500** | **123** |
 
 ---
 
