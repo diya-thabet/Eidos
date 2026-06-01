@@ -1,9 +1,12 @@
+from typing import Any
+
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     database_url: str = "postgresql+asyncpg://eidos:eidos@localhost:5432/eidos"
     in_memory_db: bool = False  # set True to use SQLite in-memory (demo/testing)
+    demo_mode: bool = False  # set True to run without DB/auth/external services
     redis_url: str = "redis://localhost:6379/0"
     qdrant_url: str = "http://localhost:6333"
     openai_api_key: str = ""
@@ -62,6 +65,13 @@ class Settings(BaseSettings):
     def db_driver(self) -> str:
         """Extract the dialect+driver from the database URL (e.g. 'postgresql+asyncpg')."""
         return self.database_url.split("://")[0] if "://" in self.database_url else ""
+
+    def __init__(self, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        if self.demo_mode:
+            self.in_memory_db = True
+            self.auth_enabled = False
+            self.rate_limit_enabled = False
 
 
 settings = Settings()
