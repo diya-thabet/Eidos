@@ -322,9 +322,12 @@ class TestBlameHealthRules:
         assert findings[0].rule_id == "GB002"
 
     def test_gb002_no_fire_recent(self):
+        from datetime import UTC, datetime, timedelta
+
         from app.analysis.code_health import HealthConfig
         from app.analysis.health_rules.blame import StaleCodeRule
-        g = self._graph([self._sym("new", modified="2025-06-01")])
+        recent = (datetime.now(UTC) - timedelta(days=30)).strftime("%Y-%m-%d")
+        g = self._graph([self._sym("new", modified=recent)])
         findings = StaleCodeRule().check(g, HealthConfig())
         assert len(findings) == 0
 
