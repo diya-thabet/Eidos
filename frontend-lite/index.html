@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eidos</title>
+<link rel="stylesheet" href="css/variables.css">
+<link rel="stylesheet" href="css/sidebar.css">
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/graph-view.css">
+</head>
+<body>
+<aside class="sidebar">
+<div class="sidebar-brand"><div class="brand-mark">E</div><div><span class="brand-label">Eidos</span><span class="brand-sub">code intelligence</span></div></div>
+<nav class="sidebar-nav">
+<div class="nav-group">Workspace</div>
+<button class="nav-btn active" data-p="repos" onclick="navigate('repos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg><span>Repositories</span></button>
+<button class="nav-btn" data-p="overview" onclick="navigate('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Overview</span></button>
+<button class="nav-btn" data-p="symbols" onclick="navigate('symbols')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg><span>Symbols</span></button>
+<div class="nav-group">Analysis</div>
+<button class="nav-btn" data-p="health" onclick="navigate('health')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg><span>Health</span></button>
+<button class="nav-btn" data-p="graph" onclick="navigate('graph')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="6" r="2"/><circle cx="19" cy="6" r="2"/><circle cx="12" cy="18" r="2"/><line x1="5" y1="8" x2="12" y2="16"/><line x1="19" y1="8" x2="12" y2="16"/></svg><span>Graph</span></button>
+<button class="nav-btn" data-p="deadcode" onclick="navigate('deadcode')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg><span>Dead Code</span></button>
+<button class="nav-btn" data-p="coupling" onclick="navigate('coupling')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg><span>Coupling</span></button>
+<div class="nav-group">Intelligence</div>
+<button class="nav-btn" data-p="ask" onclick="navigate('ask')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg><span>Ask</span></button>
+<button class="nav-btn" data-p="review" onclick="navigate('review')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><span>PR Review</span></button>
+<button class="nav-btn" data-p="docs" onclick="navigate('docs')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg><span>Docs</span></button>
+<button class="nav-btn" data-p="search" onclick="navigate('search')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><span>Search</span></button>
+<div class="nav-group">Export</div>
+<button class="nav-btn" data-p="exports" onclick="navigate('exports')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Exports</span></button>
+<div class="nav-group">System</div>
+<button class="nav-btn" data-p="settings" onclick="navigate('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09"/></svg><span>Settings</span></button>
+</nav>
+<div class="sidebar-bottom">
+<div class="conn-badge"><span class="conn-dot off" id="cd"></span><span id="ct">Offline</span></div>
+<button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">&#x263D;</button>
+</div>
+</aside>
+<main class="main" id="main"></main>
+<div class="toast-area" id="toasts"></div>
+<script src="js/core.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/pages.js"></script>
+<script>
+(function(){
+var t=localStorage.getItem('eidos_theme')||'dark';
+document.documentElement.setAttribute('data-theme',t);
+document.getElementById('theme-btn').textContent=t==='dark'?'\u2600':'\u263D';
+checkConn();navigate('repos');setInterval(checkConn,25000);
+})();
+</script>
+</body>
+</html>

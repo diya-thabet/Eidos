@@ -1,0 +1,79 @@
+:root {
+    /* Light mode (default) */
+    --bg-0: #f8f9fb;
+    --bg-1: #ffffff;
+    --bg-2: #f1f3f7;
+    --bg-3: #e8ebf0;
+    --bg-4: #dde1e8;
+    --border: #d4d9e3;
+    --text-0: #111318;
+    --text-1: #2c3040;
+    --text-2: #5f6882;
+    --text-3: #8d96aa;
+    --accent: #6246ea;
+    --accent-soft: rgba(98, 70, 234, 0.08);
+    --accent-hover: #5538d4;
+    --green: #16a34a;
+    --green-soft: rgba(22, 163, 74, 0.08);
+    --yellow: #ca8a04;
+    --yellow-soft: rgba(202, 138, 4, 0.08);
+    --red: #dc2626;
+    --red-soft: rgba(220, 38, 38, 0.08);
+    --blue: #2563eb;
+    --blue-soft: rgba(37, 99, 235, 0.08);
+    --purple: #7c3aed;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+    --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+    --sidebar-bg: #ffffff;
+    --card-bg: #ffffff;
+    --radius: 10px;
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
+}
+
+[data-theme="dark"] {
+    --bg-0: #0d0f14;
+    --bg-1: #141720;
+    --bg-2: #1c2030;
+    --bg-3: #262b3a;
+    --bg-4: #323848;
+    --border: #2a3042;
+    --text-0: #f0f2f7;
+    --text-1: #cdd2df;
+    --text-2: #8892a8;
+    --text-3: #5a6379;
+    --accent: #7c6aff;
+    --accent-soft: rgba(124, 106, 255, 0.1);
+    --accent-hover: #6b58e8;
+    --green: #34d399;
+    --green-soft: rgba(52, 211, 153, 0.1);
+    --yellow: #fbbf24;
+    --yellow-soft: rgba(251, 191, 36, 0.1);
+    --red: #f87171;
+    --red-soft: rgba(248, 113, 113, 0.1);
+    --blue: #60a5fa;
+    --blue-soft: rgba(96, 165, 250, 0.1);
+    --purple: #a78bfa;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+    --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+    --sidebar-bg: #111520;
+    --card-bg: #1a1e2c;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+
+body {
+    font-family: var(--font);
+    font-size: 14px;
+    line-height: 1.55;
+    background: var(--bg-0);
+    color: var(--text-1);
+    display: flex;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--bg-4); border-radius: 3px; }

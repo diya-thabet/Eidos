@@ -1,0 +1,3 @@
+$env:EIDOS_DEMO_MODE = "true"
+$env:EIDOS_REPOS_DATA_DIR = "./data/repos"
+python -m uvicorn app.main:app --host 0.0.0.0 --port 8000
