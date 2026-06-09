@@ -72,6 +72,12 @@ def _configure_logging() -> None:
 
 _configure_logging()
 
+# Suppress harmless Windows asyncio ConnectionResetError noise from CORS preflight
+import sys
+if sys.platform == "win32":
+    _asyncio_logger = logging.getLogger("asyncio")
+    _asyncio_logger.setLevel(logging.CRITICAL)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> Any:
@@ -223,3 +229,88 @@ async def version() -> Any:
         "version": settings.version,
         "edition": settings.edition,
     }
+
+
+@app.get("/settings")
+async def get_settings() -> Any:
+    """Return all configurable settings (secrets are masked)."""
+    return {
+        "connection": {
+            "database_url": _mask(settings.database_url),
+            "redis_url": settings.redis_url,
+            "qdrant_url": settings.qdrant_url,
+            "repos_data_dir": settings.repos_data_dir,
+        },
+        "llm": {
+            "llm_base_url": settings.llm_base_url,
+            "llm_api_key": _mask(settings.llm_api_key),
+            "llm_model": settings.llm_model,
+            "llm_temperature": settings.llm_temperature,
+            "llm_max_tokens": settings.llm_max_tokens,
+            "llm_timeout": settings.llm_timeout,
+            "openai_api_key": _mask(settings.openai_api_key),
+        },
+        "auth": {
+            "auth_enabled": settings.auth_enabled,
+            "secret_key": _mask(settings.secret_key),
+            "jwt_expire_seconds": settings.jwt_expire_seconds,
+            "github_client_id": settings.github_client_id,
+            "github_client_secret": _mask(settings.github_client_secret),
+            "github_redirect_uri": settings.github_redirect_uri,
+            "google_client_id": settings.google_client_id,
+            "google_client_secret": _mask(settings.google_client_secret),
+            "google_redirect_uri": settings.google_redirect_uri,
+            "superadmin_email": settings.superadmin_email,
+        },
+        "system": {
+            "edition": settings.edition,
+            "version": settings.version,
+            "demo_mode": settings.demo_mode,
+            "in_memory_db": settings.in_memory_db,
+            "db_pool_size": settings.db_pool_size,
+            "db_max_overflow": settings.db_max_overflow,
+            "db_echo": settings.db_echo,
+            "delete_clones_after_indexing": settings.delete_clones_after_indexing,
+            "cors_origins": settings.cors_origins,
+        },
+        "limits": {
+            "rate_limit_enabled": settings.rate_limit_enabled,
+            "rate_limit_per_second": settings.rate_limit_per_second,
+            "rate_limit_burst": settings.rate_limit_burst,
+        },
+        "webhooks": {
+            "webhook_secret": _mask(settings.webhook_secret),
+        },
+    }
+
+
+@app.patch("/settings")
+async def update_settings(body: dict[str, Any]) -> Any:
+    """Update runtime settings. Only specific fields are mutable."""
+    mutable = {
+        "llm_base_url", "llm_api_key", "llm_model", "llm_temperature",
+        "llm_max_tokens", "llm_timeout", "openai_api_key",
+        "auth_enabled", "jwt_expire_seconds",
+        "github_client_id", "github_client_secret", "github_redirect_uri",
+        "google_client_id", "google_client_secret", "google_redirect_uri",
+        "superadmin_email", "secret_key",
+        "rate_limit_enabled", "rate_limit_per_second", "rate_limit_burst",
+        "cors_origins", "webhook_secret", "repos_data_dir",
+        "delete_clones_after_indexing", "db_echo",
+        "qdrant_url", "redis_url",
+    }
+    updated = []
+    for key, val in body.items():
+        if key in mutable and hasattr(settings, key):
+            setattr(settings, key, val)
+            updated.append(key)
+    return {"updated": updated, "count": len(updated)}
+
+
+def _mask(val: str) -> str:
+    """Mask secrets for display."""
+    if not val:
+        return ""
+    if len(val) <= 8:
+        return "****"
+    return val[:4] + "****" + val[-4:]

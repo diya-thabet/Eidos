@@ -51,6 +51,7 @@ class CodeGraph:
 
     def finalize(self) -> None:
         """Build adjacency lists and module graph after all files are added."""
+        self._resolve_call_targets()
         self._callers = defaultdict(list)
         self._callees = defaultdict(list)
         self._children = defaultdict(list)
@@ -63,6 +64,28 @@ class CodeGraph:
                 self._children[edge.source_fq_name].append(edge.target_fq_name)
 
         self._build_modules()
+
+    def _resolve_call_targets(self) -> None:
+        """Resolve short call targets to full fq_names when possible.
+
+        E.g., 'GameEngine.start' -> 'com.galactic.core.GameEngine.start'
+        by matching against the known symbol table suffix.
+        """
+        # Build suffix lookup: 'ClassName.method' -> 'full.fq.ClassName.method'
+        suffix_map: dict[str, str] = {}
+        for fq in self.symbols:
+            parts = fq.rsplit(".", 2)
+            if len(parts) >= 2:
+                short = parts[-2] + "." + parts[-1]  # ClassName.method
+                suffix_map[short] = fq
+            suffix_map[parts[-1]] = fq  # just method name (last resort)
+
+        for edge in self.edges:
+            if edge.target_fq_name not in self.symbols:
+                # Try matching as ClassName.method
+                resolved = suffix_map.get(edge.target_fq_name)
+                if resolved:
+                    edge.target_fq_name = resolved
 
     def get_callers(self, fq_name: str) -> list[str]:
         """Return symbols that call the given symbol."""

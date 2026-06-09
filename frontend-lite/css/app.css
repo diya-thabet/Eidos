@@ -121,3 +121,14 @@ select.inp { appearance: none; padding-right: 28px; background-image: url("data:
     .sidebar .nav-btn { justify-content: center; padding: 9px; }
     .main { padding: 16px; }
 }
+
+/* Ingestion pulse indicator */
+.ig-pulse {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: var(--accent);
+    animation: ig-glow 1.2s ease-in-out infinite;
+}
+@keyframes ig-glow {
+    0%, 100% { box-shadow: 0 0 4px var(--accent); transform: scale(1); }
+    50% { box-shadow: 0 0 12px var(--accent), 0 0 24px var(--accent); transform: scale(1.2); }
+}

@@ -54,19 +54,78 @@ function addRepo() {
     API.post('/repos', { name: n, url: u }).then(function(r) { toast(r.name + ' registered'); toggleForm(); ingest(r.id); loadRepos(); }).catch(function(e) { toast(e.message, false); });
 }
 function ingest(id) {
-    API.post('/repos/' + id + '/ingest').then(function(r) { toast('Ingestion started'); poll(id, r.snapshot_id); }).catch(function(e) { toast(e.message, false); });
+    API.post('/repos/' + id + '/ingest').then(function(r) {
+        showIngestBar(id, r.snapshot_id);
+    }).catch(function(e) { toast(e.message, false); });
 }
-function poll(rid, sid) {
-    setTimeout(function check() {
+function showIngestBar(rid, sid) {
+    // Insert progress overlay below the repos list
+    var el = document.getElementById('rl');
+    if (!el) return;
+    el.innerHTML = '<div class="card" id="ingest-card" style="overflow:hidden;position:relative">' +
+        '<div style="position:absolute;top:0;left:0;right:0;height:3px;background:var(--bg-3)"><div id="ig-bar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--blue),var(--purple));transition:width 0.4s ease;border-radius:0 2px 2px 0"></div></div>' +
+        '<div style="padding:20px 20px 16px">' +
+        '<div class="row between" style="margin-bottom:12px"><div class="row g-8"><div class="ig-pulse"></div><span id="ig-title" style="font-weight:600;color:var(--text-0)">Starting ingestion...</span></div><span id="ig-pct" style="font-size:22px;font-weight:700;color:var(--accent)">0%</span></div>' +
+        '<p id="ig-msg" style="font-size:12px;color:var(--text-2);margin-bottom:10px">Preparing...</p>' +
+        '<div style="display:flex;gap:4px;margin-bottom:8px" id="ig-steps"></div>' +
+        '<div class="row between" style="margin-top:8px"><span id="ig-time" style="font-size:11px;color:var(--text-3)">Elapsed: 0s</span><span id="ig-snap" style="font-size:11px;color:var(--text-3)">Snapshot: ' + sid.slice(0,8) + '</span></div>' +
+        '</div></div>';
+    var startTime = Date.now();
+    pollIngest(rid, sid, startTime);
+}
+function pollIngest(rid, sid, startTime) {
+    var steps = [
+        {at:5, label:'Clone'}, {at:15, label:'Scan'}, {at:25, label:'Parse'},
+        {at:50, label:'Graph'}, {at:65, label:'Blame'}, {at:70, label:'Index'},
+        {at:90, label:'Finalize'}, {at:100, label:'Done'}
+    ];
+    function update() {
         API.get('/repos/' + rid + '/status').then(function(d) {
             var snap = (d.snapshots || []).filter(function(s) { return s.id === sid; })[0];
-            if (!snap) return;
-            if (snap.status === 'completed') { toast('Done! ' + snap.file_count + ' files'); S.set(rid, sid); loadRepos(); }
-            else if (snap.status === 'failed') { toast('Failed: ' + (snap.error_message || ''), false); }
-            else setTimeout(check, 3000);
-        }).catch(function() { setTimeout(check, 5000); });
-    }, 2500);
+            if (!snap) { setTimeout(update, 2000); return; }
+            var pct = snap.progress_percent || 0;
+            var msg = snap.progress_message || 'Working...';
+            var bar = document.getElementById('ig-bar');
+            var pctEl = document.getElementById('ig-pct');
+            var msgEl = document.getElementById('ig-msg');
+            var titleEl = document.getElementById('ig-title');
+            var timeEl = document.getElementById('ig-time');
+            var stepsEl = document.getElementById('ig-steps');
+            if (!bar) return; // page navigated away
+            bar.style.width = pct + '%';
+            pctEl.textContent = pct + '%';
+            msgEl.textContent = msg;
+            var elapsed = Math.round((Date.now() - startTime) / 1000);
+            timeEl.textContent = 'Elapsed: ' + elapsed + 's';
+            // Steps indicator
+            var sh = '';
+            for (var i = 0; i < steps.length; i++) {
+                var s = steps[i], done = pct >= s.at;
+                sh += '<div style="flex:1;text-align:center"><div style="height:4px;border-radius:2px;background:' + (done ? 'var(--accent)' : 'var(--bg-3)') + ';margin-bottom:3px"></div><span style="font-size:9px;color:' + (done ? 'var(--accent)' : 'var(--text-3)') + '">' + s.label + '</span></div>';
+            }
+            stepsEl.innerHTML = sh;
+            if (snap.status === 'completed') {
+                titleEl.textContent = 'Ingestion complete!';
+                pctEl.style.color = 'var(--green)';
+                bar.style.background = 'var(--green)';
+                S.set(rid, sid);
+                toast('Done! ' + (snap.file_count || '') + ' files indexed');
+                setTimeout(function() { loadRepos(); }, 1500);
+            } else if (snap.status === 'failed') {
+                titleEl.textContent = 'Ingestion failed';
+                pctEl.style.color = 'var(--red)';
+                bar.style.background = 'var(--red)';
+                msgEl.textContent = snap.error_message || 'Unknown error';
+                toast('Ingestion failed', false);
+            } else {
+                titleEl.textContent = 'Analyzing codebase...';
+                setTimeout(update, 1500);
+            }
+        }).catch(function() { setTimeout(update, 3000); });
+    }
+    setTimeout(update, 1000);
 }
+function poll(rid, sid) { showIngestBar(rid, sid); }
 function selRepo(id) {
     API.get('/repos/' + id + '/status').then(function(d) {
         var done = (d.snapshots || []).filter(function(s) { return s.status === 'completed'; });
@@ -161,7 +220,7 @@ function pgGraph() {
         '<div class="g-bar"><button class="btn btn-s btn-p" data-gv="class" onclick="gLoad(\'class\')">Classes</button><button class="btn btn-s btn-g" data-gv="all" onclick="gLoad(\'all\')">All</button><button class="btn btn-s btn-g" data-gv="module" onclick="gLoad(\'module\')">Modules</button><button class="btn btn-s btn-g" data-gv="calls" onclick="gLoad(\'calls\')">Calls</button><div class="sep"></div><button class="btn btn-s btn-g" onclick="GE.fitAll()">Fit</button><button class="btn btn-s btn-g" onclick="GE.exportPNG();toast(\'PNG saved\')">PNG</button><button class="btn btn-s btn-g" onclick="toggleMermaid()">Mermaid</button></div>' +
         '<div class="graph-area" id="ga"><canvas id="gc"></canvas>' +
         '<div class="g-ctrl"><button onclick="GE.sc*=1.2;GE.paint()">+</button><button onclick="GE.sc*=0.8;GE.paint()">&minus;</button><button onclick="GE.fitAll()">\u2922</button></div>' +
-        '<div class="g-legend"><h6>Nodes</h6><div class="lr"><div class="ld" style="background:#2563eb"></div>Class</div><div class="lr"><div class="ld" style="background:#7c3aed"></div>Interface</div><div class="lr"><div class="ld" style="background:#16a34a"></div>Method</div><div class="lr"><div class="ld" style="background:#dc2626"></div>Enum</div><h6>Edges</h6><div class="lr"><div class="ll" style="background:#6246ea"></div>Calls</div><div class="lr"><div class="ll" style="background:#ca8a04"></div>Inherits</div><div class="lr"><div class="ll" style="background:#7c3aed"></div>Implements</div></div>' +
+        '<div class="g-legend"><h6>Nodes</h6><div class="lr"><div class="ld" style="background:#2563eb"></div>Class</div><div class="lr"><div class="ld" style="background:#7c3aed"></div>Interface</div><div class="lr"><div class="ld" style="background:#16a34a"></div>Method</div><div class="lr"><div class="ld" style="background:#dc2626"></div>Enum</div><h6>Edges</h6><div class="lr"><div class="ll" style="background:#6246ea"></div>Calls</div><div class="lr"><div class="ll" style="background:#ca8a04"></div>Inherits</div><div class="lr"><div class="ll" style="background:#7c3aed"></div>Implements</div><div class="lr"><div class="ll" style="background:#2563eb"></div>Uses</div></div>' +
         '<div class="g-info" id="gi"><span class="x" onclick="$(\'gi\').classList.remove(\'show\')">&times;</span><h4 id="gin"></h4><div class="ir"><b>Kind:</b> <span id="gik"></span></div><div class="ir"><b>File:</b> <span id="gif"></span></div><div class="ir"><b>Lines:</b> <span id="gil"></span></div><div class="ir"><b>Edges:</b> <span id="gie"></span></div></div>' +
         '<div class="g-stats"><span id="gsn">0</span> nodes &middot; <span id="gse">0</span> edges</div></div>' +
         '<div class="card hidden" id="mc" style="margin-top:14px"><div class="row between"><div class="card-hd" style="margin:0">Mermaid Source</div><button class="btn btn-s btn-g" onclick="navigator.clipboard.writeText(_mermaid);toast(\'Copied\')">Copy</button></div><div class="code" id="mcs"></div></div>');
@@ -187,9 +246,9 @@ function gLoad(view) {
         ]).then(function(res) {
             var syms = res[0].items || [], edges = res[1].items || [];
             if (view === 'class') {
-                // Show all classes/interfaces/enums with their inheritance + containment edges
+                // Show all classes/interfaces/enums with their inheritance + composition + uses edges
                 syms = syms.filter(function(s) { return s.kind === 'class' || s.kind === 'interface' || s.kind === 'enum'; });
-                edges = edges.filter(function(e) { return e.edge_type === 'inherits' || e.edge_type === 'implements' || e.edge_type === 'contains'; });
+                edges = edges.filter(function(e) { return e.edge_type === 'inherits' || e.edge_type === 'implements' || e.edge_type === 'uses'; });
             } else if (view === 'calls') {
                 syms = syms.filter(function(s) { return s.kind === 'method' || s.kind === 'constructor'; });
                 edges = edges.filter(function(e) { return e.edge_type === 'calls'; });
@@ -322,7 +381,87 @@ function doExp(fmt) {
 
 // =================== SETTINGS ===================
 function pgSettings() {
-    html('main', '<div class="page-head"><h1>Settings</h1><p>Backend connection</p></div><div class="card"><div class="field"><label>API URL</label><input class="inp" id="su" value="' + esc(API.base) + '"></div><button class="btn btn-p" onclick="saveUrl()">Save & Test</button><div id="ss" class="mt"></div></div><div class="card"><div class="card-hd">Context</div><p style="font-size:13px;color:var(--text-2)">Repo: <b style="color:var(--text-0)">' + (S.repo || 'none') + '</b></p><p style="font-size:13px;color:var(--text-2)">Snap: <b style="color:var(--text-0)">' + (S.snap || 'none') + '</b></p><button class="btn btn-s btn-g mt" onclick="S.set(null,null);toast(\'Cleared\');pgSettings()">Clear</button></div>');
+    html('main', '<div class="page-head"><h1>Settings</h1><p>Configure connection, AI, auth, and system</p></div>' +
+        '<div class="card"><div class="card-hd">API Connection</div><div class="field"><label>Backend URL</label><input class="inp" id="su" value="' + esc(API.base) + '"></div><div class="row g-8"><button class="btn btn-p" onclick="saveUrl()">Save & Test</button></div><div id="ss" class="mt"></div></div>' +
+        '<div class="card"><div class="card-hd">Active Context</div><p style="font-size:13px;color:var(--text-2)">Repo: <b style="color:var(--text-0)">' + (S.repo || 'none') + '</b></p><p style="font-size:13px;color:var(--text-2)">Snap: <b style="color:var(--text-0)">' + (S.snap || 'none') + '</b></p><button class="btn btn-s btn-g mt" onclick="S.set(null,null);toast(\'Cleared\');pgSettings()">Clear Selection</button></div>' +
+        '<div id="cfg"><div class="loader"><span class="spin"></span> Loading configuration...</div></div>');
+    loadCfg();
+}
+function loadCfg() {
+    API.get('/settings').then(function(d) {
+        var h = '';
+        h += cfgSection('LLM / AI Provider', 'llm', [
+            {k:'llm_base_url', l:'Base URL', t:'text', v:d.llm.llm_base_url, ph:'https://api.openai.com/v1'},
+            {k:'llm_api_key', l:'API Key', t:'password', v:d.llm.llm_api_key, ph:'sk-...'},
+            {k:'openai_api_key', l:'OpenAI Key (legacy)', t:'password', v:d.llm.openai_api_key, ph:'sk-...'},
+            {k:'llm_model', l:'Model', t:'text', v:d.llm.llm_model, ph:'gpt-4o-mini'},
+            {k:'llm_temperature', l:'Temperature', t:'number', v:d.llm.llm_temperature, ph:'0.1'},
+            {k:'llm_max_tokens', l:'Max Tokens', t:'number', v:d.llm.llm_max_tokens, ph:'2048'},
+            {k:'llm_timeout', l:'Timeout (s)', t:'number', v:d.llm.llm_timeout, ph:'60'}
+        ]);
+        h += cfgSection('Authentication', 'auth', [
+            {k:'auth_enabled', l:'Enabled', t:'bool', v:d.auth.auth_enabled},
+            {k:'secret_key', l:'JWT Secret', t:'password', v:d.auth.secret_key, ph:'32+ chars'},
+            {k:'jwt_expire_seconds', l:'Token Expiry (s)', t:'number', v:d.auth.jwt_expire_seconds, ph:'86400'},
+            {k:'github_client_id', l:'GitHub Client ID', t:'text', v:d.auth.github_client_id, ph:''},
+            {k:'github_client_secret', l:'GitHub Client Secret', t:'password', v:d.auth.github_client_secret, ph:''},
+            {k:'github_redirect_uri', l:'GitHub Redirect URI', t:'text', v:d.auth.github_redirect_uri, ph:'http://localhost:8000/auth/callback'},
+            {k:'google_client_id', l:'Google Client ID', t:'text', v:d.auth.google_client_id, ph:''},
+            {k:'google_client_secret', l:'Google Client Secret', t:'password', v:d.auth.google_client_secret, ph:''},
+            {k:'google_redirect_uri', l:'Google Redirect URI', t:'text', v:d.auth.google_redirect_uri, ph:''},
+            {k:'superadmin_email', l:'Superadmin Email', t:'text', v:d.auth.superadmin_email, ph:'admin@example.com'}
+        ]);
+        h += cfgSection('Infrastructure', 'infra', [
+            {k:'qdrant_url', l:'Qdrant URL', t:'text', v:d.connection.qdrant_url, ph:'http://localhost:6333'},
+            {k:'redis_url', l:'Redis URL', t:'text', v:d.connection.redis_url, ph:'redis://localhost:6379/0'},
+            {k:'repos_data_dir', l:'Repos Data Dir', t:'text', v:d.connection.repos_data_dir, ph:'/data/repos'}
+        ]);
+        h += cfgSection('Rate Limiting', 'rate', [
+            {k:'rate_limit_enabled', l:'Enabled', t:'bool', v:d.limits.rate_limit_enabled},
+            {k:'rate_limit_per_second', l:'Requests/sec', t:'number', v:d.limits.rate_limit_per_second, ph:'10'},
+            {k:'rate_limit_burst', l:'Burst', t:'number', v:d.limits.rate_limit_burst, ph:'500'}
+        ]);
+        h += cfgSection('System', 'sys', [
+            {k:'delete_clones_after_indexing', l:'Delete Clones After Indexing', t:'bool', v:d.system.delete_clones_after_indexing},
+            {k:'db_echo', l:'DB Echo (SQL logging)', t:'bool', v:d.system.db_echo},
+            {k:'webhook_secret', l:'Webhook Secret', t:'password', v:d.webhooks.webhook_secret, ph:''}
+        ]);
+        h += '<div class="card" style="background:var(--bg-2)"><div class="card-hd">Read-Only Info</div>';
+        h += '<div class="row g-12" style="flex-wrap:wrap">';
+        h += '<div class="stat-item" style="flex:1;min-width:120px"><div class="stat-num" style="font-size:16px">' + esc(d.system.version) + '</div><div class="stat-txt">Version</div></div>';
+        h += '<div class="stat-item" style="flex:1;min-width:120px"><div class="stat-num" style="font-size:16px">' + esc(d.system.edition) + '</div><div class="stat-txt">Edition</div></div>';
+        h += '<div class="stat-item" style="flex:1;min-width:120px"><div class="stat-num" style="font-size:16px">' + (d.system.demo_mode ? 'Yes' : 'No') + '</div><div class="stat-txt">Demo Mode</div></div>';
+        h += '<div class="stat-item" style="flex:1;min-width:120px"><div class="stat-num" style="font-size:14px;word-break:break-all">' + esc(d.connection.database_url) + '</div><div class="stat-txt">Database</div></div>';
+        h += '</div></div>';
+        html('cfg', h);
+    }).catch(function(e) {
+        html('cfg', '<div class="card"><p style="color:var(--red)">Could not load settings: ' + esc(e.message) + '</p></div>');
+    });
+}
+function cfgSection(title, id, fields) {
+    var h = '<div class="card"><div class="card-hd">' + title + '</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px">';
+    for (var i = 0; i < fields.length; i++) {
+        var f = fields[i];
+        if (f.t === 'bool') {
+            h += '<div class="field"><label>' + f.l + '</label><select class="inp" data-cfg="' + f.k + '"><option value="true"' + (f.v ? ' selected' : '') + '>Enabled</option><option value="false"' + (!f.v ? ' selected' : '') + '>Disabled</option></select></div>';
+        } else {
+            h += '<div class="field"><label>' + f.l + '</label><input class="inp" type="' + f.t + '" data-cfg="' + f.k + '" value="' + esc(String(f.v || '')) + '" placeholder="' + esc(f.ph || '') + '"' + (f.t === 'number' ? ' step="any"' : '') + '></div>';
+        }
+    }
+    h += '</div><button class="btn btn-s btn-p mt" onclick="saveCfg(this)">Save ' + title + '</button></div>';
+    return h;
+}
+function saveCfg(btn) {
+    var card = btn.closest('.card');
+    var inputs = card.querySelectorAll('[data-cfg]');
+    var body = {};
+    inputs.forEach(function(el) {
+        var k = el.getAttribute('data-cfg'), v = el.value;
+        if (el.type === 'number') v = parseFloat(v);
+        else if (el.tagName === 'SELECT') v = v === 'true';
+        if (v !== '' && v !== null) body[k] = v;
+    });
+    API.patch('/settings', body).then(function(d) { toast(d.count + ' setting(s) saved'); }).catch(function(e) { toast(e.message, false); });
 }
 function saveUrl() {
     var u = $('su').value.trim(); if (!u) return;

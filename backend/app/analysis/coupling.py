@@ -154,9 +154,17 @@ def _compute_edge_metrics(
     intra: dict[str, int] = defaultdict(int)
     inter: dict[str, int] = defaultdict(int)
 
+    # Collect known module names for fuzzy matching
+    known_modules = set(sym_to_mod.values())
+
     for edge in graph.edges:
         src_mod = sym_to_mod.get(edge.source_fq_name, "")
         tgt_mod = sym_to_mod.get(edge.target_fq_name, "")
+
+        # If target not in symbol table, infer module from fq_name prefix
+        if not tgt_mod and "." in edge.target_fq_name:
+            tgt_mod = _infer_module(edge.target_fq_name, known_modules)
+
         if not src_mod or not tgt_mod:
             continue
         if src_mod == tgt_mod:
@@ -167,6 +175,20 @@ def _compute_edge_metrics(
             efferent[src_mod].add(tgt_mod)
             afferent[tgt_mod].add(src_mod)
     return afferent, efferent, intra, inter
+
+
+def _infer_module(fq_name: str, known_modules: set[str]) -> str:
+    """Infer module from a fully-qualified name by matching known module prefixes."""
+    # Try progressively shorter prefixes
+    parts = fq_name.rsplit(".", 1)
+    while len(parts) == 2:
+        candidate = parts[0]
+        # Check if any known module matches this prefix or is a prefix of it
+        if candidate in known_modules:
+            return candidate
+        # Try parent package
+        parts = candidate.rsplit(".", 1)
+    return ""
 
 
 def _compute_derived_metrics(

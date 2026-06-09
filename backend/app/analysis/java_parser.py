@@ -263,6 +263,20 @@ def _extract_members(
             )
         )
 
+        # For fields, emit USES edge to the field type (composition/association)
+        if kind == SymbolKind.FIELD:
+            field_type = _extract_field_type_ref(child, source)
+            if field_type:
+                analysis.edges.append(
+                    EdgeInfo(
+                        source_fq_name=parent_fq,
+                        target_fq_name=field_type,
+                        edge_type=EdgeType.USES,
+                        file_path=file_path,
+                        line=child.start_point[0] + 1,
+                    )
+                )
+
         if kind in (SymbolKind.METHOD, SymbolKind.CONSTRUCTOR):
             _extract_calls(child, source, file_path, analysis, fq)
 
@@ -377,6 +391,56 @@ def _extract_return_type(node: Node, source: bytes) -> str:
     return ""
 
 
+# Java primitives and common types that don't represent project relationships
+_JAVA_PRIMITIVES = frozenset({
+    "int", "long", "short", "byte", "float", "double", "boolean", "char",
+    "void", "String", "Integer", "Long", "Short", "Byte", "Float", "Double",
+    "Boolean", "Character", "Object", "Void", "Class",
+})
+
+_JAVA_COLLECTIONS = frozenset({
+    "List", "ArrayList", "LinkedList", "Map", "HashMap", "TreeMap",
+    "Set", "HashSet", "TreeSet", "Queue", "Deque", "ArrayDeque",
+    "Collection", "Iterable", "Iterator", "Optional", "Stream",
+    "Vector", "Stack", "LinkedHashMap", "LinkedHashSet", "ConcurrentHashMap",
+})
+
+
+def _extract_field_type_ref(node: Node, source: bytes) -> str:
+    """Extract a meaningful type reference from a field declaration.
+
+    Returns the type name if it looks like a project class (not a primitive
+    or standard collection). For generics like List<Enemy>, extracts the
+    type argument.
+    """
+    type_node = node.child_by_field_name("type")
+    if not type_node:
+        return ""
+
+    type_text = _node_text(type_node, source).strip()
+    # Handle arrays
+    type_text = type_text.rstrip("[]").strip()
+
+    # Handle generics: extract inner type(s)
+    refs = _extract_type_refs_from_text(type_text)
+    # Return the first non-primitive/non-collection type found
+    for ref in refs:
+        if ref and ref[0].isupper() and ref not in _JAVA_PRIMITIVES and ref not in _JAVA_COLLECTIONS:
+            return ref
+    return ""
+
+
+def _extract_type_refs_from_text(type_text: str) -> list[str]:
+    """Parse a type string and return individual type references.
+
+    E.g., 'Map<String, GameEntity>' -> ['Map', 'String', 'GameEntity']
+    """
+    # Remove generic brackets and split on delimiters
+    cleaned = type_text.replace("<", " ").replace(">", " ").replace(",", " ")
+    parts = cleaned.split()
+    return [p.strip() for p in parts if p.strip()]
+
+
 def _extract_doc_comment(node: Node, source: bytes) -> str:
     """Extract Javadoc comment preceding a declaration."""
     prev = node.prev_named_sibling
@@ -388,13 +452,14 @@ def _extract_doc_comment(node: Node, source: bytes) -> str:
 
 
 def _extract_invocation_target(node: Node, source: bytes) -> str:
+    """Extract a qualified call target like 'receiver.methodName' from a method_invocation."""
     name_node = node.child_by_field_name("name")
-    if name_node:
-        return _node_text(name_node, source)
-    obj = node.child_by_field_name("object")
-    if obj:
-        return _node_text(obj, source)
-    return ""
+    obj_node = node.child_by_field_name("object")
+    method_name = _node_text(name_node, source) if name_node else ""
+    if obj_node and method_name:
+        receiver = _node_text(obj_node, source)
+        return f"{receiver}.{method_name}"
+    return method_name
 
 
 # ------------------------------------------------------------------

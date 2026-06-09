@@ -6,12 +6,14 @@ var API = {
         if (body) opts.body = JSON.stringify(body);
         return fetch(this.base + path, opts).then(function(r) {
             if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'HTTP ' + r.status); });
+            if (r.status === 204 || r.headers.get('content-length') === '0') return null;
             var ct = r.headers.get('content-type') || '';
             return ct.indexOf('json') !== -1 ? r.json() : r.text();
         });
     },
     get: function(p) { return this.req(p, 'GET'); },
     post: function(p, b) { return this.req(p, 'POST', b); },
+    patch: function(p, b) { return this.req(p, 'PATCH', b); },
     del: function(p) { return this.req(p, 'DELETE'); },
     download: function(path, name) {
         return fetch(this.base + path).then(function(r) {
