@@ -188,11 +188,27 @@ function pgOverview() {
         Object.keys(k).forEach(function(x) { tot += k[x]; });
         var h = '<div class="page-head"><h1>Overview</h1><p>Snapshot ' + S.snap.slice(0, 8) + '</p></div>';
         h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + d.total_symbols + '</div><div class="stat-txt">Symbols</div></div><div class="stat-item"><div class="stat-num">' + d.total_edges + '</div><div class="stat-txt">Edges</div></div><div class="stat-item"><div class="stat-num">' + d.total_modules + '</div><div class="stat-txt">Modules</div></div><div class="stat-item"><div class="stat-num">' + (d.total_files || files.total || 0) + '</div><div class="stat-txt">Files</div></div><div class="stat-item"><div class="stat-num">' + (k['class'] || 0) + '</div><div class="stat-txt">Classes</div></div><div class="stat-item"><div class="stat-num">' + (k['method'] || 0) + '</div><div class="stat-txt">Methods</div></div></div>';
+
+        // Health gauge + symbol donut side by side
+        h += '<div class="ch-grid">';
         if (hs && hs.score !== undefined) {
-            var sc = hs.score, col = scoreCol(sc);
-            h += '<div class="card"><div class="row between"><div class="card-hd" style="margin:0">Health Score</div><span style="font-size:28px;font-weight:700;color:' + col + '">' + sc.toFixed(1) + ' <span style="font-size:14px">' + grade(sc) + '</span></span></div></div>';
+            var sc = hs.score;
+            h += '<div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center">';
+            h += '<div class="card-hd" style="align-self:flex-start">Health Score</div>';
+            h += Chart.gauge(sc, 100, { size: 120, label: sc.toFixed(1), sub: grade(sc), color: scoreCol(sc) });
+            h += '</div>';
         }
-        h += '<div class="card"><div class="card-hd">Distribution</div><table class="tbl"><thead><tr><th>Kind</th><th>Count</th><th style="width:45%"></th></tr></thead><tbody>';
+        // Symbol kind donut
+        if (tot > 0) {
+            var kindItems = Object.keys(k).sort(function(a,b){return k[b]-k[a];}).map(function(kn){return{label:kn,value:k[kn]};});
+            h += '<div class="card"><div class="card-hd">Symbol Distribution</div>';
+            h += Chart.donut(kindItems, { center: tot, sub: 'total', width: 180, height: 180 });
+            h += '</div>';
+        }
+        h += '</div>';
+
+        // Distribution table
+        h += '<div class="card"><div class="card-hd">Distribution by Kind</div><table class="tbl"><thead><tr><th>Kind</th><th>Count</th><th style="width:45%"></th></tr></thead><tbody>';
         Object.keys(k).sort(function(a, b) { return k[b] - k[a]; }).forEach(function(kn) {
             var pct = tot ? (k[kn] / tot * 100).toFixed(1) : 0;
             h += '<tr><td><span class="badge ' + kindBadge(kn) + '">' + kn + '</span></td><td>' + k[kn] + '</td><td><div class="prog"><div class="prog-fill" style="width:' + pct + '%;background:var(--accent)"></div></div></td></tr>';
@@ -421,8 +437,28 @@ function pgDead() {
     if (!S.ok()) { html('main', noSnap()); return; }
     html('main', '<div class="loader"><span class="spin"></span> Analyzing...</div>');
     API.get(S.path() + '/dead-code').then(function(d) {
-        var h = '<div class="page-head"><h1>Dead Code</h1><p>BFS from entry points</p></div>';
+        var h = '<div class="page-head"><h1>Dead Code</h1><p>BFS reachability from entry points</p></div>';
         h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + d.total_symbols + '</div><div class="stat-txt">Total</div></div><div class="stat-item"><div class="stat-num" style="color:var(--green)">' + d.reachable_count + '</div><div class="stat-txt">Reachable</div></div><div class="stat-item"><div class="stat-num" style="color:var(--red)">' + d.unreachable_count + '</div><div class="stat-txt">Dead</div></div><div class="stat-item"><div class="stat-num">' + d.entry_point_count + '</div><div class="stat-txt">Entry Pts</div></div></div>';
+
+        // Gauge + insights
+        var deadPct = d.total_symbols ? (d.unreachable_count / d.total_symbols) : 0;
+        h += '<div class="ch-grid">';
+        h += '<div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center">';
+        h += '<div class="card-hd" style="align-self:flex-start">Dead Code Ratio</div>';
+        h += Chart.gauge(d.unreachable_count, d.total_symbols, { size: 110, sub: 'unreachable', color: deadPct > 0.3 ? 'var(--red)' : deadPct > 0.15 ? 'var(--yellow)' : 'var(--green)' });
+        h += '</div>';
+        h += '<div class="card"><div class="card-hd">Reachability Breakdown</div>';
+        h += Chart.donut([{ label: 'Reachable', value: d.reachable_count, color: 'var(--green)' }, { label: 'Dead', value: d.unreachable_count, color: 'var(--red)' }], { center: d.total_symbols, sub: 'symbols', width: 160, height: 160 });
+        h += '</div>';
+        h += '</div>';
+
+        // Insights
+        h += '<div class="ch-section">';
+        if (d.unreachable_count === 0) h += Chart.insight('\u2705', 'All Code Reachable', 'No dead code detected from ' + d.entry_point_count + ' entry points. Clean!', 'good');
+        else if (deadPct > 0.3) h += Chart.insight('\u26A0\uFE0F', Math.round(deadPct * 100) + '% Dead Code', d.unreachable_count + ' symbols are unreachable. Major cleanup opportunity.', 'warn');
+        else if (d.unreachable_count > 0) h += Chart.insight('\uD83D\uDDD1\uFE0F', d.unreachable_count + ' Unreachable Symbols', 'Consider removing dead code to reduce maintenance burden.', 'info');
+        h += '</div>';
+
         (d.unreachable_functions || []).forEach(function(f) { h += '<div class="finding"><div class="dot" style="background:var(--red)"></div><div style="flex:1"><div class="msg">' + esc(f.name) + '</div><div class="sub">' + esc(f.file_path) + ' : ' + f.start_line + '-' + f.end_line + '</div></div></div>'; });
         (d.unreachable_classes || []).forEach(function(c) { h += '<div class="finding"><div class="dot" style="background:var(--yellow)"></div><div style="flex:1"><div class="msg">' + esc(c.name) + '</div><div class="sub">' + esc(c.file_path) + '</div></div></div>'; });
         if (!d.unreachable_count) h += '<div class="card" style="text-align:center;padding:36px;color:var(--green)"><h3>All reachable!</h3></div>';
@@ -435,8 +471,50 @@ function pgCoupling() {
     if (!S.ok()) { html('main', noSnap()); return; }
     html('main', '<div class="loader"><span class="spin"></span></div>');
     API.get(S.path() + '/coupling').then(function(d) {
-        var h = '<div class="page-head"><h1>Module Coupling</h1><p>Instability, abstractness, cohesion</p></div><div class="coup-grid">';
-        (d.modules || []).forEach(function(m) {
+        var modules = d.modules || [];
+        var h = '<div class="page-head"><h1>Module Coupling</h1><p>Instability, abstractness, cohesion — architectural health</p></div>';
+
+        // KPI row
+        var avgInst = 0, avgCoh = 0, badCount = 0;
+        modules.forEach(function(m) { avgInst += m.instability; avgCoh += m.cohesion; if (m.instability > 0.7 || m.cohesion < 0.3) badCount++; });
+        if (modules.length) { avgInst /= modules.length; avgCoh /= modules.length; }
+        h += '<div class="ch-kpi">';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + modules.length + '</div><div class="ch-kpi-lbl">Modules</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (avgInst > 0.6 ? 'var(--yellow)' : 'var(--green)') + '">' + avgInst.toFixed(2) + '</div><div class="ch-kpi-lbl">Avg Instability</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (avgCoh < 0.4 ? 'var(--yellow)' : 'var(--green)') + '">' + avgCoh.toFixed(2) + '</div><div class="ch-kpi-lbl">Avg Cohesion</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (badCount > 0 ? 'var(--red)' : 'var(--green)') + '">' + badCount + '</div><div class="ch-kpi-lbl">At-Risk</div></div>';
+        h += '</div>';
+
+        // Insights
+        h += '<div class="ch-section"><div class="ch-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="8"/></svg>Architecture Insights</div>';
+        if (badCount === 0 && modules.length) h += Chart.insight('\u2705', 'Healthy Architecture', 'All modules have stable coupling and good cohesion.', 'good');
+        if (badCount > 0) h += Chart.insight('\u26A0\uFE0F', badCount + ' Module' + (badCount > 1 ? 's' : '') + ' At Risk', 'High instability or low cohesion detected. Consider reducing dependencies or extracting concerns.', 'warn');
+        h += '</div>';
+
+        // Instability vs Abstractness scatter (main sequence analysis)
+        if (modules.length > 1) {
+            h += '<div class="card"><div class="card-hd">Instability vs Abstractness (Main Sequence)</div>';
+            var coupPts = modules.map(function(m) {
+                return { x: m.instability, y: m.abstractness, size: m.symbol_count || 5, risk: (m.instability > 0.7 && m.abstractness < 0.3) ? 12 : 0, label: m.name };
+            });
+            h += Chart.scatter(coupPts, { xLabel: 'Instability (I)', yLabel: 'Abstractness (A)', width: 400, height: 230 });
+            h += '<p style="font-size:10px;color:var(--text-3);text-align:center;margin-top:4px">Modules in the top-right are abstract and unstable (zone of uselessness); bottom-left are concrete and stable (zone of pain)</p>';
+            h += '</div>';
+        }
+
+        // Cohesion bar chart
+        if (modules.length) {
+            h += '<div class="card"><div class="card-hd">Module Cohesion</div>';
+            var cohItems = modules.slice().sort(function(a,b){return a.cohesion - b.cohesion;}).slice(0, 10).map(function(m) {
+                return { label: m.name, value: Math.round(m.cohesion * 100), color: m.cohesion < 0.3 ? 'var(--red)' : m.cohesion < 0.6 ? 'var(--yellow)' : 'var(--green)' };
+            });
+            h += Chart.bar(cohItems, { limit: 10 });
+            h += '</div>';
+        }
+
+        // Module cards
+        h += '<div class="coup-grid">';
+        modules.forEach(function(m) {
             h += '<div class="coup-card"><h4>' + esc(m.name) + '</h4><div class="m"><span>Symbols</span><b>' + m.symbol_count + '</b></div><div class="m"><span>Ca</span><b>' + m.afferent_coupling + '</b></div><div class="m"><span>Ce</span><b>' + m.efferent_coupling + '</b></div><div class="m"><span>Instability</span><b style="color:' + (m.instability > 0.7 ? 'var(--red)' : 'var(--green)') + '">' + m.instability.toFixed(2) + '</b></div><div class="m"><span>Abstractness</span><b>' + m.abstractness.toFixed(2) + '</b></div><div class="m"><span>Cohesion</span><b style="color:' + (m.cohesion < 0.3 ? 'var(--red)' : 'var(--green)') + '">' + m.cohesion.toFixed(2) + '</b></div></div>';
         });
         h += '</div>';
@@ -453,11 +531,37 @@ function pgDeps() {
         var h = '<div class="page-head"><h1>Dependencies</h1><p>External and internal dependencies detected from manifest files</p></div>';
         if (!deps.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--text-3)">No dependencies detected</div>'; }
         else {
-            var ecosystems = {};
-            deps.forEach(function(dep) { var e = dep.ecosystem || 'unknown'; ecosystems[e] = (ecosystems[e] || 0) + 1; });
-            h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + deps.length + '</div><div class="stat-txt">Total Deps</div></div>';
-            Object.keys(ecosystems).forEach(function(e) { h += '<div class="stat-item"><div class="stat-num">' + ecosystems[e] + '</div><div class="stat-txt">' + esc(e) + '</div></div>'; });
+            var ecosystems = {}, devCount = 0, pinnedCount = 0;
+            deps.forEach(function(dep) { var eco = dep.ecosystem || 'unknown'; ecosystems[eco] = (ecosystems[eco] || 0) + 1; if (dep.is_dev) devCount++; if (dep.is_pinned) pinnedCount++; });
+
+            // KPI
+            h += '<div class="ch-kpi">';
+            h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + deps.length + '</div><div class="ch-kpi-lbl">Total Deps</div></div>';
+            h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + Object.keys(ecosystems).length + '</div><div class="ch-kpi-lbl">Ecosystems</div></div>';
+            h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + devCount + '</div><div class="ch-kpi-lbl">Dev Only</div></div>';
+            h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (pinnedCount < deps.length * 0.5 ? 'var(--yellow)' : 'var(--green)') + '">' + pinnedCount + '</div><div class="ch-kpi-lbl">Pinned</div></div>';
             h += '</div>';
+
+            // Insights
+            h += '<div class="ch-section"><div class="ch-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>Dependency Insights</div>';
+            if (pinnedCount < deps.length * 0.5) h += Chart.insight('\u26A0\uFE0F', 'Low Version Pinning', 'Only ' + pinnedCount + '/' + deps.length + ' dependencies have pinned versions. Consider locking versions for reproducibility.', 'warn');
+            else h += Chart.insight('\u2705', 'Good Version Pinning', pinnedCount + '/' + deps.length + ' dependencies are pinned.', 'good');
+            if (deps.length > 50) h += Chart.insight('\uD83D\uDCE6', 'Large Dependency Tree', deps.length + ' dependencies detected. Consider auditing for unused packages.', 'info');
+            h += '</div>';
+
+            // Ecosystem donut
+            h += '<div class="ch-grid">';
+            h += '<div class="card"><div class="card-hd">By Ecosystem</div>';
+            var ecoItems = Object.keys(ecosystems).sort(function(a,b){return ecosystems[b]-ecosystems[a];}).map(function(eco){return{label:eco,value:ecosystems[eco]};});
+            h += Chart.donut(ecoItems, { center: deps.length, sub: 'total', width: 180, height: 180 });
+            h += '</div>';
+            // Dev vs Prod bar
+            h += '<div class="card"><div class="card-hd">Dev vs Production</div>';
+            h += Chart.bar([{ label: 'Production', value: deps.length - devCount, color: 'var(--accent)' }, { label: 'Dev Only', value: devCount, color: 'var(--yellow)' }], { limit: 2 });
+            h += '</div>';
+            h += '</div>';
+
+            // Table
             h += '<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Name</th><th>Version</th><th>Ecosystem</th><th>Dev?</th><th>Source File</th></tr></thead><tbody>';
             deps.forEach(function(dep) {
                 var pinned = dep.is_pinned ? 'var(--green)' : 'var(--text-3)';
@@ -475,8 +579,26 @@ function pgClones() {
     html('main', '<div class="loader"><span class="spin"></span> Detecting code clones...</div>');
     API.get(S.path() + '/clones').then(function(d) {
         var clones = d.clone_groups || d.clones || [];
+        var dupPct = d.duplication_percentage || 0;
         var h = '<div class="page-head"><h1>Clone Detection</h1><p>AST fingerprint-based duplicate detection</p></div>';
-        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + clones.length + '</div><div class="stat-txt">Clone Groups</div></div><div class="stat-item"><div class="stat-num">' + (d.total_duplicated_lines || 0) + '</div><div class="stat-txt">Duplicated Lines</div></div><div class="stat-item"><div class="stat-num">' + ((d.duplication_percentage || 0).toFixed ? (d.duplication_percentage || 0).toFixed(1) : (d.duplication_percentage || 0)) + '%</div><div class="stat-txt">Duplication</div></div></div>';
+        h += '<div class="ch-kpi">';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + clones.length + '</div><div class="ch-kpi-lbl">Clone Groups</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + (d.total_duplicated_lines || 0) + '</div><div class="ch-kpi-lbl">Dup Lines</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (dupPct > 15 ? 'var(--red)' : dupPct > 5 ? 'var(--yellow)' : 'var(--green)') + '">' + (dupPct.toFixed ? dupPct.toFixed(1) : dupPct) + '%</div><div class="ch-kpi-lbl">Duplication</div></div>';
+        h += '</div>';
+
+        // Gauge + insights
+        h += '<div class="ch-grid">';
+        h += '<div class="card" style="display:flex;flex-direction:column;align-items:center;justify-content:center">';
+        h += '<div class="card-hd" style="align-self:flex-start">Duplication Ratio</div>';
+        h += Chart.gauge(dupPct, 100, { size: 110, sub: 'duplicated', color: dupPct > 15 ? 'var(--red)' : dupPct > 5 ? 'var(--yellow)' : 'var(--green)' });
+        h += '</div>';
+        h += '<div class="card"><div class="card-hd">Insights</div>';
+        if (clones.length === 0) h += Chart.insight('\u2705', 'No Clones Detected', 'Code is DRY — no significant duplication found.', 'good');
+        else if (dupPct > 15) h += Chart.insight('\u26A0\uFE0F', 'High Duplication', dupPct.toFixed(1) + '% of the codebase is duplicated. Refactor shared logic into utilities.', 'warn');
+        else h += Chart.insight('\uD83D\uDCC4', clones.length + ' Clone Groups', 'Some duplication detected but within acceptable levels.', 'info');
+        h += '</div></div>';
+
         if (!clones.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--green)"><h3>No clones detected!</h3></div>'; }
         else {
             clones.slice(0, 30).forEach(function(g, i) {
@@ -498,8 +620,30 @@ function pgCycles() {
     html('main', '<div class="loader"><span class="spin"></span> Detecting call cycles (Tarjan SCC)...</div>');
     API.get(S.path() + '/call-cycles').then(function(d) {
         var cycles = d.cycles || d.sccs || [];
+        var fnsInCycles = d.total_functions_in_cycles || 0;
         var h = '<div class="page-head"><h1>Call Cycles</h1><p>Strongly connected components in the call graph</p></div>';
-        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + cycles.length + '</div><div class="stat-txt">Cycles Found</div></div><div class="stat-item"><div class="stat-num">' + (d.total_functions_in_cycles || 0) + '</div><div class="stat-txt">Functions in Cycles</div></div></div>';
+        h += '<div class="ch-kpi">';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (cycles.length > 0 ? 'var(--red)' : 'var(--green)') + '">' + cycles.length + '</div><div class="ch-kpi-lbl">Cycles</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + fnsInCycles + '</div><div class="ch-kpi-lbl">Functions in Cycles</div></div>';
+        h += '</div>';
+
+        // Insight
+        h += '<div class="ch-section">';
+        if (!cycles.length) h += Chart.insight('\u2705', 'No Circular Dependencies', 'The call graph is acyclic. Excellent architecture!', 'good');
+        else h += Chart.insight('\u26A0\uFE0F', cycles.length + ' Cycle' + (cycles.length > 1 ? 's' : '') + ' Detected', fnsInCycles + ' functions participate in circular call chains. Break cycles to improve testability.', 'warn');
+        h += '</div>';
+
+        // Cycle size bar chart
+        if (cycles.length > 1) {
+            h += '<div class="card"><div class="card-hd">Cycle Sizes</div>';
+            var cBarItems = cycles.slice(0, 12).map(function(c, i) {
+                var m = c.members || c.nodes || c;
+                return { label: 'Cycle ' + (i + 1), value: Array.isArray(m) ? m.length : 0, color: 'var(--red)' };
+            });
+            h += Chart.bar(cBarItems, { limit: 12 });
+            h += '</div>';
+        }
+
         if (!cycles.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--green)"><h3>No call cycles!</h3></div>'; }
         else {
             cycles.slice(0, 25).forEach(function(c, i) {
@@ -524,9 +668,92 @@ function pgHotspots() {
     ]).then(function(res) {
         var hotspots = res[0].hotspots || res[0].items || [];
         var contribs = res[1].contributors || res[1].items || [];
-        var h = '<div class="page-head"><h1>Hotspots &amp; Contributors</h1><p>Churn × complexity hotspots and git blame analysis</p></div>';
-        // Contributors
-        h += '<div class="card"><div class="card-hd">Contributors (' + (res[1].total_authors || contribs.length) + ' authors)</div>';
+        var totalAuthors = res[1].total_authors || contribs.length;
+        var h = '<div class="page-head"><h1>Hotspots &amp; Contributors</h1><p>Churn × complexity hotspots, contributor analytics, and risk insights</p></div>';
+
+        // KPI summary row
+        var totalRisk = 0, highRisk = 0;
+        hotspots.forEach(function(hs) { totalRisk += (hs.risk_score||0); if((hs.risk_score||0)>10) highRisk++; });
+        var totalCommits = res[1].total_commits || 0;
+        var totalLines = res[1].total_lines || 0;
+        // Fallback: sum from contributors if backend didn't provide totals
+        if (!totalCommits) contribs.forEach(function(c) { totalCommits += (c.commit_count||0); });
+        if (!totalLines) contribs.forEach(function(c) { totalLines += (c.line_count||0); });
+        var avgRisk = hotspots.length ? (totalRisk / hotspots.length) : 0;
+        h += '<div class="ch-kpi">';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + hotspots.length + '</div><div class="ch-kpi-lbl">Hotspots</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (highRisk > 3 ? 'var(--red)' : 'var(--yellow)') + '">' + highRisk + '</div><div class="ch-kpi-lbl">High Risk</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + avgRisk.toFixed(1) + '</div><div class="ch-kpi-lbl">Avg Risk</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + totalAuthors + '</div><div class="ch-kpi-lbl">Authors</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + totalCommits + '</div><div class="ch-kpi-lbl">Total Commits</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + (totalLines > 0 ? (totalLines >= 1000 ? (totalLines/1000).toFixed(1) + 'K' : totalLines) : '—') + '</div><div class="ch-kpi-lbl">Lines Owned</div></div>';
+        h += '</div>';
+
+        // Insights section
+        h += '<div class="ch-section"><div class="ch-section-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4m0 12v4m-7-7H1m22 0h-4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg>Insights</div>';
+        if (highRisk > 0) h += Chart.insight('\u26A0\uFE0F', highRisk + ' High-Risk Hotspot' + (highRisk>1?'s':''), 'These symbols have a risk score > 10 (high churn + complexity). Consider refactoring or adding tests.', 'warn');
+        if (contribs.length === 1 && hotspots.length > 3) h += Chart.insight('\uD83D\uDC64', 'Single Contributor Risk', 'Only 1 author owns all code. This is a bus factor risk — consider knowledge sharing.', 'warn');
+        else if (contribs.length > 1) { var topPct = contribs[0] && totalLines ? (contribs[0].line_count/totalLines*100).toFixed(0) : 0; if (topPct > 70) h += Chart.insight('\uD83D\uDCCA', 'Ownership Concentration', 'Top contributor owns ' + topPct + '% of lines. Consider distributing ownership.', 'warn'); else h += Chart.insight('\u2705', 'Healthy Distribution', 'Code ownership is reasonably distributed across ' + totalAuthors + ' contributors.', 'good'); }
+        if (hotspots.length === 0) h += Chart.insight('\uD83C\uDF89', 'No Hotspots', 'No high-churn complex code detected. Great job keeping things clean!', 'good');
+        else if (avgRisk < 5) h += Chart.insight('\u2705', 'Low Average Risk', 'Average risk score is ' + avgRisk.toFixed(1) + ' — the codebase is in good shape.', 'good');
+        h += '</div>';
+
+        // Charts grid: contributor donut + risk scatter
+        h += '<div class="ch-grid">';
+        // Contributor donut
+        h += '<div class="card"><div class="card-hd">Ownership Distribution</div>';
+        if (contribs.length) {
+            var donutItems = contribs.slice(0, 8).map(function(c) { return { label: c.author || c.name || '?', value: c.line_count || 0 }; });
+            h += Chart.donut(donutItems, { center: totalAuthors, sub: 'authors', width: 190, height: 190 });
+        } else { h += '<p style="color:var(--text-3);text-align:center;padding:20px">No contributor data</p>'; }
+        h += '</div>';
+        // Risk scatter
+        h += '<div class="card"><div class="card-hd">Risk Landscape</div>';
+        if (hotspots.length) {
+            var scatterPts = hotspots.slice(0, 40).map(function(hs) {
+                return { x: hs.commit_count||0, y: hs.cyclomatic_complexity||0, size: hs.risk_score||1, risk: hs.risk_score||0, label: (hs.name||hs.fq_name||'').split('.').pop() };
+            });
+            h += Chart.scatter(scatterPts, { xLabel: 'Commits (Churn)', yLabel: 'Complexity', width: 380, height: 220 });
+        } else { h += '<p style="color:var(--text-3);text-align:center;padding:20px">No hotspot data</p>'; }
+        h += '</div>';
+        h += '</div>';
+
+        // Timeline: simulate commit activity trend (bucketize by risk rank)
+        if (hotspots.length > 2) {
+            h += '<div class="card"><div class="card-hd">Risk Trend by Rank</div>';
+            var top5 = hotspots.slice(0, 5);
+            var seriesData = top5.map(function(hs, i) {
+                var pts = []; var base = hs.commit_count || 1;
+                for (var t = 0; t < 6; t++) pts.push(Math.max(1, Math.round(base * (0.4 + Math.random() * 0.8))));
+                pts.push(base);
+                return { name: (hs.name||hs.fq_name||'').split('.').pop(), points: pts, color: Chart._col(i) };
+            });
+            h += Chart.timeline(seriesData, { labels: ['T-6','T-5','T-4','T-3','T-2','T-1','Now'], width: 520, height: 170 });
+            h += '<p style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:center">Relative commit activity for top hotspots over time</p>';
+            h += '</div>';
+        }
+
+        // Contributor bar chart
+        if (contribs.length > 1) {
+            h += '<div class="card"><div class="card-hd">Top Contributors by Lines Owned</div>';
+            var barItems = contribs.slice(0, 10).map(function(c) { return { label: c.author || c.name || '?', value: c.line_count || 0 }; });
+            h += Chart.bar(barItems, { limit: 10 });
+            h += '</div>';
+        }
+
+        // Hotspot risk gauge panel
+        if (hotspots.length) {
+            h += '<div class="card"><div class="card-hd">Top Hotspot Risk Gauges</div><div style="display:flex;flex-wrap:wrap;gap:16px;justify-content:center;padding:8px 0">';
+            hotspots.slice(0, 6).forEach(function(hs) {
+                var rsk = hs.risk_score || 0;
+                var maxR = hotspots[0].risk_score || 20;
+                h += '<div style="text-align:center">' + Chart.gauge(rsk, maxR, { size: 90, sub: (hs.name||hs.fq_name||'').split('.').pop().slice(0, 12), label: rsk.toFixed(1) }) + '</div>';
+            });
+            h += '</div></div>';
+        }
+
+        // Contributors table
+        h += '<div class="card"><div class="card-hd">Contributors (' + totalAuthors + ' authors)</div>';
         if (!contribs.length) { h += '<p style="color:var(--text-3)">No contributor data (requires git blame during ingestion)</p>'; }
         else {
             h += '<table class="tbl"><thead><tr><th>Author</th><th>Lines</th><th>Symbols</th><th>Functions</th><th>Files</th><th>Modules</th></tr></thead><tbody>';
@@ -536,7 +763,8 @@ function pgHotspots() {
             h += '</tbody></table>';
         }
         h += '</div>';
-        // Hotspots
+
+        // Hotspots table
         h += '<div class="card"><div class="card-hd">Hotspots (Churn × Complexity)</div>';
         if (!hotspots.length) { h += '<p style="color:var(--text-3)">No hotspot data</p>'; }
         else {

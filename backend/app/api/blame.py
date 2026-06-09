@@ -32,6 +32,8 @@ class ContributorStats(BaseModel):
 class ContributorsReport(BaseModel):
     snapshot_id: str
     total_authors: int
+    total_commits: int
+    total_lines: int
     contributors: list[ContributorStats]
 
 
@@ -64,46 +66,75 @@ async def get_contributors(
             "modules": set(),
             "lines": 0,
             "symbols": 0,
-            "commits": 0,
+            "commit_hexes": set(),
         }
     )
 
     for s in symbols:
         # Parse the full author breakdown from blame
-        authors_map: dict[str, int] = {}
+        authors_map: dict[str, Any] = {}
         if s.authors_json:
             try:
                 authors_map = json.loads(s.authors_json)
             except (json.JSONDecodeError, TypeError):
                 pass
 
+        # Skip classes/interfaces for line counting to avoid overlapping
+        # with their children (methods). Only count leaf symbols.
+        is_leaf = s.kind in ("method", "constructor", "function", "field")
+
         if authors_map:
-            # Credit every author based on their actual line contribution
-            for author, lines in authors_map.items():
+            # Credit every author based on their actual contribution
+            # Determine if this is new-format (with hashes) or old-format (plain int)
+            has_hashes = False
+            for author, val in authors_map.items():
                 if not author:
                     continue
                 d = author_data[author]
-                d["lines"] += lines
+                # Support both old {author: linecount} and new {author: {lines, commits, hashes}}
+                if isinstance(val, dict):
+                    lines = val.get("lines", 0)
+                    hashes = val.get("hashes", [])
+                    if hashes:
+                        has_hashes = True
+                else:
+                    lines = int(val) if val else 0
+                    hashes = []
+                if is_leaf:
+                    d["lines"] += lines
                 d["files"].add(s.file_path)
                 d["symbols"] += 1
                 if s.kind in ("method", "constructor", "function"):
                     d["funcs"] += 1
-                d["commits"] += 1
+                # Deduplicate commits using actual hashes
+                for ch in hashes:
+                    d["commit_hexes"].add(ch)
                 ns = s.namespace or ""
                 if not ns and "/" in s.file_path:
                     ns = s.file_path.rsplit("/", 1)[0]
                 if ns:
                     d["modules"].add(ns)
+
+            # For old-format authors_json (no hashes), credit each author
+            # with the symbol's total commit_count (tracked via symbol identity
+            # to avoid over-counting when multiple authors share a symbol).
+            if not has_hashes and (s.commit_count or 0) > 0:
+                for a in [a for a in authors_map if a]:
+                    author_data[a]["commit_hexes"].add(
+                        f"_legacy_{s.fq_name}"
+                    )
         elif s.last_author:
             # Fallback for symbols without authors_json (old data)
             author = s.last_author
             d = author_data[author]
-            d["lines"] += max(0, (s.end_line or 0) - (s.start_line or 0))
+            if is_leaf:
+                d["lines"] += max(0, (s.end_line or 0) - (s.start_line or 0))
             d["files"].add(s.file_path)
             d["symbols"] += 1
             if s.kind in ("method", "constructor", "function"):
                 d["funcs"] += 1
-            d["commits"] += s.commit_count or 1
+            # Track unique symbols as proxy for commits when no hashes
+            d["commit_hexes"].add(f"_legacy_{s.fq_name}")
             ns = s.namespace or ""
             if not ns and "/" in s.file_path:
                 ns = s.file_path.rsplit("/", 1)[0]
@@ -117,7 +148,7 @@ async def get_contributors(
                 function_count=data["funcs"],
                 file_count=len(data["files"]),
                 line_count=data["lines"],
-                commit_count=data["commits"],
+                commit_count=len(data["commit_hexes"]),
                 symbol_count=data["symbols"],
                 modules=sorted(data["modules"]),
             )
@@ -127,9 +158,15 @@ async def get_contributors(
         reverse=True,
     )
 
+    # Compute accurate totals
+    total_lines = sum(c.line_count for c in contributors)
+    total_commits = sum(c.commit_count for c in contributors)
+
     return ContributorsReport(
         snapshot_id=snapshot_id,
         total_authors=len(contributors),
+        total_commits=total_commits,
+        total_lines=total_lines,
         contributors=contributors,
     )
 

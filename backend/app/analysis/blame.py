@@ -26,7 +26,8 @@ class BlameInfo:
     last_modified_at: datetime | None = None
     author_count: int = 0
     commit_count: int = 0
-    authors: dict[str, int] = field(default_factory=dict)  # author -> line count
+    # {author: {"lines": N, "commits": N, "hashes": [...]}} — rich per-author attribution
+    authors: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -93,6 +94,7 @@ def blame_for_range(
 ) -> BlameInfo:
     """Aggregate blame data for a line range."""
     authors: dict[str, int] = {}
+    author_commits: dict[str, set[str]] = {}
     commits: set[str] = set()
     latest_date: datetime | None = None
     latest_author = ""
@@ -101,17 +103,30 @@ def blame_for_range(
         if bl.line_no < start_line or bl.line_no > end_line:
             continue
         authors[bl.author] = authors.get(bl.author, 0) + 1
+        if bl.author not in author_commits:
+            author_commits[bl.author] = set()
+        author_commits[bl.author].add(bl.commit_hex)
         commits.add(bl.commit_hex)
         if latest_date is None or bl.committed_date > latest_date:
             latest_date = bl.committed_date
             latest_author = bl.author
+
+    # Build rich authors dict: {author: {"lines": N, "commits": N, "hashes": [...]}}
+    authors_rich: dict[str, dict[str, Any]] = {}
+    for author, lines in authors.items():
+        c_hashes = sorted(author_commits.get(author, set()))
+        authors_rich[author] = {
+            "lines": lines,
+            "commits": len(c_hashes),
+            "hashes": c_hashes,
+        }
 
     return BlameInfo(
         last_author=latest_author,
         last_modified_at=latest_date,
         author_count=len(authors),
         commit_count=len(commits),
-        authors=authors,
+        authors=authors_rich,
     )
 
 
