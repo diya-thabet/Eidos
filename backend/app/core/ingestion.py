@@ -107,9 +107,25 @@ def clone_repo(
     clone_url = _inject_token(url, token)
 
     logger.info("Cloning %s (branch=%s) -> %s", url, branch, dest)
-    repo = git.Repo.clone_from(
-        clone_url, str(dest), branch=branch, depth=1 if not commit_sha else 0
-    )
+    try:
+        repo = git.Repo.clone_from(
+            clone_url, str(dest), branch=branch, depth=1 if not commit_sha else 0
+        )
+    except git.exc.GitCommandError as e:
+        # If the branch was not found, retry without specifying a branch
+        # (uses the remote's default branch)
+        if "not found in upstream" in str(e) or "Could not find remote branch" in str(e):
+            logger.warning(
+                "Branch '%s' not found, falling back to default branch", branch
+            )
+            if dest.exists():
+                shutil.rmtree(dest)
+            dest.mkdir(parents=True, exist_ok=True)
+            repo = git.Repo.clone_from(
+                clone_url, str(dest), depth=1 if not commit_sha else 0
+            )
+        else:
+            raise
 
     if commit_sha:
         repo.git.checkout(commit_sha)

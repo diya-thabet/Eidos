@@ -31,11 +31,45 @@ function checkConn() {
 // =================== REPOS ===================
 function pgRepos() {
     html('main', '<div class="page-head between row"><div><h1>Repositories</h1><p>Manage and analyze Git repositories</p></div><button class="btn btn-p" onclick="toggleForm()">+ Add Repo</button></div>' +
-        '<div class="card hidden" id="rf"><div class="field"><label>Name</label><input class="inp" id="rn" placeholder="my-project"></div><div class="field"><label>Git URL</label><input class="inp" id="ru" placeholder="https://github.com/user/repo"></div><div class="row g-8"><button class="btn btn-p" onclick="addRepo()">Register & Ingest</button><button class="btn btn-g" onclick="toggleForm()">Cancel</button></div></div>' +
+        '<div class="card hidden" id="rf">' +
+        '<div class="field"><label>Name</label><input class="inp" id="rn" placeholder="my-project"></div>' +
+        '<div class="field"><label>Git URL</label><input class="inp" id="ru" placeholder="https://github.com/user/repo" onblur="fetchBranches()"></div>' +
+        '<div class="field" id="rb-wrap" style="display:none"><label>Branch</label><div class="row g-8"><select class="inp" id="rb" style="flex:1"><option value="">default</option></select><button class="btn btn-s btn-g" onclick="fetchBranches()" title="Refresh branches">&#8635;</button></div><span id="rb-status" style="font-size:11px;color:var(--text-3)"></span></div>' +
+        '<div class="row g-8"><button class="btn btn-p" onclick="addRepo()">Register & Ingest</button><button class="btn btn-g" onclick="toggleForm()">Cancel</button></div>' +
+        '</div>' +
         '<div id="rl"><div class="loader"><span class="spin"></span> Loading...</div></div>');
     loadRepos();
 }
 function toggleForm() { $('rf').classList.toggle('hidden'); }
+function fetchBranches() {
+    var u = $('ru').value.trim();
+    if (!u) { $('rb-wrap').style.display = 'none'; return; }
+    var wrap = $('rb-wrap'), sel = $('rb'), status = $('rb-status');
+    wrap.style.display = '';
+    sel.innerHTML = '<option value="">loading...</option>';
+    sel.disabled = true;
+    status.textContent = 'Fetching branches...';
+    API.post('/repos/branches', { url: u }).then(function(d) {
+        var branches = d.branches || [];
+        sel.disabled = false;
+        if (!branches.length) {
+            sel.innerHTML = '<option value="">default</option>';
+            status.textContent = 'Could not detect branches — will use default';
+        } else {
+            var h = '';
+            branches.forEach(function(b) {
+                var selected = (b === 'main' || b === 'master') ? ' selected' : '';
+                h += '<option value="' + esc(b) + '"' + selected + '>' + esc(b) + '</option>';
+            });
+            sel.innerHTML = h;
+            status.textContent = branches.length + ' branch(es) found';
+        }
+    }).catch(function() {
+        sel.disabled = false;
+        sel.innerHTML = '<option value="">default</option>';
+        status.textContent = 'Could not fetch branches';
+    });
+}
 function loadRepos() {
     API.get('/repos').then(function(d) {
         var repos = Array.isArray(d) ? d : (d.items || []);
@@ -51,7 +85,10 @@ function loadRepos() {
 function addRepo() {
     var n = $('rn').value.trim(), u = $('ru').value.trim();
     if (!n || !u) { toast('Fill both fields', false); return; }
-    API.post('/repos', { name: n, url: u }).then(function(r) { toast(r.name + ' registered'); toggleForm(); ingest(r.id); loadRepos(); }).catch(function(e) { toast(e.message, false); });
+    var branch = $('rb') ? $('rb').value : '';
+    var payload = { name: n, url: u };
+    if (branch) payload.default_branch = branch;
+    API.post('/repos', payload).then(function(r) { toast(r.name + ' registered'); toggleForm(); ingest(r.id); loadRepos(); }).catch(function(e) { toast(e.message, false); });
 }
 function ingest(id) {
     API.post('/repos/' + id + '/ingest').then(function(r) {

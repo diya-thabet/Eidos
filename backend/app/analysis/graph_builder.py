@@ -87,13 +87,26 @@ class CodeGraph:
                 if resolved:
                     edge.target_fq_name = resolved
 
+    def _resolve_key(self, name: str, lookup: dict[str, list[str]]) -> str:
+        """Resolve a name to its full key in a dict, supporting suffix match."""
+        if name in lookup:
+            return name
+        # Try suffix match: find a key ending with '.Name'
+        suffix = "." + name
+        for key in lookup:
+            if key.endswith(suffix) or key == name:
+                return key
+        return name
+
     def get_callers(self, fq_name: str) -> list[str]:
         """Return symbols that call the given symbol."""
-        return list(self._callers.get(fq_name, []))
+        key = self._resolve_key(fq_name, self._callers)
+        return list(self._callers.get(key, []))
 
     def get_callees(self, fq_name: str) -> list[str]:
         """Return symbols that the given symbol calls."""
-        return list(self._callees.get(fq_name, []))
+        key = self._resolve_key(fq_name, self._callees)
+        return list(self._callees.get(key, []))
 
     def get_children(self, fq_name: str) -> list[str]:
         """Return child symbols (members of a class)."""
@@ -128,11 +141,13 @@ class CodeGraph:
 
     def fan_in(self, fq_name: str) -> int:
         """Number of distinct callers."""
-        return len(set(self._callers.get(fq_name, [])))
+        key = self._resolve_key(fq_name, self._callers)
+        return len(set(self._callers.get(key, [])))
 
     def fan_out(self, fq_name: str) -> int:
         """Number of distinct callees."""
-        return len(set(self._callees.get(fq_name, [])))
+        key = self._resolve_key(fq_name, self._callees)
+        return len(set(self._callees.get(key, [])))
 
     def _build_modules(self) -> None:
         """Group symbols and files into namespace-based modules."""

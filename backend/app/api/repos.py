@@ -4,6 +4,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -40,6 +41,48 @@ from app.storage.schemas import (
 )
 
 router = APIRouter()
+
+
+class BranchListRequest(BaseModel):
+    url: str
+    token: str = ""
+
+
+@router.post("/branches", summary="List remote branches for a Git URL")
+async def list_branches(body: BranchListRequest) -> Any:
+    """Use git ls-remote to list branches without cloning."""
+    import asyncio
+
+    from app.core.ingestion import _inject_token
+
+    clone_url = _inject_token(body.url, body.token)
+
+    def _ls_remote() -> list[str]:
+        import subprocess
+
+        try:
+            result = subprocess.run(
+                ["git", "ls-remote", "--heads", clone_url],
+                capture_output=True,
+                text=True,
+                timeout=15,
+            )
+            if result.returncode != 0:
+                return []
+            branches = []
+            for line in result.stdout.strip().splitlines():
+                parts = line.split("\t")
+                if len(parts) == 2:
+                    ref = parts[1]
+                    # refs/heads/main -> main
+                    if ref.startswith("refs/heads/"):
+                        branches.append(ref[len("refs/heads/"):])
+            return sorted(branches)
+        except Exception:
+            return []
+
+    branches = await asyncio.to_thread(_ls_remote)
+    return {"branches": branches}
 
 
 @router.post("", response_model=RepoOut, status_code=201,
