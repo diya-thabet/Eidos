@@ -425,8 +425,9 @@ def _extract_field_type_ref(node: Node, source: bytes) -> str:
     refs = _extract_type_refs_from_text(type_text)
     # Return the first non-primitive/non-collection type found
     for ref in refs:
-        if ref and ref[0].isupper() and ref not in _JAVA_PRIMITIVES and ref not in _JAVA_COLLECTIONS:
-            return ref
+        if ref and ref[0].isupper() and ref not in _JAVA_PRIMITIVES:
+            if ref not in _JAVA_COLLECTIONS:
+                return ref
     return ""
 
 

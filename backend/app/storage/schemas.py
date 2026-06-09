@@ -176,6 +176,7 @@ class SymbolOut(BaseModel):
     signature: str = ""
     modifiers: str = ""
     return_type: str = ""
+    source_code: str = ""
 
     model_config = {"from_attributes": True}
 

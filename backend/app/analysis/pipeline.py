@@ -283,17 +283,44 @@ def _parse_parallel(repo_dir: Path, file_records: list[dict[str, Any]]) -> list[
     return analyses
 
 
-async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) -> None:
+async def persist_graph(
+    db: AsyncSession,
+    snapshot_id: str,
+    graph: CodeGraph,
+    repo_dir: Path | None = None,
+) -> None:
     """
     Persist all symbols and edges from a CodeGraph to the database.
 
     Also attempts to link edges to symbol IDs for efficient joins.
+    If repo_dir is provided, extracts source code snippets for each symbol.
     """
+    # Pre-read source files for snippet extraction
+    _file_cache: dict[str, list[str]] = {}
+
+    def _get_source(file_path: str, start: int, end: int) -> str:
+        """Read source lines for a symbol (cached per file)."""
+        if not repo_dir:
+            return ""
+        if file_path not in _file_cache:
+            full = repo_dir / file_path
+            try:
+                text = full.read_text(encoding="utf-8", errors="replace")
+                _file_cache[file_path] = text.splitlines()
+            except (OSError, ValueError):
+                _file_cache[file_path] = []
+        lines = _file_cache[file_path]
+        # Limit to 200 lines max per symbol
+        s = max(0, start - 1)
+        e = min(len(lines), s + 200, end)
+        return "\n".join(lines[s:e])
+
     # Build fq_name -> file_id lookup from existing file records
     fq_to_symbol_id: dict[str, int] = {}
 
     # Persist symbols
     for sym in graph.symbols.values():
+        source_snippet = _get_source(sym.file_path, sym.start_line, sym.end_line)
         db_symbol = Symbol(
             snapshot_id=snapshot_id,
             kind=sym.kind.value,
@@ -307,6 +334,7 @@ async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) ->
             signature=sym.signature,
             modifiers=",".join(sym.modifiers),
             return_type=sym.return_type,
+            source_code=source_snippet,
             cyclomatic_complexity=sym.cyclomatic_complexity,
             cognitive_complexity=sym.cognitive_complexity,
         )

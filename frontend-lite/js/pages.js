@@ -175,11 +175,32 @@ function loadSym() {
         $('sn').disabled = !d.has_more;
         if (!items.length) { html('st', '<p style="color:var(--text-3)">No results</p>'); return; }
         var filtered = q ? items.filter(function(s) { return s.name.toLowerCase().indexOf(q.toLowerCase()) >= 0; }) : items;
-        var h = '<table class="tbl"><thead><tr><th>Kind</th><th>Name</th><th>Namespace</th><th>File</th><th>Lines</th></tr></thead><tbody>';
-        filtered.forEach(function(s) { h += '<tr><td><span class="badge ' + kindBadge(s.kind) + '">' + s.kind + '</span></td><td><strong>' + esc(s.name) + '</strong></td><td style="font-size:11px;color:var(--text-3)">' + esc(s.namespace) + '</td><td style="font-size:11px">' + esc((s.file_path || '').split('/').pop()) + '</td><td>' + s.start_line + '-' + s.end_line + '</td></tr>'; });
+        var h = '<table class="tbl"><thead><tr><th>Kind</th><th>Name</th><th>Namespace</th><th>File</th><th>Lines</th><th></th></tr></thead><tbody>';
+        filtered.forEach(function(s, i) {
+            h += '<tr><td><span class="badge ' + kindBadge(s.kind) + '">' + s.kind + '</span></td><td><strong>' + esc(s.name) + '</strong></td><td style="font-size:11px;color:var(--text-3)">' + esc(s.namespace) + '</td><td style="font-size:11px">' + esc((s.file_path || '').split('/').pop()) + '</td><td>' + s.start_line + '-' + s.end_line + '</td>';
+            h += '<td><button class="btn btn-s btn-g sym-code-btn" onclick="viewSymCode(\'' + esc(s.fq_name).replace(/'/g, "\\'") + '\',' + i + ')" title="View source code">&#128196;</button></td></tr>';
+            h += '<tr class="sym-code-row hidden" id="scr-' + i + '"><td colspan="6"><div class="sym-code-block"><pre><code id="scc-' + i + '"></code></pre></div></td></tr>';
+        });
         h += '</tbody></table>';
         html('st', h);
     }).catch(function(e) { html('st', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); });
+}
+function viewSymCode(fq, idx) {
+    var row = document.getElementById('scr-' + idx);
+    var code = document.getElementById('scc-' + idx);
+    if (!row) return;
+    if (!row.classList.contains('hidden')) { row.classList.add('hidden'); return; }
+    code.textContent = 'Loading...';
+    row.classList.remove('hidden');
+    API.get(S.path() + '/symbols/' + encodeURIComponent(fq)).then(function(sym) {
+        if (sym.source_code) {
+            code.textContent = sym.source_code;
+        } else {
+            code.textContent = '// No source code stored for this symbol';
+        }
+    }).catch(function(e) {
+        code.textContent = '// Error: ' + e.message;
+    });
 }
 
 // =================== HEALTH ===================
@@ -221,11 +242,11 @@ function pgGraph() {
         '<div class="graph-area" id="ga"><canvas id="gc"></canvas>' +
         '<div class="g-ctrl"><button onclick="GE.sc*=1.2;GE.paint()">+</button><button onclick="GE.sc*=0.8;GE.paint()">&minus;</button><button onclick="GE.fitAll()">\u2922</button></div>' +
         '<div class="g-legend"><h6>Nodes</h6><div class="lr"><div class="ld" style="background:#2563eb"></div>Class</div><div class="lr"><div class="ld" style="background:#7c3aed"></div>Interface</div><div class="lr"><div class="ld" style="background:#16a34a"></div>Method</div><div class="lr"><div class="ld" style="background:#dc2626"></div>Enum</div><h6>Edges</h6><div class="lr"><div class="ll" style="background:#6246ea"></div>Calls</div><div class="lr"><div class="ll" style="background:#ca8a04"></div>Inherits</div><div class="lr"><div class="ll" style="background:#7c3aed"></div>Implements</div><div class="lr"><div class="ll" style="background:#2563eb"></div>Uses</div></div>' +
-        '<div class="g-info" id="gi"><span class="x" onclick="$(\'gi\').classList.remove(\'show\')">&times;</span><h4 id="gin"></h4><div class="ir"><b>Kind:</b> <span id="gik"></span></div><div class="ir"><b>File:</b> <span id="gif"></span></div><div class="ir"><b>Lines:</b> <span id="gil"></span></div><div class="ir"><b>Edges:</b> <span id="gie"></span></div></div>' +
+        '<div class="g-info" id="gi"><span class="x" onclick="$(\'gi\').classList.remove(\'show\');$(\'gic\').classList.add(\'hidden\')">&times;</span><h4 id="gin"></h4><div class="ir"><b>Kind:</b> <span id="gik"></span></div><div class="ir"><b>File:</b> <span id="gif"></span></div><div class="ir"><b>Lines:</b> <span id="gil"></span></div><div class="ir"><b>Edges:</b> <span id="gie"></span></div><button class="btn btn-s btn-p gi-code-btn" id="gib" onclick="showNodeCode()">&#9654; View Code</button><div class="gi-code hidden" id="gic"><pre><code id="gics"></code></pre></div></div>' +
         '<div class="g-stats"><span id="gsn">0</span> nodes &middot; <span id="gse">0</span> edges</div></div>' +
         '<div class="card hidden" id="mc" style="margin-top:14px"><div class="row between"><div class="card-hd" style="margin:0">Mermaid Source</div><button class="btn btn-s btn-g" onclick="navigator.clipboard.writeText(_mermaid);toast(\'Copied\')">Copy</button></div><div class="code" id="mcs"></div></div>');
     GE.init($('gc'));
-    GE.onSelect = function(n) { $('gi').classList.add('show'); $('gin').textContent = n.name; $('gik').textContent = n.kind; $('gif').textContent = n.file || '-'; $('gil').textContent = n.sl ? n.sl + '-' + n.el : '-'; $('gie').textContent = GE.edges.filter(function(e) { return e.s === n || e.t === n; }).length; };
+    GE.onSelect = function(n) { $('gi').classList.add('show'); $('gin').textContent = n.name; $('gik').textContent = n.kind; $('gif').textContent = n.file || '-'; $('gil').textContent = n.sl ? n.sl + '-' + n.el : '-'; $('gie').textContent = GE.edges.filter(function(e) { return e.srcId === n.id || e.tgtId === n.id; }).length; window._selNodeFq = n.id; $('gic').classList.add('hidden'); $('gics').textContent = ''; };
     GE.onDeselect = function() { $('gi').classList.remove('show'); };
     gLoad('class');
 }
@@ -270,6 +291,25 @@ function gLoad(view) {
     API.get(S.path() + '/diagram?diagram_type=' + mt).then(function(d) { _mermaid = d.mermaid || ''; }).catch(function() { _mermaid = ''; });
 }
 function updGStats() { $('gsn').textContent = GE.flatNodes.length; $('gse').textContent = GE.edges.length; }
+function showNodeCode() {
+    var fq = window._selNodeFq;
+    if (!fq || !S.ok()) { toast('No symbol selected', false); return; }
+    var viewer = $('gic'), pre = $('gics'), btn = $('gib');
+    if (!viewer.classList.contains('hidden')) { viewer.classList.add('hidden'); return; }
+    btn.textContent = '\u23F3 Loading...';
+    API.get(S.path() + '/symbols/' + encodeURIComponent(fq)).then(function(sym) {
+        btn.textContent = '\u25B6 View Code';
+        if (sym.source_code) {
+            pre.textContent = sym.source_code;
+            viewer.classList.remove('hidden');
+        } else {
+            toast('No source code stored for this symbol', false);
+        }
+    }).catch(function(e) {
+        btn.textContent = '\u25B6 View Code';
+        toast('Failed to load code: ' + e.message, false);
+    });
+}
 function toggleMermaid() { $('mc').classList.toggle('hidden'); $('mcs').textContent = _mermaid || 'No source'; }
 
 // =================== DEAD CODE ===================

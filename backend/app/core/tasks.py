@@ -150,7 +150,7 @@ async def _analyze_phase(
         f"Parsed {len(graph.symbols)} symbols, "
         f"{len(graph.edges)} edges. Persisting graph...",
     )
-    await persist_graph(db, snapshot_id, graph)
+    await persist_graph(db, snapshot_id, graph, dest)
 
     if prev_snapshot_id:
         changed_paths = {f["path"] for f in changed_files}

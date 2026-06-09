@@ -1,4 +1,5 @@
 import logging
+import sys
 from contextlib import asynccontextmanager
 from typing import Any
 
@@ -45,8 +46,6 @@ from app.storage.models import Base
 
 def _configure_logging() -> None:
     """Set up logging: JSON in client mode, text in internal mode."""
-    import logging
-
     if settings.edition == "client":
         try:
             from pythonjsonlogger.json import JsonFormatter
@@ -73,10 +72,24 @@ def _configure_logging() -> None:
 _configure_logging()
 
 # Suppress harmless Windows asyncio ConnectionResetError noise from CORS preflight
-import sys
 if sys.platform == "win32":
     _asyncio_logger = logging.getLogger("asyncio")
     _asyncio_logger.setLevel(logging.CRITICAL)
+
+
+def _sqlite_add_missing_columns(connection) -> None:
+    """Add columns to existing SQLite tables that create_all won't ALTER."""
+    from sqlalchemy import text
+
+    try:
+        result = connection.execute(text("PRAGMA table_info(symbols)"))
+        cols = {row[1] for row in result.fetchall()}
+        if "source_code" not in cols:
+            connection.execute(
+                text("ALTER TABLE symbols ADD COLUMN source_code TEXT DEFAULT ''")
+            )
+    except Exception:
+        pass
 
 
 @asynccontextmanager
@@ -87,6 +100,8 @@ async def lifespan(app: FastAPI) -> Any:
             # SQLite (tests/dev): use create_all since Alembic doesn't support async SQLite well
             async with engine.begin() as conn:
                 await conn.run_sync(Base.metadata.create_all)
+                # Ensure new columns are added to existing tables (create_all won't ALTER)
+                await conn.run_sync(_sqlite_add_missing_columns)
         else:
             # PostgreSQL (production): run Alembic migrations
             from alembic.config import Config

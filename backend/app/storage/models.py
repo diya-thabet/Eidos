@@ -537,6 +537,7 @@ class Symbol(Base):
     signature: Mapped[str] = mapped_column(Text, default="")
     modifiers: Mapped[str] = mapped_column(Text, default="")  # comma-separated
     return_type: Mapped[str] = mapped_column(String(256), default="")
+    source_code: Mapped[str] = mapped_column(Text, default="", server_default="")
     metadata_json: Mapped[str | None] = mapped_column(Text, nullable=True)  # extra info as JSON
     cyclomatic_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     cognitive_complexity: Mapped[int] = mapped_column(Integer, default=0, server_default="0")

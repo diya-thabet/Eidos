@@ -55,6 +55,12 @@ select.inp { appearance: none; padding-right: 28px; background-image: url("data:
 .tbl th { text-align: left; padding: 9px 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; color: var(--text-3); border-bottom: 1px solid var(--border); }
 .tbl td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
 .tbl tr:hover td { background: var(--bg-2); }
+.tbl tr.sym-code-row td { padding: 0; border-bottom: 1px solid var(--border); }
+.tbl tr.sym-code-row:hover td { background: transparent; }
+.tbl tr.hidden { display: none; }
+.sym-code-btn { font-size: 13px; padding: 2px 6px; cursor: pointer; }
+.sym-code-block { max-height: 280px; overflow: auto; background: var(--bg-0); border-radius: 6px; margin: 8px 12px; border: 1px solid var(--border); }
+.sym-code-block pre { margin: 0; padding: 12px; font-size: 11px; line-height: 1.5; white-space: pre-wrap; word-break: break-all; color: var(--text-1); font-family: 'JetBrains Mono', 'Fira Code', monospace; }
 
 .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.2px; }
 .b-green { background: var(--green-soft); color: var(--green); }
