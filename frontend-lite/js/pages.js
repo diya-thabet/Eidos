@@ -76,7 +76,7 @@ function selRepo(id) {
         navigate('overview');
     }).catch(function(e) { toast(e.message, false); });
 }
-function delRepo(id) { if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
+function delRepo(id) { if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { if (S.repo === id) S.set(null, null); toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
 
 // =================== OVERVIEW ===================
 function pgOverview() {
@@ -158,7 +158,7 @@ var _mermaid = '';
 function pgGraph() {
     if (!S.ok()) { html('main', noSnap()); return; }
     html('main', '<div class="page-head"><h1>Graph Explorer</h1><p>Interactive architecture visualization</p></div>' +
-        '<div class="g-bar"><button class="btn btn-s btn-p" data-gv="class" onclick="gLoad(\'class\')">Classes</button><button class="btn btn-s btn-g" data-gv="module" onclick="gLoad(\'module\')">Modules</button><button class="btn btn-s btn-g" data-gv="calls" onclick="gLoad(\'calls\')">Calls</button><div class="sep"></div><button class="btn btn-s btn-g" onclick="GE.shuffle()">Reset</button><button class="btn btn-s btn-g" onclick="GE.fitAll()">Fit</button><button class="btn btn-s btn-g" onclick="GE.exportPNG();toast(\'PNG saved\')">PNG</button><button class="btn btn-s btn-g" onclick="toggleMermaid()">Mermaid</button></div>' +
+        '<div class="g-bar"><button class="btn btn-s btn-p" data-gv="class" onclick="gLoad(\'class\')">Classes</button><button class="btn btn-s btn-g" data-gv="all" onclick="gLoad(\'all\')">All</button><button class="btn btn-s btn-g" data-gv="module" onclick="gLoad(\'module\')">Modules</button><button class="btn btn-s btn-g" data-gv="calls" onclick="gLoad(\'calls\')">Calls</button><div class="sep"></div><button class="btn btn-s btn-g" onclick="GE.fitAll()">Fit</button><button class="btn btn-s btn-g" onclick="GE.exportPNG();toast(\'PNG saved\')">PNG</button><button class="btn btn-s btn-g" onclick="toggleMermaid()">Mermaid</button></div>' +
         '<div class="graph-area" id="ga"><canvas id="gc"></canvas>' +
         '<div class="g-ctrl"><button onclick="GE.sc*=1.2;GE.paint()">+</button><button onclick="GE.sc*=0.8;GE.paint()">&minus;</button><button onclick="GE.fitAll()">\u2922</button></div>' +
         '<div class="g-legend"><h6>Nodes</h6><div class="lr"><div class="ld" style="background:#2563eb"></div>Class</div><div class="lr"><div class="ld" style="background:#7c3aed"></div>Interface</div><div class="lr"><div class="ld" style="background:#16a34a"></div>Method</div><div class="lr"><div class="ld" style="background:#dc2626"></div>Enum</div><h6>Edges</h6><div class="lr"><div class="ll" style="background:#6246ea"></div>Calls</div><div class="lr"><div class="ll" style="background:#ca8a04"></div>Inherits</div><div class="lr"><div class="ll" style="background:#7c3aed"></div>Implements</div></div>' +
@@ -187,16 +187,21 @@ function gLoad(view) {
         ]).then(function(res) {
             var syms = res[0].items || [], edges = res[1].items || [];
             if (view === 'class') {
+                // Show all classes/interfaces/enums with their inheritance + containment edges
                 syms = syms.filter(function(s) { return s.kind === 'class' || s.kind === 'interface' || s.kind === 'enum'; });
-                edges = edges.filter(function(e) { return e.edge_type === 'inherits' || e.edge_type === 'implements'; });
-            } else {
+                edges = edges.filter(function(e) { return e.edge_type === 'inherits' || e.edge_type === 'implements' || e.edge_type === 'contains'; });
+            } else if (view === 'calls') {
                 syms = syms.filter(function(s) { return s.kind === 'method' || s.kind === 'constructor'; });
                 edges = edges.filter(function(e) { return e.edge_type === 'calls'; });
                 var conn = {}; edges.forEach(function(e) { conn[e.source_fq_name] = 1; conn[e.target_fq_name] = 1; });
-                syms = syms.filter(function(s) { return conn[s.fq_name]; }).slice(0, 100);
+                syms = syms.filter(function(s) { return conn[s.fq_name]; }).slice(0, 120);
                 var fqs = {}; syms.forEach(function(s) { fqs[s.fq_name] = 1; });
                 edges = edges.filter(function(e) { return fqs[e.source_fq_name] && fqs[e.target_fq_name]; });
+            } else {
+                // 'all' view: everything
             }
+            // If no symbols match the filter, show all
+            if (syms.length === 0) { syms = res[0].items || []; }
             GE.build(syms, edges);
             updGStats();
         }).catch(function(e) { toast(e.message, false); });
@@ -205,7 +210,7 @@ function gLoad(view) {
     var mt = view === 'calls' ? 'class' : view;
     API.get(S.path() + '/diagram?diagram_type=' + mt).then(function(d) { _mermaid = d.mermaid || ''; }).catch(function() { _mermaid = ''; });
 }
-function updGStats() { $('gsn').textContent = GE.nodes.length; $('gse').textContent = GE.edges.length; }
+function updGStats() { $('gsn').textContent = GE.flatNodes.length; $('gse').textContent = GE.edges.length; }
 function toggleMermaid() { $('mc').classList.toggle('hidden'); $('mcs').textContent = _mermaid || 'No source'; }
 
 // =================== DEAD CODE ===================

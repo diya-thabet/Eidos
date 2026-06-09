@@ -19,15 +19,16 @@ import logging
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
+from sqlalchemy import event
 
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# If in_memory_db is True, override database_url to use SQLite in-memory
+# If in_memory_db is True, override database_url to use SQLite file-based
+# (file-based allows multiple connections to see committed data correctly)
 _effective_url = (
-    "sqlite+aiosqlite://"
+    "sqlite+aiosqlite:///eidos_demo.db"
     if settings.in_memory_db
     else settings.database_url
 )
@@ -39,12 +40,16 @@ _engine_kwargs: dict[str, Any] = {"echo": settings.db_echo}
 if not _is_sqlite:
     _engine_kwargs["pool_size"] = settings.db_pool_size
     _engine_kwargs["max_overflow"] = settings.db_max_overflow
-elif _effective_url == "sqlite+aiosqlite://":
-    # In-memory SQLite: use StaticPool so all connections share the same DB
-    _engine_kwargs["poolclass"] = StaticPool
-    _engine_kwargs["connect_args"] = {"check_same_thread": False}
 
 engine = create_async_engine(_effective_url, **_engine_kwargs)
+
+# Enable foreign keys for SQLite (required for CASCADE deletes)
+if _is_sqlite:
+    @event.listens_for(engine.sync_engine, "connect")
+    def _set_sqlite_pragma(dbapi_conn, connection_record):
+        cursor = dbapi_conn.cursor()
+        cursor.execute("PRAGMA foreign_keys=ON")
+        cursor.close()
 
 async_session = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 

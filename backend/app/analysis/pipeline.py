@@ -316,10 +316,12 @@ async def persist_graph(db: AsyncSession, snapshot_id: str, graph: CodeGraph) ->
 
     # Persist edges with resolved symbol IDs where possible
     for edge in graph.edges:
+        src_id = fq_to_symbol_id.get(edge.source_fq_name)
+        tgt_id = fq_to_symbol_id.get(edge.target_fq_name)
         db_edge = Edge(
             snapshot_id=snapshot_id,
-            source_symbol_id=fq_to_symbol_id.get(edge.source_fq_name),
-            target_symbol_id=fq_to_symbol_id.get(edge.target_fq_name),
+            source_symbol_id=src_id,
+            target_symbol_id=tgt_id,
             source_fq_name=edge.source_fq_name,
             target_fq_name=edge.target_fq_name,
             edge_type=edge.edge_type.value,
