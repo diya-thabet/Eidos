@@ -13,7 +13,7 @@ from app.analysis.pipeline import analyze_snapshot_files, persist_graph
 from app.api.metrics import record_ingestion
 from app.auth.crypto import decrypt
 from app.core.incremental import compute_changed_files, copy_unchanged_symbols
-from app.core.ingestion import clone_repo, repo_clone_path, scan_files
+from app.core.ingestion import clone_repo, count_repo_commits, repo_clone_path, scan_files
 from app.core.retention import cleanup_clone
 from app.indexing.indexer import run_indexing
 from app.storage.database import async_session
@@ -52,6 +52,8 @@ async def run_ingestion(snapshot_id: str) -> None:
             dest, resolved_sha = await _clone_phase(
                 _progress, repo, snapshot, git_token,
             )
+            snapshot.commit_count = await asyncio.to_thread(count_repo_commits, dest)
+            await db.commit()
             file_entries = await _scan_phase(
                 _progress, db, snapshot_id, snapshot, dest,
             )

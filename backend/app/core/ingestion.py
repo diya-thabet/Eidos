@@ -134,6 +134,16 @@ def clone_repo(
     return repo.head.commit.hexsha
 
 
+def count_repo_commits(repo_path: Path) -> int:
+    """Return the number of commits reachable from HEAD."""
+    try:
+        repo = git.Repo(repo_path)
+        return sum(1 for _ in repo.iter_commits("HEAD"))
+    except Exception:
+        logger.debug("Could not count commits for %s", repo_path, exc_info=True)
+        return 0
+
+
 def detect_language(path: str) -> str | None:
     ext = os.path.splitext(path)[1].lower()
     return LANGUAGE_MAP.get(ext)

@@ -26,7 +26,7 @@ class BlameInfo:
     last_modified_at: datetime | None = None
     author_count: int = 0
     commit_count: int = 0
-    # {author: {"lines": N, "commits": N, "hashes": [...]}} — rich per-author attribution
+    # {author: {"lines": N, "commits": N, "hashes": [...]}} - rich per-author attribution
     authors: dict[str, dict[str, Any]] = field(default_factory=dict)
 
 

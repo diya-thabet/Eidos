@@ -685,7 +685,7 @@ function pgHotspots() {
         h += '<div class="ch-kpi-item"><div class="ch-kpi-num" style="color:' + (highRisk > 3 ? 'var(--red)' : 'var(--yellow)') + '">' + highRisk + '</div><div class="ch-kpi-lbl">High Risk</div></div>';
         h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + avgRisk.toFixed(1) + '</div><div class="ch-kpi-lbl">Avg Risk</div></div>';
         h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + totalAuthors + '</div><div class="ch-kpi-lbl">Authors</div></div>';
-        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + totalCommits + '</div><div class="ch-kpi-lbl">Total Commits</div></div>';
+        h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + totalCommits + '</div><div class="ch-kpi-lbl">Repo Commits</div></div>';
         h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + (totalLines > 0 ? (totalLines >= 1000 ? (totalLines/1000).toFixed(1) + 'K' : totalLines) : '—') + '</div><div class="ch-kpi-lbl">Lines Owned</div></div>';
         h += '</div>';
 
@@ -718,18 +718,14 @@ function pgHotspots() {
         h += '</div>';
         h += '</div>';
 
-        // Timeline: simulate commit activity trend (bucketize by risk rank)
+        // Deterministic churn profile. No simulated time-series data.
         if (hotspots.length > 2) {
-            h += '<div class="card"><div class="card-hd">Risk Trend by Rank</div>';
-            var top5 = hotspots.slice(0, 5);
-            var seriesData = top5.map(function(hs, i) {
-                var pts = []; var base = hs.commit_count || 1;
-                for (var t = 0; t < 6; t++) pts.push(Math.max(1, Math.round(base * (0.4 + Math.random() * 0.8))));
-                pts.push(base);
-                return { name: (hs.name||hs.fq_name||'').split('.').pop(), points: pts, color: Chart._col(i) };
+            h += '<div class="card"><div class="card-hd">Hotspot Churn Profile</div>';
+            var churnItems = hotspots.slice(0, 10).map(function(hs, i) {
+                return { label: (hs.name||hs.fq_name||'').split('.').pop(), value: hs.commit_count || 0, color: Chart._col(i) };
             });
-            h += Chart.timeline(seriesData, { labels: ['T-6','T-5','T-4','T-3','T-2','T-1','Now'], width: 520, height: 170 });
-            h += '<p style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:center">Relative commit activity for top hotspots over time</p>';
+            h += Chart.bar(churnItems, { limit: 10 });
+            h += '<p style="font-size:10px;color:var(--text-3);margin-top:6px;text-align:center">Real commits touching each hotspot. No synthetic trend data.</p>';
             h += '</div>';
         }
 

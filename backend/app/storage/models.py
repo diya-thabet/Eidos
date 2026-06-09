@@ -124,6 +124,7 @@ class RepoSnapshot(Base):
     id: Mapped[str] = mapped_column(String(24), primary_key=True)
     repo_id: Mapped[str] = mapped_column(ForeignKey("repos.id", ondelete="CASCADE"), nullable=False)
     commit_sha: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    commit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     status: Mapped[SnapshotStatus] = mapped_column(
         Enum(SnapshotStatus, name="snapshot_status"), default=SnapshotStatus.pending
     )

@@ -71,6 +71,7 @@ def upgrade() -> None:
         sa.Column("id", sa.String(24), primary_key=True),
         sa.Column("repo_id", sa.String(24), _REPO_FK, nullable=False),
         sa.Column("commit_sha", sa.String(40), nullable=True),
+        sa.Column("commit_count", sa.Integer, server_default="0"),
         sa.Column("status", snapshot_status, server_default="pending"),
         sa.Column("file_count", sa.Integer, server_default="0"),
         sa.Column("error_message", sa.Text, nullable=True),

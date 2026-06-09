@@ -92,6 +92,13 @@ def _sqlite_add_missing_columns(connection: Any) -> None:
             connection.execute(
                 text("ALTER TABLE symbols ADD COLUMN authors_json TEXT DEFAULT ''")
             )
+
+        result = connection.execute(text("PRAGMA table_info(repo_snapshots)"))
+        snap_cols = {row[1] for row in result.fetchall()}
+        if "commit_count" not in snap_cols:
+            connection.execute(
+                text("ALTER TABLE repo_snapshots ADD COLUMN commit_count INTEGER DEFAULT 0")
+            )
     except Exception:
         pass
 

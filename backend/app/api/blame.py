@@ -46,7 +46,7 @@ async def get_contributors(
     repo_id: str,
     snapshot_id: str,
     db: AsyncSession = Depends(get_db),
-    _snapshot: RepoSnapshot = Depends(verify_snapshot),
+    snapshot: RepoSnapshot = Depends(verify_snapshot),
 ) -> ContributorsReport:
     """Return per-author stats using full blame data from authors_json.
 
@@ -158,9 +158,11 @@ async def get_contributors(
         reverse=True,
     )
 
-    # Compute accurate totals
+    # Compute totals. Prefer the persisted repository commit count because
+    # summing symbol/contributor commit counts double-counts commits that touch
+    # multiple methods.
     total_lines = sum(c.line_count for c in contributors)
-    total_commits = sum(c.commit_count for c in contributors)
+    total_commits = snapshot.commit_count or sum(c.commit_count for c in contributors)
 
     return ContributorsReport(
         snapshot_id=snapshot_id,
