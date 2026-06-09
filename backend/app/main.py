@@ -77,7 +77,7 @@ if sys.platform == "win32":
     _asyncio_logger.setLevel(logging.CRITICAL)
 
 
-def _sqlite_add_missing_columns(connection) -> None:
+def _sqlite_add_missing_columns(connection: Any) -> None:
     """Add columns to existing SQLite tables that create_all won't ALTER."""
     from sqlalchemy import text
 

@@ -46,7 +46,7 @@ engine = create_async_engine(_effective_url, **_engine_kwargs)
 # Enable foreign keys for SQLite (required for CASCADE deletes)
 if _is_sqlite:
     @event.listens_for(engine.sync_engine, "connect")
-    def _set_sqlite_pragma(dbapi_conn, connection_record):
+    def _set_sqlite_pragma(dbapi_conn: Any, connection_record: Any) -> None:
         cursor = dbapi_conn.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
