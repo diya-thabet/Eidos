@@ -209,10 +209,33 @@ def parse_pom_xml(content: str, file_path: str) -> list[DependencyInfo]:
     except Exception:
         return deps
 
+    # Resolve Maven properties (${prop.name}) from <properties> block
+    props: dict[str, str] = {}
+    for ns in (f"{_MVN_NS}", ""):
+        props_el = root.find(f"{ns}properties")
+        if props_el is not None:
+            for child in props_el:
+                tag = child.tag.replace(_MVN_NS, "")
+                if child.text:
+                    props[tag] = child.text.strip()
+
+    def _resolve(val: str) -> str:
+        if not val or "${" not in val:
+            return val
+        for k, v in props.items():
+            val = val.replace("${" + k + "}", v)
+        # Also handle ${project.version}
+        proj_ver = root.findtext(f"{_MVN_NS}version", "")
+        if not proj_ver:
+            proj_ver = root.findtext("version", "")
+        if proj_ver:
+            val = val.replace("${project.version}", proj_ver)
+        return val
+
     for dep in root.iter(f"{_MVN_NS}dependency"):
         gid = dep.findtext(f"{_MVN_NS}groupId", "")
         aid = dep.findtext(f"{_MVN_NS}artifactId", "")
-        ver = dep.findtext(f"{_MVN_NS}version", "*")
+        ver = _resolve(dep.findtext(f"{_MVN_NS}version", "*"))
         scope = dep.findtext(f"{_MVN_NS}scope", "compile")
         if not aid:
             continue
@@ -231,7 +254,7 @@ def parse_pom_xml(content: str, file_path: str) -> list[DependencyInfo]:
         for dep in root.iter("dependency"):
             gid = dep.findtext("groupId", "")
             aid = dep.findtext("artifactId", "")
-            ver = dep.findtext("version", "*")
+            ver = _resolve(dep.findtext("version", "*"))
             scope = dep.findtext("scope", "compile")
             if not aid:
                 continue

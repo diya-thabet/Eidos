@@ -26,6 +26,7 @@ class BlameInfo:
     last_modified_at: datetime | None = None
     author_count: int = 0
     commit_count: int = 0
+    authors: dict[str, int] = field(default_factory=dict)  # author -> line count
 
 
 @dataclass
@@ -91,7 +92,7 @@ def blame_for_range(
     end_line: int,
 ) -> BlameInfo:
     """Aggregate blame data for a line range."""
-    authors: set[str] = set()
+    authors: dict[str, int] = {}
     commits: set[str] = set()
     latest_date: datetime | None = None
     latest_author = ""
@@ -99,7 +100,7 @@ def blame_for_range(
     for bl in file_blame.lines:
         if bl.line_no < start_line or bl.line_no > end_line:
             continue
-        authors.add(bl.author)
+        authors[bl.author] = authors.get(bl.author, 0) + 1
         commits.add(bl.commit_hex)
         if latest_date is None or bl.committed_date > latest_date:
             latest_date = bl.committed_date
@@ -110,6 +111,7 @@ def blame_for_range(
         last_modified_at=latest_date,
         author_count=len(authors),
         commit_count=len(commits),
+        authors=authors,
     )
 
 

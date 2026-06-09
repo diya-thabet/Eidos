@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from typing import Any
 
@@ -22,6 +23,9 @@ class ContributorStats(BaseModel):
     author: str
     function_count: int
     file_count: int
+    line_count: int
+    commit_count: int
+    symbol_count: int
     modules: list[str]
 
 
@@ -42,33 +46,69 @@ async def get_contributors(
     db: AsyncSession = Depends(get_db),
     _snapshot: RepoSnapshot = Depends(verify_snapshot),
 ) -> ContributorsReport:
-    """Return per-author function count, files touched, modules."""
+    """Return per-author stats using full blame data from authors_json.
+
+    Each symbol stores a JSON dict of {author: line_count} from git blame.
+    This gives accurate attribution � every author who wrote any line in a
+    symbol gets credit proportional to their contribution.
+    """
     result = await db.execute(
-        select(Symbol)
-        .where(
-            Symbol.snapshot_id == snapshot_id,
-            Symbol.kind.in_(["method", "constructor"]),
-            Symbol.last_author != "",
-            Symbol.last_author.is_not(None),
-        )
+        select(Symbol).where(Symbol.snapshot_id == snapshot_id)
     )
     symbols = list(result.scalars().all())
 
     author_data: dict[str, dict[str, Any]] = defaultdict(
-        lambda: {"funcs": 0, "files": set(), "modules": set()}
+        lambda: {
+            "funcs": 0,
+            "files": set(),
+            "modules": set(),
+            "lines": 0,
+            "symbols": 0,
+            "commits": 0,
+        }
     )
+
     for s in symbols:
-        a = s.last_author or ""
-        if not a:
-            continue
-        d = author_data[a]
-        d["funcs"] += 1
-        d["files"].add(s.file_path)
-        ns = s.namespace or ""
-        if not ns and "/" in s.file_path:
-            ns = s.file_path.rsplit("/", 1)[0]
-        if ns:
-            d["modules"].add(ns)
+        # Parse the full author breakdown from blame
+        authors_map: dict[str, int] = {}
+        if s.authors_json:
+            try:
+                authors_map = json.loads(s.authors_json)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        if authors_map:
+            # Credit every author based on their actual line contribution
+            for author, lines in authors_map.items():
+                if not author:
+                    continue
+                d = author_data[author]
+                d["lines"] += lines
+                d["files"].add(s.file_path)
+                d["symbols"] += 1
+                if s.kind in ("method", "constructor", "function"):
+                    d["funcs"] += 1
+                d["commits"] += 1
+                ns = s.namespace or ""
+                if not ns and "/" in s.file_path:
+                    ns = s.file_path.rsplit("/", 1)[0]
+                if ns:
+                    d["modules"].add(ns)
+        elif s.last_author:
+            # Fallback for symbols without authors_json (old data)
+            author = s.last_author
+            d = author_data[author]
+            d["lines"] += max(0, (s.end_line or 0) - (s.start_line or 0))
+            d["files"].add(s.file_path)
+            d["symbols"] += 1
+            if s.kind in ("method", "constructor", "function"):
+                d["funcs"] += 1
+            d["commits"] += s.commit_count or 1
+            ns = s.namespace or ""
+            if not ns and "/" in s.file_path:
+                ns = s.file_path.rsplit("/", 1)[0]
+            if ns:
+                d["modules"].add(ns)
 
     contributors = sorted(
         [
@@ -76,11 +116,14 @@ async def get_contributors(
                 author=author,
                 function_count=data["funcs"],
                 file_count=len(data["files"]),
+                line_count=data["lines"],
+                commit_count=data["commits"],
+                symbol_count=data["symbols"],
                 modules=sorted(data["modules"]),
             )
             for author, data in author_data.items()
         ],
-        key=lambda c: c.function_count,
+        key=lambda c: c.line_count,
         reverse=True,
     )
 

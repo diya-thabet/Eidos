@@ -547,6 +547,7 @@ class Symbol(Base):
     )
     author_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     commit_count: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
+    authors_json: Mapped[str] = mapped_column(Text, default="", server_default="")
 
     __table_args__ = (
         Index("ix_symbols_snapshot_fq", "snapshot_id", "fq_name"),

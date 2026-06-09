@@ -232,6 +232,35 @@ class TestPomXml:
         deps = parse_pom_xml(content, "pom.xml")
         assert len(deps) >= 1
 
+    def test_maven_property_resolution(self):
+        content = textwrap.dedent("""\
+            <project xmlns="http://maven.apache.org/POM/4.0.0">
+                <properties>
+                    <javafx.version>21.0.2</javafx.version>
+                    <spring.version>6.1.0</spring.version>
+                </properties>
+                <dependencies>
+                    <dependency>
+                        <groupId>org.openjfx</groupId>
+                        <artifactId>javafx-controls</artifactId>
+                        <version>${javafx.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.springframework</groupId>
+                        <artifactId>spring-core</artifactId>
+                        <version>${spring.version}</version>
+                    </dependency>
+                </dependencies>
+            </project>
+        """)
+        deps = parse_pom_xml(content, "pom.xml")
+        assert len(deps) == 2
+        javafx = [d for d in deps if "javafx" in d.name][0]
+        assert javafx.version == "21.0.2"
+        assert "${" not in javafx.version
+        spring = [d for d in deps if "spring" in d.name][0]
+        assert spring.version == "6.1.0"
+
     def test_invalid_xml(self):
         deps = parse_pom_xml("not xml<>><", "pom.xml")
         assert deps == []

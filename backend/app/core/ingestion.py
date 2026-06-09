@@ -109,7 +109,7 @@ def clone_repo(
     logger.info("Cloning %s (branch=%s) -> %s", url, branch, dest)
     try:
         repo = git.Repo.clone_from(
-            clone_url, str(dest), branch=branch, depth=1 if not commit_sha else 0
+            clone_url, str(dest), branch=branch,
         )
     except git.exc.GitCommandError as e:
         # If the branch was not found, retry without specifying a branch
@@ -122,7 +122,7 @@ def clone_repo(
                 shutil.rmtree(dest)
             dest.mkdir(parents=True, exist_ok=True)
             repo = git.Repo.clone_from(
-                clone_url, str(dest), depth=1 if not commit_sha else 0
+                clone_url, str(dest),
             )
         else:
             raise

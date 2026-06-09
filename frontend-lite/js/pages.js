@@ -4,7 +4,7 @@ function navigate(pg) {
     document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
     var btn = document.querySelector('[data-p="' + pg + '"]');
     if (btn) btn.classList.add('active');
-    var pages = { repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, settings: pgSettings };
+    var pages = { repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, deps: pgDeps, clones: pgClones, cycles: pgCycles, hotspots: pgHotspots, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, settings: pgSettings };
     if (pages[pg]) pages[pg]();
 }
 
@@ -178,19 +178,69 @@ function delRepo(id) { if (!confirm('Delete?')) return; API.del('/repos/' + id).
 function pgOverview() {
     if (!S.ok()) { html('main', noSnap()); return; }
     html('main', '<div class="loader"><span class="spin"></span> Loading...</div>');
-    API.get(S.path() + '/overview').then(function(d) {
+    Promise.all([
+        API.get(S.path() + '/overview'),
+        API.get(S.path() + '/files?limit=5').catch(function() { return { items: [], total: 0 }; }),
+        API.get(S.path() + '/health-score').catch(function() { return null; })
+    ]).then(function(res) {
+        var d = res[0], files = res[1], hs = res[2];
         var k = d.symbols_by_kind || {}, tot = 0;
         Object.keys(k).forEach(function(x) { tot += k[x]; });
         var h = '<div class="page-head"><h1>Overview</h1><p>Snapshot ' + S.snap.slice(0, 8) + '</p></div>';
-        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + d.total_symbols + '</div><div class="stat-txt">Symbols</div></div><div class="stat-item"><div class="stat-num">' + d.total_edges + '</div><div class="stat-txt">Edges</div></div><div class="stat-item"><div class="stat-num">' + d.total_modules + '</div><div class="stat-txt">Modules</div></div><div class="stat-item"><div class="stat-num">' + (k['class'] || 0) + '</div><div class="stat-txt">Classes</div></div><div class="stat-item"><div class="stat-num">' + (k['method'] || 0) + '</div><div class="stat-txt">Methods</div></div><div class="stat-item"><div class="stat-num">' + (k['interface'] || 0) + '</div><div class="stat-txt">Interfaces</div></div></div>';
+        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + d.total_symbols + '</div><div class="stat-txt">Symbols</div></div><div class="stat-item"><div class="stat-num">' + d.total_edges + '</div><div class="stat-txt">Edges</div></div><div class="stat-item"><div class="stat-num">' + d.total_modules + '</div><div class="stat-txt">Modules</div></div><div class="stat-item"><div class="stat-num">' + (d.total_files || files.total || 0) + '</div><div class="stat-txt">Files</div></div><div class="stat-item"><div class="stat-num">' + (k['class'] || 0) + '</div><div class="stat-txt">Classes</div></div><div class="stat-item"><div class="stat-num">' + (k['method'] || 0) + '</div><div class="stat-txt">Methods</div></div></div>';
+        if (hs && hs.score !== undefined) {
+            var sc = hs.score, col = scoreCol(sc);
+            h += '<div class="card"><div class="row between"><div class="card-hd" style="margin:0">Health Score</div><span style="font-size:28px;font-weight:700;color:' + col + '">' + sc.toFixed(1) + ' <span style="font-size:14px">' + grade(sc) + '</span></span></div></div>';
+        }
         h += '<div class="card"><div class="card-hd">Distribution</div><table class="tbl"><thead><tr><th>Kind</th><th>Count</th><th style="width:45%"></th></tr></thead><tbody>';
         Object.keys(k).sort(function(a, b) { return k[b] - k[a]; }).forEach(function(kn) {
             var pct = tot ? (k[kn] / tot * 100).toFixed(1) : 0;
             h += '<tr><td><span class="badge ' + kindBadge(kn) + '">' + kn + '</span></td><td>' + k[kn] + '</td><td><div class="prog"><div class="prog-fill" style="width:' + pct + '%;background:var(--accent)"></div></div></td></tr>';
         });
         h += '</tbody></table></div>';
+        // Snapshot management
+        h += '<div class="card"><div class="card-hd">Snapshot Actions</div><div class="row g-8 flex-wrap"><button class="btn btn-s btn-g" onclick="viewSnapshots()">View All Snapshots</button><button class="btn btn-s btn-g" onclick="viewFiles()">Browse Files</button><button class="btn btn-s btn-d" onclick="delSnap()">Delete This Snapshot</button></div></div>';
         html('main', h);
     }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });
+}
+function viewSnapshots() {
+    API.get('/repos/' + S.repo + '/snapshots').then(function(d) {
+        var snaps = d.items || d.snapshots || d || [];
+        if (!Array.isArray(snaps)) snaps = [];
+        var h = '<div class="page-head"><h1>Snapshots</h1><p>All snapshots for this repository</p></div>';
+        h += '<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>ID</th><th>Status</th><th>Files</th><th>Created</th><th></th></tr></thead><tbody>';
+        snaps.forEach(function(s) {
+            var col = s.status === 'completed' ? 'b-green' : s.status === 'failed' ? 'b-red' : 'b-yellow';
+            h += '<tr><td style="font-family:monospace;font-size:11px">' + (s.id || '').slice(0, 8) + '</td><td><span class="badge ' + col + '">' + esc(s.status) + '</span></td><td>' + (s.file_count || 0) + '</td><td style="font-size:11px">' + (s.created_at ? new Date(s.created_at).toLocaleString() : '-') + '</td><td class="row g-8">';
+            if (s.status === 'completed') h += '<button class="btn btn-s btn-p" onclick="S.set(\'' + S.repo + '\',\'' + s.id + '\');toast(\'Selected\');navigate(\'overview\')">Use</button>';
+            h += '<button class="btn btn-s btn-d" onclick="delSnapById(\'' + s.id + '\')">Del</button></td></tr>';
+        });
+        h += '</tbody></table></div>';
+        html('main', h);
+    }).catch(function(e) { toast(e.message, false); });
+}
+function viewFiles() {
+    API.get(S.path() + '/files?limit=200').then(function(d) {
+        var files = d.items || [];
+        var h = '<div class="page-head"><h1>Files</h1><p>' + (d.total || files.length) + ' files in snapshot</p></div>';
+        h += '<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Path</th><th>Language</th><th>Lines</th></tr></thead><tbody>';
+        files.forEach(function(f) {
+            h += '<tr><td style="font-size:12px">' + esc(f.path || f.file_path || '') + '</td><td><span class="badge b-blue">' + esc(f.language || '-') + '</span></td><td>' + (f.line_count || 0) + '</td></tr>';
+        });
+        h += '</tbody></table></div>';
+        html('main', h);
+    }).catch(function(e) { toast(e.message, false); });
+}
+function delSnap() {
+    if (!confirm('Delete current snapshot?')) return;
+    API.del(S.path()).then(function() { S.set(S.repo, null); toast('Snapshot deleted'); navigate('repos'); }).catch(function(e) { toast(e.message, false); });
+}
+function delSnapById(sid) {
+    if (!confirm('Delete snapshot ' + sid.slice(0, 8) + '?')) return;
+    API.del('/repos/' + S.repo + '/snapshots/' + sid).then(function() {
+        if (S.snap === sid) S.set(S.repo, null);
+        toast('Deleted'); viewSnapshots();
+    }).catch(function(e) { toast(e.message, false); });
 }
 
 // =================== SYMBOLS ===================
@@ -215,7 +265,7 @@ function loadSym() {
         var h = '<table class="tbl"><thead><tr><th>Kind</th><th>Name</th><th>Namespace</th><th>File</th><th>Lines</th><th></th></tr></thead><tbody>';
         filtered.forEach(function(s, i) {
             h += '<tr><td><span class="badge ' + kindBadge(s.kind) + '">' + s.kind + '</span></td><td><strong>' + esc(s.name) + '</strong></td><td style="font-size:11px;color:var(--text-3)">' + esc(s.namespace) + '</td><td style="font-size:11px">' + esc((s.file_path || '').split('/').pop()) + '</td><td>' + s.start_line + '-' + s.end_line + '</td>';
-            h += '<td><button class="btn btn-s btn-g sym-code-btn" onclick="viewSymCode(\'' + esc(s.fq_name).replace(/'/g, "\\'") + '\',' + i + ')" title="View source code">&#128196;</button></td></tr>';
+            h += '<td class="row g-4"><button class="btn btn-s btn-g sym-code-btn" onclick="viewSymCode(\'' + esc(s.fq_name).replace(/'/g, "\\'") + '\',' + i + ')" title="View source code">&#128196;</button><button class="btn btn-s btn-g sym-code-btn" onclick="viewSymCallers(\'' + esc(s.fq_name).replace(/'/g, "\\'") + '\',' + i + ')" title="View callers">&#128279;</button></td></tr>';
             h += '<tr class="sym-code-row hidden" id="scr-' + i + '"><td colspan="6"><div class="sym-code-block"><pre><code id="scc-' + i + '"></code></pre></div></td></tr>';
         });
         h += '</tbody></table>';
@@ -235,6 +285,23 @@ function viewSymCode(fq, idx) {
         } else {
             code.textContent = '// No source code stored for this symbol';
         }
+    }).catch(function(e) {
+        code.textContent = '// Error: ' + e.message;
+    });
+}
+function viewSymCallers(fq, idx) {
+    var row = document.getElementById('scr-' + idx);
+    var code = document.getElementById('scc-' + idx);
+    if (!row) return;
+    if (!row.classList.contains('hidden')) { row.classList.add('hidden'); return; }
+    code.textContent = 'Loading callers...';
+    row.classList.remove('hidden');
+    API.get(S.path() + '/symbols/' + encodeURIComponent(fq) + '/callers').then(function(d) {
+        var callers = d.callers || d.items || [];
+        if (!callers.length) { code.textContent = '// No callers found for ' + fq; return; }
+        var txt = '// Callers of ' + fq + ':\n';
+        callers.forEach(function(c) { txt += '\n  ' + (c.fq_name || c.name || c) + '  (' + (c.file_path || '') + ':' + (c.start_line || '') + ')'; });
+        code.textContent = txt;
     }).catch(function(e) {
         code.textContent = '// Error: ' + e.message;
     });
@@ -372,6 +439,114 @@ function pgCoupling() {
         (d.modules || []).forEach(function(m) {
             h += '<div class="coup-card"><h4>' + esc(m.name) + '</h4><div class="m"><span>Symbols</span><b>' + m.symbol_count + '</b></div><div class="m"><span>Ca</span><b>' + m.afferent_coupling + '</b></div><div class="m"><span>Ce</span><b>' + m.efferent_coupling + '</b></div><div class="m"><span>Instability</span><b style="color:' + (m.instability > 0.7 ? 'var(--red)' : 'var(--green)') + '">' + m.instability.toFixed(2) + '</b></div><div class="m"><span>Abstractness</span><b>' + m.abstractness.toFixed(2) + '</b></div><div class="m"><span>Cohesion</span><b style="color:' + (m.cohesion < 0.3 ? 'var(--red)' : 'var(--green)') + '">' + m.cohesion.toFixed(2) + '</b></div></div>';
         });
+        h += '</div>';
+        html('main', h);
+    }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });
+}
+
+// =================== DEPENDENCIES ===================
+function pgDeps() {
+    if (!S.ok()) { html('main', noSnap()); return; }
+    html('main', '<div class="loader"><span class="spin"></span></div>');
+    API.get(S.path() + '/dependencies').then(function(d) {
+        var deps = d.dependencies || d.items || [];
+        var h = '<div class="page-head"><h1>Dependencies</h1><p>External and internal dependencies detected from manifest files</p></div>';
+        if (!deps.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--text-3)">No dependencies detected</div>'; }
+        else {
+            var ecosystems = {};
+            deps.forEach(function(dep) { var e = dep.ecosystem || 'unknown'; ecosystems[e] = (ecosystems[e] || 0) + 1; });
+            h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + deps.length + '</div><div class="stat-txt">Total Deps</div></div>';
+            Object.keys(ecosystems).forEach(function(e) { h += '<div class="stat-item"><div class="stat-num">' + ecosystems[e] + '</div><div class="stat-txt">' + esc(e) + '</div></div>'; });
+            h += '</div>';
+            h += '<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>Name</th><th>Version</th><th>Ecosystem</th><th>Dev?</th><th>Source File</th></tr></thead><tbody>';
+            deps.forEach(function(dep) {
+                var pinned = dep.is_pinned ? 'var(--green)' : 'var(--text-3)';
+                h += '<tr><td><strong>' + esc(dep.name || '') + '</strong></td><td style="font-size:12px;color:' + pinned + '">' + esc(dep.version || '*') + '</td><td><span class="badge b-blue">' + esc(dep.ecosystem || '-') + '</span></td><td>' + (dep.is_dev ? '<span class="badge b-yellow">dev</span>' : '') + '</td><td style="font-size:11px;color:var(--text-3)">' + esc(dep.file_path || '') + '</td></tr>';
+            });
+            h += '</tbody></table></div>';
+        }
+        html('main', h);
+    }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });
+}
+
+// =================== CLONES ===================
+function pgClones() {
+    if (!S.ok()) { html('main', noSnap()); return; }
+    html('main', '<div class="loader"><span class="spin"></span> Detecting code clones...</div>');
+    API.get(S.path() + '/clones').then(function(d) {
+        var clones = d.clone_groups || d.clones || [];
+        var h = '<div class="page-head"><h1>Clone Detection</h1><p>AST fingerprint-based duplicate detection</p></div>';
+        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + clones.length + '</div><div class="stat-txt">Clone Groups</div></div><div class="stat-item"><div class="stat-num">' + (d.total_duplicated_lines || 0) + '</div><div class="stat-txt">Duplicated Lines</div></div><div class="stat-item"><div class="stat-num">' + ((d.duplication_percentage || 0).toFixed ? (d.duplication_percentage || 0).toFixed(1) : (d.duplication_percentage || 0)) + '%</div><div class="stat-txt">Duplication</div></div></div>';
+        if (!clones.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--green)"><h3>No clones detected!</h3></div>'; }
+        else {
+            clones.slice(0, 30).forEach(function(g, i) {
+                var instances = g.instances || g.fragments || [];
+                h += '<div class="card"><div class="card-hd">Clone Group ' + (i + 1) + ' <span class="badge b-yellow">' + instances.length + ' instances</span> <span style="font-size:11px;color:var(--text-3)">' + (g.lines || g.line_count || '?') + ' lines</span></div>';
+                instances.forEach(function(inst) {
+                    h += '<div class="finding"><div class="dot" style="background:var(--yellow)"></div><div style="flex:1"><div class="msg">' + esc(inst.file_path || inst.file || '') + '</div><div class="sub">Lines ' + (inst.start_line || '') + '-' + (inst.end_line || '') + '</div></div></div>';
+                });
+                h += '</div>';
+            });
+        }
+        html('main', h);
+    }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });
+}
+
+// =================== CALL CYCLES ===================
+function pgCycles() {
+    if (!S.ok()) { html('main', noSnap()); return; }
+    html('main', '<div class="loader"><span class="spin"></span> Detecting call cycles (Tarjan SCC)...</div>');
+    API.get(S.path() + '/call-cycles').then(function(d) {
+        var cycles = d.cycles || d.sccs || [];
+        var h = '<div class="page-head"><h1>Call Cycles</h1><p>Strongly connected components in the call graph</p></div>';
+        h += '<div class="stat-row"><div class="stat-item"><div class="stat-num">' + cycles.length + '</div><div class="stat-txt">Cycles Found</div></div><div class="stat-item"><div class="stat-num">' + (d.total_functions_in_cycles || 0) + '</div><div class="stat-txt">Functions in Cycles</div></div></div>';
+        if (!cycles.length) { h += '<div class="card" style="text-align:center;padding:30px;color:var(--green)"><h3>No call cycles!</h3></div>'; }
+        else {
+            cycles.slice(0, 25).forEach(function(c, i) {
+                var members = c.members || c.nodes || c;
+                if (!Array.isArray(members)) members = [];
+                h += '<div class="card"><div class="card-hd">Cycle ' + (i + 1) + ' <span class="badge b-red">' + members.length + ' functions</span></div><div style="display:flex;flex-wrap:wrap;gap:6px">';
+                members.forEach(function(m) { h += '<span class="badge b-muted" style="font-size:11px">' + esc(typeof m === 'string' ? m.split('.').pop() : (m.name || '')) + '</span>'; });
+                h += '</div></div>';
+            });
+        }
+        html('main', h);
+    }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });
+}
+
+// =================== HOTSPOTS ===================
+function pgHotspots() {
+    if (!S.ok()) { html('main', noSnap()); return; }
+    html('main', '<div class="loader"><span class="spin"></span> Loading hotspots &amp; contributors...</div>');
+    Promise.all([
+        API.get(S.path() + '/hotspots').catch(function() { return { items: [] }; }),
+        API.get(S.path() + '/contributors').catch(function() { return { contributors: [] }; })
+    ]).then(function(res) {
+        var hotspots = res[0].hotspots || res[0].items || [];
+        var contribs = res[1].contributors || res[1].items || [];
+        var h = '<div class="page-head"><h1>Hotspots &amp; Contributors</h1><p>Churn × complexity hotspots and git blame analysis</p></div>';
+        // Contributors
+        h += '<div class="card"><div class="card-hd">Contributors (' + (res[1].total_authors || contribs.length) + ' authors)</div>';
+        if (!contribs.length) { h += '<p style="color:var(--text-3)">No contributor data (requires git blame during ingestion)</p>'; }
+        else {
+            h += '<table class="tbl"><thead><tr><th>Author</th><th>Lines</th><th>Symbols</th><th>Functions</th><th>Files</th><th>Modules</th></tr></thead><tbody>';
+            contribs.forEach(function(c) {
+                h += '<tr><td><strong>' + esc(c.author || c.name || '') + '</strong></td><td><strong>' + (c.line_count || 0) + '</strong></td><td>' + (c.symbol_count || 0) + '</td><td>' + (c.function_count || 0) + '</td><td>' + (c.file_count || 0) + '</td><td style="font-size:11px;color:var(--text-3)">' + (c.modules || []).slice(0, 3).join(', ') + (c.modules && c.modules.length > 3 ? ' +' + (c.modules.length - 3) : '') + '</td></tr>';
+            });
+            h += '</tbody></table>';
+        }
+        h += '</div>';
+        // Hotspots
+        h += '<div class="card"><div class="card-hd">Hotspots (Churn × Complexity)</div>';
+        if (!hotspots.length) { h += '<p style="color:var(--text-3)">No hotspot data</p>'; }
+        else {
+            h += '<table class="tbl"><thead><tr><th>Symbol</th><th>File</th><th>Risk</th><th>Complexity</th><th>Commits</th><th>Authors</th></tr></thead><tbody>';
+            hotspots.slice(0, 30).forEach(function(hs) {
+                var risk = hs.risk_score || 0;
+                h += '<tr><td><strong>' + esc(hs.name || hs.fq_name || '') + '</strong></td><td style="font-size:11px">' + esc((hs.file_path || '').split('/').pop()) + '</td><td><span style="color:' + (risk > 10 ? 'var(--red)' : risk > 5 ? 'var(--yellow)' : 'var(--green)') + ';font-weight:600">' + risk.toFixed(1) + '</span></td><td>' + (hs.cyclomatic_complexity || 0) + '</td><td>' + (hs.commit_count || 0) + '</td><td>' + (hs.author_count || 0) + '</td></tr>';
+            });
+            h += '</tbody></table>';
+        }
         h += '</div>';
         html('main', h);
     }).catch(function(e) { html('main', '<div class="empty"><h3>Error</h3><p>' + esc(e.message) + '</p></div>'); });

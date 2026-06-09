@@ -87,8 +87,10 @@ select.inp { appearance: none; padding-right: 28px; background-image: url("data:
 
 .row { display: flex; align-items: center; }
 .between { justify-content: space-between; }
+.g-4 { gap: 4px; }
 .g-8 { gap: 8px; }
 .g-12 { gap: 12px; }
+.flex-wrap { flex-wrap: wrap; }
 .mt { margin-top: 14px; }
 .hidden { display: none !important; }
 

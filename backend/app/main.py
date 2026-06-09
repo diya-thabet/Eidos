@@ -88,6 +88,10 @@ def _sqlite_add_missing_columns(connection: Any) -> None:
             connection.execute(
                 text("ALTER TABLE symbols ADD COLUMN source_code TEXT DEFAULT ''")
             )
+        if "authors_json" not in cols:
+            connection.execute(
+                text("ALTER TABLE symbols ADD COLUMN authors_json TEXT DEFAULT ''")
+            )
     except Exception:
         pass
 

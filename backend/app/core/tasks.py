@@ -166,6 +166,8 @@ async def _blame_phase(
 ) -> None:
     """Extract git blame data and persist to symbols (non-fatal)."""
     try:
+        import json
+
         from app.analysis.blame import extract_blame_for_snapshot
 
         sym_dicts = [
@@ -176,13 +178,13 @@ async def _blame_phase(
                 "end_line": s.end_line,
             }
             for s in graph.symbols.values()
-            if s.kind.value in ("method", "constructor")
         ]
         blame_map = await asyncio.to_thread(
             extract_blame_for_snapshot, dest, sym_dicts,
         )
         if blame_map:
             for fq_name, info in blame_map.items():
+                authors_str = json.dumps(info.authors) if info.authors else ""
                 await db.execute(
                     update(Symbol)
                     .where(
@@ -194,6 +196,7 @@ async def _blame_phase(
                         last_modified_at=info.last_modified_at,
                         author_count=info.author_count,
                         commit_count=info.commit_count,
+                        authors_json=authors_str,
                     )
                 )
             await db.flush()

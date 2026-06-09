@@ -498,3 +498,70 @@ class TestBlameAPI:
         resp = await client.get("/repos/r1/snapshots/s3/hotspots")
         assert resp.status_code == 200
         assert resp.json()["total"] == 0
+
+    @pytest.mark.asyncio
+    async def test_contributors_multiple_authors(self, client):
+        """Verify all authors appear with correct function/file/line counts."""
+        resp = await client.get("/repos/r1/snapshots/s1/contributors")
+        assert resp.status_code == 200
+        data = resp.json()
+        # We created 4 symbols: 2 by Alice, 1 by Bob, 1 by Charlie
+        assert data["total_authors"] == 3
+        authors = {c["author"]: c for c in data["contributors"]}
+        assert "Alice" in authors
+        assert "Bob" in authors
+        assert "Charlie" in authors
+        alice = authors["Alice"]
+        assert alice["function_count"] == 2
+        assert alice["file_count"] >= 1
+        assert alice["line_count"] > 0
+
+    @pytest.mark.asyncio
+    async def test_contributors_response_fields(self, client):
+        """Verify response schema includes all expected fields."""
+        resp = await client.get("/repos/r1/snapshots/s1/contributors")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "total_authors" in data
+        assert "contributors" in data
+        if data["contributors"]:
+            c = data["contributors"][0]
+            assert "author" in c
+            assert "function_count" in c
+            assert "file_count" in c
+            assert "line_count" in c
+            assert "commit_count" in c
+            assert "symbol_count" in c
+            assert "modules" in c
+
+    @pytest.mark.asyncio
+    async def test_contributors_authors_json(self, client):
+        """Verify authors_json gives credit to all authors, not just last_author."""
+        import json
+
+        # Add a symbol with authors_json showing multiple contributors
+        async for db in override_get_db():
+            db.add(Symbol(
+                snapshot_id="s1", name="shared_func", kind="method",
+                fq_name="app.shared_func", file_path="shared.py",
+                start_line=1, end_line=30, namespace="app",
+                cyclomatic_complexity=5, cognitive_complexity=5,
+                commit_count=5, author_count=3,
+                last_author="Charlie",  # Only last author
+                authors_json=json.dumps({
+                    "Alice": 15, "Bob": 10, "Charlie": 5,
+                }),
+            ))
+            await db.commit()
+
+        resp = await client.get("/repos/r1/snapshots/s1/contributors")
+        assert resp.status_code == 200
+        data = resp.json()
+        authors = {c["author"]: c for c in data["contributors"]}
+        # All 3 should get credit from this symbol
+        assert "Alice" in authors
+        assert "Bob" in authors
+        assert "Charlie" in authors
+        # Alice should have 15 lines from shared_func (plus any from setup symbols)
+        assert authors["Alice"]["line_count"] >= 15
+        assert authors["Bob"]["line_count"] >= 10
