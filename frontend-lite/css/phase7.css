@@ -1,0 +1,302 @@
+/*
+   Phase 7 - Temporal Awareness & Trends
+   Sparklines, trend arrows, snapshot diff, notification center, onboarding, number animations
+*/
+
+/* -- Sparkline ------------------------------------------------ */
+.sparkline {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 6px;
+}
+.sparkline svg {
+    display: block;
+}
+
+/* -- Trend Badge ---------------------------------------------- */
+.trend-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 10px;
+    margin-top: 4px;
+}
+.trend-badge.trend-up {
+    color: var(--red, #ef4444);
+    background: rgba(239,68,68,0.08);
+}
+.trend-badge.trend-down {
+    color: var(--green, #22c55e);
+    background: rgba(34,197,94,0.08);
+}
+.trend-badge.trend-stable {
+    color: var(--text-3);
+    background: var(--bg-2);
+}
+/* Invert meaning for metrics where "down" is bad */
+.trend-badge.trend-up.inverted {
+    color: var(--green, #22c55e);
+    background: rgba(34,197,94,0.08);
+}
+.trend-badge.trend-down.inverted {
+    color: var(--red, #ef4444);
+    background: rgba(239,68,68,0.08);
+}
+
+/* -- Number Animation ----------------------------------------- */
+.num-animate {
+    transition: opacity 0.1s;
+}
+.num-animate.flash-good {
+    animation: flashGood 0.6s ease-out;
+}
+.num-animate.flash-bad {
+    animation: flashBad 0.6s ease-out;
+}
+@keyframes flashGood {
+    0%,100% { background: transparent; }
+    30% { background: rgba(34,197,94,0.15); border-radius: 4px; }
+}
+@keyframes flashBad {
+    0%,100% { background: transparent; }
+    30% { background: rgba(239,68,68,0.12); border-radius: 4px; }
+}
+
+/* -- Notification Center -------------------------------------- */
+.notif-bell {
+    position: relative;
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.12s;
+}
+.notif-bell:hover {
+    background: var(--bg-2);
+}
+.notif-bell .bell-icon {
+    font-size: 13px;
+}
+.notif-bell .notif-count {
+    position: absolute;
+    top: -2px; right: 0;
+    background: var(--red, #ef4444);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    min-width: 14px;
+    height: 14px;
+    line-height: 14px;
+    text-align: center;
+    border-radius: 7px;
+    padding: 0 3px;
+    display: none;
+}
+.notif-bell .notif-count.visible {
+    display: block;
+}
+
+/* -- Notification Panel --------------------------------------- */
+.notif-panel {
+    position: fixed;
+    top: auto; bottom: 32px;
+    right: 12px;
+    width: 320px;
+    max-height: 360px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    box-shadow: var(--shadow-lg, var(--shadow-md));
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+}
+.notif-panel.open {
+    display: flex;
+}
+.notif-panel .np-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-1);
+}
+.notif-panel .np-clear {
+    font-size: 11px;
+    color: var(--text-3);
+    cursor: pointer;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.1s, background 0.1s;
+}
+.notif-panel .np-clear:hover {
+    color: var(--text-1);
+    background: var(--bg-2);
+}
+.notif-panel .np-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0;
+}
+.notif-panel .np-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 14px;
+    font-size: 12px;
+    color: var(--text-2);
+    transition: background 0.1s;
+}
+.notif-panel .np-item:hover {
+    background: var(--bg-2);
+}
+.notif-panel .np-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+.notif-panel .np-body {
+    flex: 1;
+}
+.notif-panel .np-title {
+    font-weight: 500;
+    color: var(--text-1);
+    margin-bottom: 2px;
+}
+.notif-panel .np-time {
+    font-size: 10px;
+    color: var(--text-3);
+}
+.notif-panel .np-empty {
+    text-align: center;
+    padding: 24px 14px;
+    color: var(--text-3);
+    font-size: 12px;
+}
+
+/* -- Snapshot Diff -------------------------------------------- */
+.diff-selector {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+.diff-selector select {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--bg-1);
+    color: var(--text-1);
+    font-size: 12px;
+    cursor: pointer;
+}
+.diff-selector .diff-vs {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 600;
+}
+.diff-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-left: 6px;
+    padding: 1px 5px;
+    border-radius: 8px;
+}
+.diff-delta.dd-good {
+    color: var(--green, #22c55e);
+    background: rgba(34,197,94,0.1);
+}
+.diff-delta.dd-bad {
+    color: var(--red, #ef4444);
+    background: rgba(239,68,68,0.1);
+}
+.diff-delta.dd-neutral {
+    color: var(--text-3);
+    background: var(--bg-2);
+}
+
+/* -- Onboarding Tour ----------------------------------------- */
+.tour-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 9999;
+    display: none;
+}
+.tour-overlay.active {
+    display: block;
+}
+.tour-tip {
+    position: fixed;
+    z-index: 10000;
+    background: var(--bg-1);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 14px 18px;
+    max-width: 300px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+    font-size: 13px;
+    color: var(--text-1);
+    display: none;
+}
+.tour-tip.active {
+    display: block;
+}
+.tour-tip .tt-title {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 14px;
+}
+.tour-tip .tt-body {
+    color: var(--text-2);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+.tour-tip .tt-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+.tour-tip .tt-step {
+    font-size: 11px;
+    color: var(--text-3);
+}
+.tour-tip .tt-actions {
+    display: flex;
+    gap: 6px;
+}
+.tour-tip .tt-btn {
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: none;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.1s;
+}
+.tour-tip .tt-btn-skip {
+    background: var(--bg-2);
+    color: var(--text-2);
+}
+.tour-tip .tt-btn-skip:hover { background: var(--bg-3, var(--bg-2)); }
+.tour-tip .tt-btn-next {
+    background: var(--accent);
+    color: #fff;
+}
+.tour-tip .tt-btn-next:hover { opacity: 0.9; }
+
+/* -- Reduced motion ------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+    .num-animate { transition: none; }
+    @keyframes flashGood { 0%,100% { background: transparent; } }
+    @keyframes flashBad { 0%,100% { background: transparent; } }
+}

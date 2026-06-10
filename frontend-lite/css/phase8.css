@@ -1,0 +1,137 @@
+/*
+   Phase 8 — Accessibility & Performance Hardening
+   ARIA focus styles, skip link, high-contrast focus, perf badge
+*/
+
+/* -- Skip to Content Link ------------------------------------- */
+.skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 16px;
+    z-index: 99999;
+    font-size: 13px;
+    border-radius: 0 0 8px 0;
+    transition: top 0.2s;
+}
+.skip-link:focus {
+    top: 0;
+}
+
+/* -- Enhanced Focus Outlines ---------------------------------- */
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+button:focus-visible,
+.btn:focus-visible,
+.nav-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(98, 70, 234, 0.15);
+}
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+}
+.tbl tbody tr:focus-within {
+    background: var(--bg-2);
+    outline: 1px solid var(--accent);
+    outline-offset: -1px;
+}
+
+/* -- Accessible Card Focus ------------------------------------ */
+.card[tabindex]:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    box-shadow: 0 0 0 4px rgba(98, 70, 234, 0.1);
+}
+
+/* -- ARIA Live Region (screen reader announcements) ----------- */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+[aria-live] {
+    /* Ensure live regions don't affect layout */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+}
+
+/* -- Performance Badge (dev mode) ----------------------------- */
+.perf-badge {
+    position: fixed;
+    top: 6px;
+    right: 6px;
+    z-index: 99998;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    font-family: monospace;
+    color: var(--text-3);
+    pointer-events: none;
+    opacity: 0.7;
+    display: none;
+}
+.perf-badge.visible {
+    display: block;
+}
+.perf-badge.warn {
+    color: var(--red, #ef4444);
+    border-color: var(--red, #ef4444);
+    opacity: 1;
+}
+
+/* -- High Contrast Mode --------------------------------------- */
+@media (forced-colors: active) {
+    .btn, .nav-btn, .badge, .conf-badge {
+        border: 1px solid ButtonText;
+    }
+    .tip-bubble {
+        border: 1px solid CanvasText;
+    }
+}
+
+/* -- Print Styles --------------------------------------------- */
+@media print {
+    .sidebar, .status-bar, .g-ctrl, .g-minimap,
+    .shortcut-hint, .cmd-overlay, .tour-overlay, .tour-tip,
+    .notif-panel, .notif-bell, .perf-badge {
+        display: none !important;
+    }
+    .main-content {
+        margin-left: 0 !important;
+        padding: 20px !important;
+    }
+    .card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}
+
+/* -- Reduced motion (additional Phase 8 guards) --------------- */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

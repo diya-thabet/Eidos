@@ -1,0 +1,288 @@
+/* ===============================================================
+   Phase 5 - Advanced HMI Layer
+   Status bar, risk radar, graph minimap, ingestion timeline
+   =============================================================== */
+
+/* -- Global Status Bar --------------------------------------- */
+.status-bar {
+    position: fixed;
+    bottom: 0; left: 230px; right: 0;
+    height: 28px;
+    background: var(--bg-1);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 16px;
+    font-size: 10px;
+    color: var(--text-3);
+    z-index: 60;
+    transition: left 0.2s;
+}
+.status-bar .sb-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+.status-bar .sb-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.status-bar .sb-dot.on { background: var(--green); }
+.status-bar .sb-dot.off { background: var(--red); }
+.status-bar .sb-sep {
+    width: 1px; height: 14px;
+    background: var(--border);
+    flex-shrink: 0;
+}
+.status-bar .sb-accent {
+    color: var(--accent);
+    font-weight: 600;
+}
+.status-bar .sb-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.status-bar .sb-kbd {
+    font-family: var(--mono);
+    font-size: 9px;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+}
+
+/* Adjust main area for status bar */
+.main {
+    padding-bottom: 36px !important;
+}
+
+@media (max-width: 860px) {
+    .status-bar { left: 52px; }
+}
+
+/* -- Risk Radar Chart ---------------------------------------- */
+.radar-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    padding: 8px 0;
+}
+.radar-wrap svg {
+    display: block;
+}
+.radar-labels {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 14px;
+    margin-top: 10px;
+}
+.radar-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10px;
+    color: var(--text-2);
+}
+.radar-label .rdot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+}
+
+/* -- Graph Minimap ------------------------------------------- */
+.g-minimap {
+    position: absolute;
+    bottom: 10px; right: 10px;
+    width: 160px; height: 110px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    overflow: hidden;
+    cursor: crosshair;
+    transition: opacity 0.15s, border-color 0.15s;
+    z-index: 10;
+    user-select: none;
+}
+.g-minimap:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow-lg, var(--shadow-md));
+}
+.g-minimap canvas {
+    width: 100%; height: 100%;
+    display: block;
+    pointer-events: none;
+}
+.g-minimap .mm-viewport {
+    position: absolute;
+    border: 1.5px solid var(--accent);
+    border-radius: 2px;
+    background: rgba(98, 70, 234, 0.08);
+    pointer-events: none;
+    transition: left 0.08s ease-out, top 0.08s ease-out, width 0.08s ease-out, height 0.08s ease-out;
+}
+
+/* -- Ingestion Timeline -------------------------------------- */
+.ingest-timeline {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 12px 0;
+    position: relative;
+}
+.ingest-timeline .it-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+.ingest-timeline .it-dot {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg-1);
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+    color: var(--text-3);
+    transition: border-color 0.2s, background 0.2s, color 0.2s;
+}
+.ingest-timeline .it-step.done .it-dot {
+    border-color: var(--green);
+    background: var(--green-soft);
+    color: var(--green);
+}
+.ingest-timeline .it-step.active .it-dot {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent);
+    animation: itPulse 1.4s ease-in-out infinite;
+}
+.ingest-timeline .it-step.failed .it-dot {
+    border-color: var(--red);
+    background: var(--red-soft);
+    color: var(--red);
+}
+.ingest-timeline .it-label {
+    font-size: 9px;
+    color: var(--text-3);
+    margin-top: 5px;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    font-weight: 500;
+}
+.ingest-timeline .it-step.done .it-label { color: var(--green); }
+.ingest-timeline .it-step.active .it-label { color: var(--accent); }
+.ingest-timeline .it-line {
+    position: absolute;
+    top: 11px;
+    left: 0; right: 0;
+    height: 2px;
+    background: var(--border);
+    z-index: 0;
+}
+.ingest-timeline .it-line-fill {
+    height: 100%;
+    background: var(--green);
+    transition: width 0.4s var(--ease-out, ease);
+    border-radius: 1px;
+}
+@keyframes itPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(98, 70, 234, 0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(98, 70, 234, 0); }
+}
+
+/* -- Snapshot Timeline --------------------------------------- */
+.snap-timeline {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 48px;
+    padding: 4px 0;
+}
+.snap-timeline .st-bar {
+    flex: 1;
+    min-width: 12px;
+    max-width: 32px;
+    border-radius: 3px 3px 0 0;
+    background: var(--accent);
+    opacity: 0.5;
+    cursor: pointer;
+    transition: opacity 0.12s, transform 0.12s;
+    position: relative;
+}
+.snap-timeline .st-bar:hover {
+    opacity: 1;
+    transform: scaleY(1.05);
+    transform-origin: bottom;
+}
+.snap-timeline .st-bar.current {
+    opacity: 1;
+    background: var(--green);
+}
+.snap-timeline .st-bar .st-tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.9);
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 4px 8px;
+    font-size: 9px;
+    white-space: nowrap;
+    color: var(--text-1);
+    box-shadow: var(--shadow-sm);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.12s, transform 0.12s;
+}
+.snap-timeline .st-bar:hover .st-tip {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+}
+
+/* -- Risk Dimension Pill ------------------------------------- */
+.risk-dims {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 10px;
+}
+.risk-dim {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    transition: border-color 0.12s;
+}
+.risk-dim.risk-ok { border-left: 3px solid var(--green); }
+.risk-dim.risk-warn { border-left: 3px solid var(--yellow); }
+.risk-dim.risk-bad { border-left: 3px solid var(--red); }
+.risk-dim .rd-name {
+    color: var(--text-1);
+    font-weight: 500;
+}
+.risk-dim .rd-val {
+    color: var(--text-3);
+    font-size: 10px;
+}
+
+/* -- Reduced motion ------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    .ingest-timeline .it-step.active .it-dot { animation: none; }
+    .snap-timeline .st-bar:hover { transform: none; }
+}

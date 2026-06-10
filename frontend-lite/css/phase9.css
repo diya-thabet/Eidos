@@ -1,0 +1,397 @@
+/* ???????????????????????????????????????????????????
+   Phase 9 — Platform & Sharing
+   Deep links, PDF export, responsive, ambient, collab
+   ??????????????????????????????????????????????????? */
+
+/* --- 9.1 Deep Link Copy Button --- */
+.deeplink-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 3px 8px;
+    font-size: 11px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: all 0.12s;
+    white-space: nowrap;
+}
+.deeplink-btn:hover {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+}
+.deeplink-btn:active {
+    transform: scale(0.96);
+}
+.deeplink-btn svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+}
+.deeplink-copied {
+    background: var(--green, #22c55e) !important;
+    color: #fff !important;
+    border-color: var(--green, #22c55e) !important;
+}
+
+/* --- 9.2 PDF Report --- */
+.pdf-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+}
+.pdf-overlay.open {
+    opacity: 1;
+    pointer-events: auto;
+}
+.pdf-dialog {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    min-width: 320px;
+    max-width: 440px;
+    width: 90vw;
+    box-shadow: var(--shadow-lg, 0 20px 60px rgba(0,0,0,0.3));
+}
+.pdf-dialog h3 {
+    font-size: 16px;
+    margin-bottom: 12px;
+    color: var(--text-0);
+}
+.pdf-dialog p {
+    font-size: 13px;
+    color: var(--text-2);
+    margin-bottom: 16px;
+    line-height: 1.5;
+}
+.pdf-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+.pdf-opt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-1);
+}
+.pdf-opt input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent);
+}
+.pdf-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+}
+.pdf-progress {
+    margin-top: 12px;
+    display: none;
+}
+.pdf-progress.active {
+    display: block;
+}
+.pdf-progress-bar {
+    height: 4px;
+    background: var(--bg-2);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.pdf-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    width: 0%;
+    border-radius: 2px;
+    transition: width 0.3s;
+    animation: pdf-pulse 1.5s ease-in-out infinite;
+}
+@keyframes pdf-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+.pdf-progress-text {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 4px;
+}
+
+/* --- 9.3 Responsive Tablet Layout --- */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 56px !important;
+        overflow: hidden;
+    }
+    .sidebar-brand {
+        padding: 12px 8px;
+        justify-content: center;
+    }
+    .sidebar-brand div {
+        display: none;
+    }
+    .brand-logo {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    .nav-btn span {
+        display: none;
+    }
+    .nav-btn {
+        justify-content: center;
+        padding: 10px 0 !important;
+    }
+    .nav-btn svg {
+        margin-right: 0 !important;
+    }
+    .nav-group {
+        font-size: 0;
+        height: 8px;
+        padding: 0 !important;
+    }
+    .sidebar-bottom {
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    .conn-badge span:last-child {
+        display: none;
+    }
+    .main {
+        margin-left: 56px !important;
+    }
+    .status-bar {
+        left: 56px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        position: fixed;
+        left: -240px;
+        width: 240px !important;
+        z-index: 1000;
+        transition: left 0.2s;
+    }
+    .sidebar.mobile-open {
+        left: 0;
+    }
+    .main {
+        margin-left: 0 !important;
+        padding: 16px 12px !important;
+    }
+    .status-bar {
+        left: 0 !important;
+    }
+    .mobile-nav-toggle {
+        display: flex !important;
+    }
+    .page-head h1 {
+        font-size: 18px;
+    }
+    .stat-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+    .cmd-palette {
+        width: 95vw !important;
+        max-width: 95vw !important;
+    }
+    .drawer {
+        width: 100% !important;
+    }
+    .export-grid {
+        grid-template-columns: 1fr 1fr !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .stat-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .export-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .fb-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+/* Mobile nav toggle button */
+.mobile-nav-toggle {
+    display: none;
+    position: fixed;
+    top: 10px;
+    left: 10px;
+    z-index: 1001;
+    width: 36px;
+    height: 36px;
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--text-1);
+    box-shadow: var(--shadow-sm);
+}
+.mobile-nav-toggle svg {
+    width: 20px;
+    height: 20px;
+}
+
+/* --- 9.4 Ambient Status Indicators --- */
+.ambient-border {
+    position: fixed;
+    top: 0;
+    left: var(--sidebar-w, 220px);
+    bottom: 28px;
+    width: 2px;
+    pointer-events: none;
+    transition: background 1.5s ease;
+    z-index: 1;
+}
+.ambient-border[data-risk="low"] {
+    background: linear-gradient(180deg, var(--green, #22c55e) 0%, transparent 60%);
+}
+.ambient-border[data-risk="medium"] {
+    background: linear-gradient(180deg, var(--yellow, #eab308) 0%, transparent 60%);
+}
+.ambient-border[data-risk="high"] {
+    background: linear-gradient(180deg, var(--red, #ef4444) 0%, transparent 60%);
+}
+.ambient-border[data-risk="neutral"] {
+    background: transparent;
+}
+
+/* Nav dot indicators for pages with findings */
+.nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    animation: nav-dot-pulse 2s ease-in-out infinite;
+}
+@keyframes nav-dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+}
+
+/* Ingestion warmth on status bar */
+.status-bar.ingesting {
+    background: linear-gradient(90deg, var(--bg-0) 0%, rgba(234, 179, 8, 0.08) 50%, var(--bg-0) 100%);
+}
+
+/* --- 9.5 Collaboration Presence (Scaffold) --- */
+.presence-group {
+    display: flex;
+    align-items: center;
+    gap: -4px;
+    margin-left: 8px;
+}
+.presence-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--bg-0);
+    margin-left: -4px;
+    cursor: default;
+    position: relative;
+}
+.presence-avatar:first-child {
+    margin-left: 0;
+}
+.presence-avatar[data-tooltip]:hover::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 11px;
+    color: var(--text-1);
+    white-space: nowrap;
+    box-shadow: var(--shadow-sm);
+    z-index: 100;
+}
+
+/* --- Share button for pages --- */
+.share-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+.share-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: var(--bg-1);
+    color: var(--text-2);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.share-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+.share-btn svg {
+    width: 12px;
+    height: 12px;
+}
+
+/* Page head with share integration */
+.page-head-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Print styles for PDF-like output */
+@media print {
+    .sidebar, .status-bar, .notif-panel, .cmd-overlay,
+    .tour-overlay, .tour-tip, .mobile-nav-toggle,
+    .ambient-border, .share-bar, .deeplink-btn {
+        display: none !important;
+    }
+    .main {
+        margin: 0 !important;
+        padding: 20px !important;
+    }
+    .card {
+        break-inside: avoid;
+        box-shadow: none !important;
+        border: 1px solid #ddd !important;
+    }
+}

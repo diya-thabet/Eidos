@@ -1,0 +1,109 @@
+/* Phase 1: Trust & Reliability UI */
+
+/* ?? Page transitions (see phase2.css for enhanced version) ?? */
+/* Base keyframe kept for backwards compat; overridden by phase2 */
+
+/* ?? Skeleton loaders ??????????????????????????????????????? */
+@keyframes shimmer {
+    0%   { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+.skel {
+    background: linear-gradient(90deg, var(--bg-2) 25%, var(--bg-3) 50%, var(--bg-2) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: 6px;
+}
+.skel-row    { height: 16px; margin-bottom: 10px; width: 80%; }
+.skel-kpi    { height: 72px; border-radius: 8px; }
+.skel-chart  { height: 160px; border-radius: 8px; }
+.skel-line   { height: 12px; margin-bottom: 8px; }
+.skel-grid   { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-bottom: 16px; }
+
+/* ?? Tooltips ??????????????????????????????????????????????? */
+.tip-wrap { position: relative; display: inline-flex; align-items: center; }
+.tip-icon {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--bg-3);
+    color: var(--text-3);
+    font-size: 9px; font-weight: 700;
+    display: inline-grid; place-items: center;
+    cursor: help;
+    margin-left: 4px;
+    transition: background 0.12s, color 0.12s;
+    flex-shrink: 0;
+}
+.tip-icon:hover { background: var(--accent-soft); color: var(--accent); }
+.tip-bubble {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%) scale(0.95);
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 11px; line-height: 1.5;
+    color: var(--text-1);
+    box-shadow: var(--shadow-md);
+    white-space: normal;
+    width: max-content;
+    max-width: 240px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s, transform 0.15s;
+    z-index: 900;
+}
+.tip-bubble::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--border);
+}
+.tip-wrap:hover .tip-bubble { opacity: 1; transform: translateX(-50%) scale(1); pointer-events: auto; }
+
+/* ?? Confidence badge ??????????????????????????????????????? */
+.conf-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 10px; font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.conf-high   { background: var(--green-soft); color: var(--green); }
+.conf-medium { background: var(--yellow-soft); color: var(--yellow); }
+.conf-low    { background: var(--red-soft); color: var(--red); }
+.conf-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ?? Snapshot metadata bar ?????????????????????????????????? */
+.snap-meta {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    margin-top: 8px;
+}
+.snap-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    background: var(--bg-2);
+    color: var(--text-2);
+    border: 1px solid var(--border);
+}
+.snap-tag svg { width: 10px; height: 10px; opacity: 0.7; }
+
+/* ?? Section separator ?????????????????????????????????????? */
+.section-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 20px 0;
+    opacity: 0.5;
+}
+
+/* ?? KPI with tooltip support ??????????????????????????????? */
+.ch-kpi-item .tip-wrap { justify-content: center; }
+.ch-kpi-lbl { display: flex; align-items: center; justify-content: center; gap: 2px; }

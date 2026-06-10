@@ -1,0 +1,210 @@
+/*
+   Phase 6 — Graph Intelligence
+   Search overlay, contextual zoom, heatmap mode, path finder
+*/
+
+/* -- Graph Search Overlay ------------------------------------ */
+.g-search {
+    position: absolute;
+    top: 10px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 6px 14px;
+    box-shadow: var(--shadow-md);
+    min-width: 260px;
+    max-width: 380px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s, transform 0.15s;
+    transform: translateX(-50%) translateY(-6px);
+}
+.g-search.open {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(-50%) translateY(0);
+}
+.g-search input {
+    flex: 1;
+    border: none;
+    background: none;
+    color: var(--text-1);
+    font-size: 13px;
+    outline: none;
+    padding: 4px 0;
+}
+.g-search input::placeholder { color: var(--text-3); }
+.g-search .gs-icon {
+    font-size: 14px;
+    color: var(--text-3);
+}
+.g-search .gs-count {
+    font-size: 11px;
+    color: var(--text-3);
+    white-space: nowrap;
+}
+.g-search .gs-close {
+    cursor: pointer;
+    font-size: 15px;
+    color: var(--text-3);
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.1s, background 0.1s;
+}
+.g-search .gs-close:hover {
+    color: var(--text-1);
+    background: var(--bg-2);
+}
+
+/* -- Heatmap Mode Toolbar ------------------------------------ */
+.g-heatbar {
+    position: absolute;
+    top: 10px; left: 10px;
+    z-index: 15;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 4px 8px;
+    box-shadow: var(--shadow-sm);
+    font-size: 11px;
+    color: var(--text-2);
+}
+.g-heatbar span.hb-label {
+    font-weight: 500;
+    margin-right: 4px;
+    color: var(--text-3);
+}
+.g-heatbar button {
+    border: none;
+    background: var(--bg-2);
+    color: var(--text-2);
+    padding: 3px 8px;
+    border-radius: 5px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+}
+.g-heatbar button:hover {
+    background: var(--bg-3, var(--bg-2));
+    color: var(--text-1);
+}
+.g-heatbar button.active {
+    background: var(--accent);
+    color: #fff;
+}
+
+/* -- Heatmap Legend ------------------------------------------- */
+.g-heat-legend {
+    position: absolute;
+    bottom: 130px; right: 10px;
+    z-index: 12;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 10px;
+    color: var(--text-3);
+    display: none;
+    box-shadow: var(--shadow-sm);
+}
+.g-heat-legend.visible {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.g-heat-legend .hl-bar {
+    width: 60px;
+    height: 8px;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+}
+
+/* -- Path Finder Mode ---------------------------------------- */
+.g-pathbar {
+    position: absolute;
+    bottom: 50px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 20;
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: var(--bg-1);
+    border: 1px solid var(--accent);
+    border-radius: 10px;
+    padding: 8px 16px;
+    box-shadow: var(--shadow-md);
+    font-size: 12px;
+    color: var(--text-2);
+}
+.g-pathbar.open {
+    display: flex;
+}
+.g-pathbar .pb-step {
+    font-weight: 500;
+    color: var(--accent);
+}
+.g-pathbar .pb-node {
+    background: var(--bg-2);
+    padding: 2px 8px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--text-1);
+}
+.g-pathbar .pb-arrow {
+    color: var(--text-3);
+}
+.g-pathbar .pb-cancel {
+    cursor: pointer;
+    color: var(--text-3);
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: color 0.1s, background 0.1s;
+    margin-left: 6px;
+}
+.g-pathbar .pb-cancel:hover {
+    color: var(--red, #ef4444);
+    background: var(--bg-2);
+}
+
+/* -- Breadcrumb (contextual zoom back) ----------------------- */
+.g-breadcrumb {
+    position: absolute;
+    top: 50px; left: 10px;
+    z-index: 15;
+    display: none;
+    align-items: center;
+    gap: 6px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 5px 12px;
+    box-shadow: var(--shadow-sm);
+    font-size: 12px;
+    color: var(--text-2);
+    cursor: pointer;
+    transition: border-color 0.12s;
+}
+.g-breadcrumb.visible {
+    display: flex;
+}
+.g-breadcrumb:hover {
+    border-color: var(--accent);
+    color: var(--text-1);
+}
+.g-breadcrumb .bc-icon {
+    font-size: 14px;
+}
+
+/* -- Reduced motion ------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+    .g-search { transition: none; }
+}

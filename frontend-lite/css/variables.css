@@ -26,6 +26,8 @@
     --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
     --sidebar-bg: #ffffff;
     --card-bg: #ffffff;
+    --logo-bg: #1a1a2e;
+    --logo-ring: rgba(0, 0, 0, 0.12);
     --radius: 10px;
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
     --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', Consolas, monospace;
@@ -58,6 +60,8 @@
     --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
     --sidebar-bg: #111520;
     --card-bg: #1a1e2c;
+    --logo-bg: #0d0f18;
+    --logo-ring: rgba(255, 255, 255, 0.08);
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }

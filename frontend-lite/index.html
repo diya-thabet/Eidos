@@ -4,16 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eidos</title>
+<link rel="icon" type="image/png" sizes="32x32" href="images/logo-32.png">
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/sidebar.css">
 <link rel="stylesheet" href="css/app.css">
 <link rel="stylesheet" href="css/charts.css">
+<link rel="stylesheet" href="css/phase1.css">
+<link rel="stylesheet" href="css/phase2.css">
+<link rel="stylesheet" href="css/phase3.css">
+<link rel="stylesheet" href="css/phase4.css">
+<link rel="stylesheet" href="css/phase5.css">
+<link rel="stylesheet" href="css/phase6.css">
+<link rel="stylesheet" href="css/phase7.css">
+<link rel="stylesheet" href="css/phase8.css">
+<link rel="stylesheet" href="css/phase9.css">
 <link rel="stylesheet" href="css/graph-view.css">
 </head>
 <body>
-<aside class="sidebar">
-<div class="sidebar-brand"><div class="brand-mark">E</div><div><span class="brand-label">Eidos</span><span class="brand-sub">code intelligence</span></div></div>
-<nav class="sidebar-nav">
+<a href="#main" class="skip-link">Skip to main content</a>
+<div aria-live="polite" aria-atomic="true" id="aria-live"></div>
+<button class="mobile-nav-toggle" id="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
+<div class="ambient-border" id="ambient-border" data-risk="neutral"></div>
+<aside class="sidebar" role="navigation" aria-label="Main navigation">
+<div class="sidebar-brand"><img src="images/logo-64.png" alt="Eidos" class="brand-logo"><div><span class="brand-label">Eidos</span><span class="brand-sub">code intelligence</span></div></div>
+<nav class="sidebar-nav" aria-label="Pages">
 <div class="nav-group">Workspace</div>
 <button class="nav-btn active" data-p="repos" onclick="navigate('repos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg><span>Repositories</span></button>
 <button class="nav-btn" data-p="overview" onclick="navigate('overview')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg><span>Overview</span></button>
@@ -39,21 +53,37 @@
 </nav>
 <div class="sidebar-bottom">
 <div class="conn-badge"><span class="conn-dot off" id="cd"></span><span id="ct">Offline</span></div>
-<button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Toggle theme">&#x263D;</button>
+<button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark/light theme">&#x263D;</button>
 </div>
 </aside>
-<main class="main" id="main"></main>
-<div class="toast-area" id="toasts"></div>
+<main class="main" id="main" role="main" aria-label="Page content"></main>
+<div class="drawer-overlay" id="drawer-overlay" onclick="closeDrawer()" role="presentation"></div>
+<div class="drawer" id="drawer" role="dialog" aria-modal="true" aria-labelledby="drawer-title"><div class="drawer-head"><h3 id="drawer-title">Details</h3><button class="drawer-close" onclick="closeDrawer()" aria-label="Close panel">&times;</button></div><div class="drawer-body" id="drawer-body"></div><div class="drawer-footer" id="drawer-footer"></div></div>
+<div class="cmd-overlay" id="cmd-overlay" onclick="if(event.target===this)cmdClose()" role="dialog" aria-modal="true" aria-label="Command palette"><div class="cmd-palette"><div class="cmd-input-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg><input class="cmd-input" id="cmd-input" placeholder="Type a command or search..." autocomplete="off" spellcheck="false" aria-label="Command search"><span class="cmd-kbd">Esc</span></div><div class="cmd-results" id="cmd-results" role="listbox"></div><div class="cmd-footer"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span><span><kbd>Enter</kbd> Execute</span><span><kbd>Esc</kbd> Close</span></div></div></div>
+<div class="shortcut-hint" id="shortcut-hint"><kbd>Ctrl</kbd>+<kbd>K</kbd> Command Palette</div>
+<div class="pdf-overlay" id="pdf-overlay" onclick="if(event.target===this)closePdfDialog()"><div class="pdf-dialog"><h3>Generate PDF Report</h3><p>Create a downloadable report summarizing the current analysis state.</p><div class="pdf-options"><label class="pdf-opt"><input type="checkbox" id="pdf-kpis" checked> KPI Summary</label><label class="pdf-opt"><input type="checkbox" id="pdf-hotspots" checked> Top Hotspots</label><label class="pdf-opt"><input type="checkbox" id="pdf-deps" checked> Dependency Health</label><label class="pdf-opt"><input type="checkbox" id="pdf-actions" checked> Recommended Actions</label><label class="pdf-opt"><input type="checkbox" id="pdf-graph"> Graph Snapshot</label></div><div class="pdf-actions"><button class="btn btn-s btn-g" onclick="closePdfDialog()">Cancel</button><button class="btn btn-s btn-p" id="pdf-generate-btn" onclick="generatePdfReport()">Generate Report</button></div><div class="pdf-progress" id="pdf-progress"><div class="pdf-progress-bar"><div class="pdf-progress-fill" id="pdf-progress-fill"></div></div><div class="pdf-progress-text" id="pdf-progress-text">Preparing...</div></div></div></div>
+<div class="toast-area" id="toasts" aria-live="assertive" aria-atomic="true" role="status"></div>
 <script src="js/core.js"></script>
 <script src="js/charts.js"></script>
 <script src="js/graph.js"></script>
 <script src="js/pages.js"></script>
+<div class="status-bar" id="status-bar"><div class="sb-item"><span class="sb-dot off" id="sb-dot"></span><span id="sb-conn">Offline</span></div><div class="sb-sep"></div><div class="sb-item">Repo: <span class="sb-accent" id="sb-repo">none</span></div><div class="sb-sep"></div><div class="sb-item">Snap: <span class="sb-accent" id="sb-snap">none</span></div><div class="sb-right"><div class="presence-group" id="presence-group"></div><span class="notif-bell" id="notif-bell" onclick="Notif.toggle()"><span class="bell-icon">&#128276;</span><span class="notif-count" id="notif-count">0</span></span><span class="sb-item"><span class="sb-kbd">Ctrl+K</span> palette</span><span class="sb-item">v1.0</span></div></div>
+<div class="notif-panel" id="notif-panel"><div class="np-header"><span>Notifications</span><span class="np-clear" onclick="Notif.clear()">Clear all</span></div><div class="np-list" id="notif-list"><div class="np-empty">No notifications yet</div></div></div>
+<div class="tour-overlay" id="tour-overlay" onclick="Tour.skip()"></div>
+<div class="tour-tip" id="tour-tip"><div class="tt-title" id="tt-title"></div><div class="tt-body" id="tt-body"></div><div class="tt-footer"><span class="tt-step" id="tt-step"></span><div class="tt-actions"><button class="tt-btn tt-btn-skip" onclick="Tour.skip()">Skip</button><button class="tt-btn tt-btn-next" onclick="Tour.next()" id="tt-next">Next</button></div></div></div>
 <script>
 (function(){
 var t=localStorage.getItem('eidos_theme')||'dark';
 document.documentElement.setAttribute('data-theme',t);
 document.getElementById('theme-btn').textContent=t==='dark'?'\u2600':'\u263D';
-checkConn();navigate('repos');setInterval(checkConn,25000);
+checkConn();
+// Phase 9: Restore deep-link state or navigate to repos
+if(!DeepLink.restore()) navigate('repos');
+setInterval(checkConn,25000);
+setInterval(updateStatusBar, 2000); updateStatusBar();
+Notif.init(); Perf.init();
+if(!localStorage.getItem('eidos_onboarded')) setTimeout(function(){Tour.start();},800);
+document.addEventListener('click',function(e){var p=document.getElementById('notif-panel');var b=document.getElementById('notif-bell');if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!b.contains(e.target))p.classList.remove('open');});
 })();
 </script>
 </body>
