@@ -487,6 +487,43 @@
     margin-top: 8px;
 }
 
+/* Login form tabs and fields */
+.login-form {
+    margin-bottom: 4px;
+}
+.login-tabs {
+    display: flex;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+.login-tab {
+    flex: 1;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    background: var(--bg-1);
+    color: var(--text-2);
+    border: none;
+    cursor: pointer;
+    transition: all 0.12s;
+}
+.login-tab.active {
+    background: var(--accent);
+    color: #fff;
+}
+.login-tab:hover:not(.active) {
+    background: var(--bg-2);
+}
+.login-error {
+    font-size: 12px;
+    color: var(--red, #ef4444);
+    min-height: 18px;
+    margin-bottom: 8px;
+    text-align: left;
+}
+
 /* Auth badge in sidebar */
 .auth-user-badge {
     display: flex;
