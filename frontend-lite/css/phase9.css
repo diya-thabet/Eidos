@@ -404,6 +404,9 @@
     width: 56px;
     height: 56px;
     border-radius: 12px;
+    background: var(--logo-bg, #1a1a2e);
+    padding: 4px;
+    box-shadow: 0 4px 16px rgba(98, 70, 234, 0.2);
 }
 .login-title {
     font-size: 22px;

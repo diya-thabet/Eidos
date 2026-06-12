@@ -132,7 +132,7 @@ function pgLogin() {
 
     var h = '<div class="login-page">';
     h += '<div class="login-card">';
-    h += '<div class="login-logo"><img src="images/logo-64.png" alt="Eidos" class="login-logo-img"></div>';
+    h += '<div class="login-logo"><img src="images/logo.svg" alt="Eidos" class="login-logo-img"></div>';
     h += '<h1 class="login-title">Welcome to Eidos</h1>';
     h += '<p class="login-subtitle">Code intelligence platform — sign in to continue</p>';
 
