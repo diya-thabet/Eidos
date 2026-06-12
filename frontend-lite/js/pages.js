@@ -2768,7 +2768,7 @@ function pgAdmin() {
     h += '<div class="admin-tabs" id="admin-tabs">';
     h += '<button class="admin-tab active" onclick="adminTab(\'users\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Users <span class="admin-tab-badge" id="admin-tab-users-count">…</span></button>';
     h += '<button class="admin-tab" onclick="adminTab(\'plans\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg> Plans <span class="admin-tab-badge" id="admin-tab-plans-count">…</span></button>';
-    h += '<button class="admin-tab" onclick="adminTab(\'activity\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Activity</button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'audit\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Audit Log</button>';
     h += '<button class="admin-tab" onclick="adminTab(\'system\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15H3a2 2 0 110-4h.09"/></svg> System</button>';
     h += '</div>';
 
@@ -2797,7 +2797,7 @@ function adminTab(tab, btn) {
     } else {
         // Auto-select the correct tab button
         var tabs = document.querySelectorAll('.admin-tab');
-        var tabNames = ['users', 'plans', 'activity', 'system'];
+        var tabNames = ['users', 'plans', 'audit', 'system'];
         for (var i = 0; i < tabs.length; i++) {
             tabs[i].classList.toggle('active', tabNames[i] === tab);
         }
@@ -2808,7 +2808,7 @@ function adminTab(tab, btn) {
 
     if (tab === 'users') _adminUsers(el);
     else if (tab === 'plans') _adminPlans(el);
-    else if (tab === 'activity') _adminActivity(el);
+    else if (tab === 'audit') _adminAudit(el);
     else if (tab === 'system') _adminSystem(el);
 }
 
@@ -2891,9 +2891,27 @@ function _renderAdminUsers(el) {
     h += '<button class="btn btn-xs btn-g" onclick="adminRefreshUsers()" title="Refresh users list"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>';
     h += '</div>';
 
-    // Filter + sort users
+    // Results container (this is the part that gets updated on filter)
+    h += '<div id="admin-users-results"></div>';
+
+    el.innerHTML = h;
+
+    // Render results into the sub-container
+    _updateAdminResults();
+}
+
+function _updateAdminResults() {
+    var container = document.getElementById('admin-users-results');
+    if (!container) return;
+
+    var users = _adminUsersCache;
+    var totalUsers = users.length;
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleList = ['superadmin', 'admin', 'employee', 'support', 'user'];
+
     var filtered = _filterAdminUsers(users);
     var showing = filtered.length;
+    var h = '';
 
     if (showing < totalUsers) {
         h += '<p style="font-size:11px;color:var(--text-3);margin-bottom:8px">Showing ' + showing + ' of ' + totalUsers + ' users';
@@ -2906,7 +2924,7 @@ function _renderAdminUsers(el) {
     if (!filtered.length) {
         h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><p>No users match your search</p>';
         h += '<p style="font-size:11px;margin-top:8px"><a href="#" onclick="document.getElementById(\'admin-user-search\').value=\'\';document.getElementById(\'admin-role-filter\').value=\'\';adminFilterUsers();return false" style="color:var(--accent)">Clear filters</a></p></div>';
-        el.innerHTML = h;
+        container.innerHTML = h;
         return;
     }
 
@@ -2940,7 +2958,7 @@ function _renderAdminUsers(el) {
     }
     h += '</div>';
 
-    el.innerHTML = h;
+    container.innerHTML = h;
 }
 
 function _filterAdminUsers(users) {
@@ -2973,8 +2991,7 @@ function adminFilterUsers() {
     _adminUserFilter.search = (document.getElementById('admin-user-search') || {}).value || '';
     _adminUserFilter.role = (document.getElementById('admin-role-filter') || {}).value || '';
     _adminUserFilter.sort = (document.getElementById('admin-sort') || {}).value || 'name';
-    var el = document.getElementById('admin-content');
-    if (el) _renderAdminUsers(el);
+    _updateAdminResults();
 }
 
 function adminRefreshUsers() {
@@ -3233,32 +3250,247 @@ function adminCreatePlan() {
     });
 }
 
-function _adminActivity(el) {
-    API.get('/admin/usage?limit=50').then(function(records) {
-        var h = '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Recent Activity</div>';
+var _auditState = { events: [], total: 0, offset: 0, limit: 50, filter: { action: '', user: '', success: '', method: '' } };
 
-        if (!records || !records.length) {
-            h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>';
-            h += '<p>No activity recorded yet.</p><p style="font-size:11px;margin-top:6px;color:var(--text-3)">Usage records will appear here after API calls with token tracking.</p></div></div>';
-            el.innerHTML = h;
-            return;
-        }
+function _adminAudit(el) {
+    // Load stats + events in parallel
+    var statsPromise = API.get('/admin/audit-log/stats').catch(function() { return null; });
+    var eventsPromise = _auditFetchEvents();
 
-        h += '<table class="tbl admin-tbl"><thead><tr><th>User</th><th>Action</th><th>Tokens</th><th>Time</th></tr></thead><tbody>';
-        for (var i = 0; i < records.length; i++) {
-            var r = records[i];
-            var time = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
-            h += '<tr>';
-            h += '<td><code style="font-size:11px">' + esc((r.user_id || '').slice(0, 12)) + '</code></td>';
-            h += '<td style="font-size:12px">' + esc(r.action || '—') + '</td>';
-            h += '<td style="font-size:12px;font-weight:500">' + (r.tokens_used || 0) + '</td>';
-            h += '<td style="font-size:11px;color:var(--text-3)">' + time + '</td>';
-            h += '</tr>';
+    Promise.all([statsPromise, eventsPromise]).then(function(results) {
+        var stats = results[0];
+        var eventsData = results[1];
+        _auditState.events = (eventsData && eventsData.events) || [];
+        _auditState.total = (eventsData && eventsData.total) || 0;
+        _auditState.offset = 0;
+
+        var h = '';
+
+        // Stats overview
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Audit Log Overview</div>';
+        if (stats) {
+            h += '<div class="admin-sys-grid">';
+            h += _adminSysTile(stats.total_events || 0, 'Total Events', 'var(--accent)');
+            h += _adminSysTile(stats.unique_users || 0, 'Unique Users', 'var(--text-0)');
+            h += _adminSysTile(stats.recent_failures || 0, 'Failures', stats.recent_failures > 0 ? 'var(--red)' : 'var(--green)');
+            // Top actions
+            var topActions = stats.actions ? Object.keys(stats.actions) : [];
+            h += _adminSysTile(topActions.length, 'Action Types', 'var(--text-1)');
+            h += '</div>';
+            if (topActions.length) {
+                h += '<div style="margin-top:12px"><span style="font-size:11px;font-weight:600;color:var(--text-2)">Top Actions:</span> ';
+                var sorted = topActions.sort(function(a,b) { return (stats.actions[b]||0) - (stats.actions[a]||0); });
+                for (var ai = 0; ai < Math.min(sorted.length, 8); ai++) {
+                    h += '<span class="admin-stat-pill" style="font-size:10px;cursor:pointer" onclick="_auditSetFilter(\'action\',\'' + esc(sorted[ai]) + '\')"><span class="admin-stat-num">' + stats.actions[sorted[ai]] + '</span> ' + esc(sorted[ai]) + '</span> ';
+                }
+                h += '</div>';
+            }
+        } else {
+            h += '<p style="font-size:12px;color:var(--text-3)">Audit stats unavailable.</p>';
         }
-        h += '</tbody></table></div>';
+        h += '</div>';
+
+        // Filters toolbar
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filters & Search</div>';
+        h += '<div class="admin-toolbar" style="margin-bottom:0">';
+        h += '<div class="admin-search-box" style="min-width:160px"><svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+        h += '<input class="admin-search-inp" id="audit-filter-user" placeholder="User ID or email..." value="' + esc(_auditState.filter.user) + '" onchange="_auditApplyFilters()"></div>';
+        h += '<input class="admin-search-inp" id="audit-filter-action" placeholder="Action..." value="' + esc(_auditState.filter.action) + '" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;min-width:120px" onchange="_auditApplyFilters()">';
+        h += '<select class="admin-filter-select" id="audit-filter-success" onchange="_auditApplyFilters()">';
+        h += '<option value="">All status</option>';
+        h += '<option value="true"' + (_auditState.filter.success === 'true' ? ' selected' : '') + '>✓ Success</option>';
+        h += '<option value="false"' + (_auditState.filter.success === 'false' ? ' selected' : '') + '>✗ Failed</option>';
+        h += '</select>';
+        h += '<select class="admin-filter-select" id="audit-filter-method" onchange="_auditApplyFilters()">';
+        h += '<option value="">All methods</option>';
+        h += '<option value="GET"' + (_auditState.filter.method === 'GET' ? ' selected' : '') + '>GET</option>';
+        h += '<option value="POST"' + (_auditState.filter.method === 'POST' ? ' selected' : '') + '>POST</option>';
+        h += '<option value="PUT"' + (_auditState.filter.method === 'PUT' ? ' selected' : '') + '>PUT</option>';
+        h += '<option value="DELETE"' + (_auditState.filter.method === 'DELETE' ? ' selected' : '') + '>DELETE</option>';
+        h += '</select>';
+        h += '<button class="btn btn-xs btn-g" onclick="_auditClearFilters()" title="Clear all filters">Clear</button>';
+        h += '<button class="btn btn-xs btn-g" onclick="_auditExportCsv()" title="Export audit log as CSV"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> CSV</button>';
+        h += '</div></div>';
+
+        // Events table
+        h += '<div id="audit-events-container"></div>';
+
+        // Purge section
+        h += '<div class="card" style="margin-top:12px"><div class="card-hd" style="color:var(--red)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Data Retention</div>';
+        h += '<p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Purge audit events older than a specified number of days. This action is irreversible.</p>';
+        h += '<div class="row g-8" style="align-items:center">';
+        h += '<input class="inp" id="audit-purge-days" type="number" value="90" min="1" max="3650" style="width:80px;font-size:12px">';
+        h += '<span style="font-size:12px;color:var(--text-2)">days</span>';
+        h += '<button class="btn btn-xs btn-d" onclick="_auditPurge()">Purge Old Events</button>';
+        h += '</div></div>';
+
         el.innerHTML = h;
+        _auditRenderEvents();
     }).catch(function(e) {
-        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load activity: ' + esc(e.message) + '</p></div>';
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load audit log: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _auditFetchEvents() {
+    var params = '?limit=' + _auditState.limit + '&offset=' + _auditState.offset;
+    if (_auditState.filter.action) params += '&action=' + encodeURIComponent(_auditState.filter.action);
+    if (_auditState.filter.user) params += '&user_id=' + encodeURIComponent(_auditState.filter.user);
+    if (_auditState.filter.success) params += '&success=' + _auditState.filter.success;
+    if (_auditState.filter.method) params += '&method=' + encodeURIComponent(_auditState.filter.method);
+    return API.get('/admin/audit-log' + params);
+}
+
+function _auditRenderEvents() {
+    var container = document.getElementById('audit-events-container');
+    if (!container) return;
+
+    var events = _auditState.events;
+    var total = _auditState.total;
+    var h = '';
+
+    h += '<div class="card">';
+    h += '<div class="card-hd" style="display:flex;justify-content:space-between;align-items:center"><span><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Events</span>';
+    h += '<span style="font-size:11px;color:var(--text-3)">' + total + ' total &middot; showing ' + (_auditState.offset + 1) + '–' + Math.min(_auditState.offset + events.length, total) + '</span></div>';
+
+    if (!events.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        h += '<p>No audit events found.</p>';
+        if (_auditState.filter.action || _auditState.filter.user || _auditState.filter.success || _auditState.filter.method) {
+            h += '<p style="font-size:11px;margin-top:6px"><a href="#" onclick="_auditClearFilters();return false" style="color:var(--accent)">Clear filters</a></p>';
+        }
+        h += '</div></div>';
+        container.innerHTML = h;
+        return;
+    }
+
+    h += '<div style="overflow-x:auto"><table class="tbl admin-tbl"><thead><tr>';
+    h += '<th>Time</th><th>User</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th>Success</th>';
+    h += '</tr></thead><tbody>';
+
+    for (var i = 0; i < events.length; i++) {
+        var e = events[i];
+        var time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '—';
+        var statusColor = e.success ? 'var(--green)' : 'var(--red)';
+        var methodColor = { GET: 'var(--green)', POST: 'var(--accent)', PUT: 'var(--yellow,#f59e0b)', DELETE: 'var(--red)' }[e.method] || 'var(--text-2)';
+
+        h += '<tr style="cursor:pointer" onclick="_auditShowDetail(' + i + ')">';
+        h += '<td style="font-size:11px;white-space:nowrap;color:var(--text-2)">' + time + '</td>';
+        h += '<td style="font-size:11px"><code>' + esc((e.user_email || e.user_id || '—').slice(0, 24)) + '</code></td>';
+        h += '<td style="font-size:12px;font-weight:500">' + esc(e.action || '—') + '</td>';
+        h += '<td><span style="font-size:10px;font-weight:600;color:' + methodColor + '">' + esc(e.method || '—') + '</span></td>';
+        h += '<td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.path || '') + '">' + esc(e.path || '—') + '</td>';
+        h += '<td style="font-size:11px">' + (e.status_code || '—') + '</td>';
+        h += '<td><span style="color:' + statusColor + ';font-size:11px">' + (e.success ? '✓' : '✗') + '</span></td>';
+        h += '</tr>';
+    }
+    h += '</tbody></table></div>';
+
+    // Pagination
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
+    h += '<button class="btn btn-xs btn-g"' + (_auditState.offset <= 0 ? ' disabled' : '') + ' onclick="_auditPage(-1)">← Previous</button>';
+    h += '<span style="font-size:11px;color:var(--text-3)">Page ' + (Math.floor(_auditState.offset / _auditState.limit) + 1) + ' of ' + Math.max(1, Math.ceil(total / _auditState.limit)) + '</span>';
+    h += '<button class="btn btn-xs btn-g"' + ((_auditState.offset + _auditState.limit >= total) ? ' disabled' : '') + ' onclick="_auditPage(1)">Next →</button>';
+    h += '</div>';
+
+    h += '</div>';
+    container.innerHTML = h;
+}
+
+function _auditPage(dir) {
+    _auditState.offset = Math.max(0, _auditState.offset + (dir * _auditState.limit));
+    _auditFetchEvents().then(function(data) {
+        _auditState.events = (data && data.events) || [];
+        _auditState.total = (data && data.total) || 0;
+        _auditRenderEvents();
+    }).catch(function(e) {
+        toast('Failed to load events: ' + e.message, false);
+    });
+}
+
+function _auditApplyFilters() {
+    _auditState.filter.user = (document.getElementById('audit-filter-user') || {}).value || '';
+    _auditState.filter.action = (document.getElementById('audit-filter-action') || {}).value || '';
+    _auditState.filter.success = (document.getElementById('audit-filter-success') || {}).value || '';
+    _auditState.filter.method = (document.getElementById('audit-filter-method') || {}).value || '';
+    _auditState.offset = 0;
+    _auditFetchEvents().then(function(data) {
+        _auditState.events = (data && data.events) || [];
+        _auditState.total = (data && data.total) || 0;
+        _auditRenderEvents();
+    }).catch(function(e) {
+        toast('Failed to filter events: ' + e.message, false);
+    });
+}
+
+function _auditClearFilters() {
+    _auditState.filter = { action: '', user: '', success: '', method: '' };
+    _auditState.offset = 0;
+    var el = document.getElementById('admin-content');
+    if (el) _adminAudit(el);
+}
+
+function _auditSetFilter(key, value) {
+    _auditState.filter[key] = value;
+    _auditState.offset = 0;
+    var el = document.getElementById('admin-content');
+    if (el) _adminAudit(el);
+}
+
+function _auditShowDetail(idx) {
+    var e = _auditState.events[idx];
+    if (!e) return;
+    var time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '—';
+    var statusColor = e.success ? 'var(--green)' : 'var(--red)';
+
+    var m = '<div class="admin-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal" style="max-width:560px">';
+    m += '<div class="admin-modal-hd">Audit Event #' + (e.id || idx) + '</div>';
+    m += '<div class="admin-detail-grid">';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Timestamp</div><div class="admin-detail-item-val">' + time + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">User</div><div class="admin-detail-item-val">' + esc(e.user_email || e.user_id || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Action</div><div class="admin-detail-item-val">' + esc(e.action || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Method</div><div class="admin-detail-item-val">' + esc(e.method || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Path</div><div class="admin-detail-item-val" style="word-break:break-all">' + esc(e.path || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Status Code</div><div class="admin-detail-item-val">' + (e.status_code || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Success</div><div class="admin-detail-item-val" style="color:' + statusColor + '">' + (e.success ? '✓ Yes' : '✗ No') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">IP Address</div><div class="admin-detail-item-val">' + esc(e.ip_address || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Resource Type</div><div class="admin-detail-item-val">' + esc(e.resource_type || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Resource ID</div><div class="admin-detail-item-val">' + esc(e.resource_id || '—') + '</div></div>';
+    m += '</div>';
+
+    // Metadata
+    if (e.metadata && Object.keys(e.metadata).length) {
+        m += '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">';
+        m += '<div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px">Metadata</div>';
+        m += '<pre style="font-size:11px;background:var(--bg-1);padding:10px;border-radius:6px;overflow-x:auto;max-height:200px">' + esc(JSON.stringify(e.metadata, null, 2)) + '</pre>';
+        m += '</div>';
+    }
+
+    m += '<div style="text-align:right;margin-top:14px"><button class="btn btn-xs btn-g" onclick="document.getElementById(\'audit-detail-modal\').remove()">Close</button></div>';
+    m += '</div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function _auditExportCsv() {
+    var params = '?limit=10000';
+    if (_auditState.filter.action) params += '&action=' + encodeURIComponent(_auditState.filter.action);
+    if (_auditState.filter.user) params += '&user_id=' + encodeURIComponent(_auditState.filter.user);
+    API.download('/admin/audit-log/export' + params, 'audit-log.csv').then(function() {
+        toast('Audit log exported');
+    }).catch(function(e) {
+        toast('Export failed: ' + (e.message || 'Unknown error'), false);
+    });
+}
+
+function _auditPurge() {
+    var days = parseInt((document.getElementById('audit-purge-days') || {}).value) || 90;
+    if (!confirm('Purge all audit events older than ' + days + ' days? This cannot be undone.')) return;
+    API.del('/admin/audit-log/purge?older_than_days=' + days).then(function(res) {
+        toast('Purged ' + (res.purged || 0) + ' events older than ' + days + ' days');
+        var el = document.getElementById('admin-content');
+        if (el) _adminAudit(el);
+    }).catch(function(e) {
+        toast('Purge failed: ' + (e.message || 'Unknown error'), false);
     });
 }
 
@@ -3284,7 +3516,7 @@ function _adminSystem(el) {
         h += '<button class="btn btn-s btn-g" onclick="adminTab(\'users\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Manage Users</button>';
         h += '<button class="btn btn-s btn-g" onclick="API.get(\'/health\').then(function(d){toast(\'Backend: \'+d.status)}).catch(function(){toast(\'Backend unreachable\',false)})"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Ping Backend</button>';
         h += '<button class="btn btn-s btn-g" onclick="adminExportUsers()"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export Users</button>';
-        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'activity\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> View Activity</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'audit\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Audit Log</button>';
         h += '</div></div>';
 
         // Configuration info
