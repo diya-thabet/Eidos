@@ -248,14 +248,30 @@ async def local_signup(
     user_id = f"lo-{uuid.uuid4().hex[:16]}"
     pw_hash = hash_password(body.password)
 
+    # Determine role: superadmin if email matches config or if first user ever
+    from sqlalchemy import func
+
+    from app.storage.models import UserRole
+
+    role = UserRole.user
+    email_lower = body.email.lower().strip()
+    if settings.superadmin_email and email_lower == settings.superadmin_email.lower().strip():
+        role = UserRole.superadmin
+    else:
+        # First user in the system becomes superadmin (bootstrap)
+        user_count = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
+        if user_count == 0:
+            role = UserRole.superadmin
+
     user = User(
         id=user_id,
         auth_provider="local",
         github_login=login_key,
         name=body.name or body.email.split("@")[0],
-        email=body.email.lower().strip(),
+        email=email_lower,
         avatar_url="",
         password_hash=pw_hash,
+        role=role,
     )
     db.add(user)
     await db.commit()
@@ -295,6 +311,17 @@ async def local_login(
 
     if not verify_password(body.password, user.password_hash):
         raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Auto-promote to superadmin if email matches config
+    from app.storage.models import UserRole
+
+    if (
+        settings.superadmin_email
+        and user.email.lower() == settings.superadmin_email.lower().strip()
+        and user.role != UserRole.superadmin
+    ):
+        user.role = UserRole.superadmin
+        await db.commit()
 
     access_token = create_access_token(user.id)
     return {

@@ -38,7 +38,7 @@ function navigate(pg) {
 
     setTimeout(function() {
 
-        var pages = { login: pgLogin, repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, deps: pgDeps, clones: pgClones, cycles: pgCycles, hotspots: pgHotspots, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, settings: pgSettings };
+        var pages = { login: pgLogin, repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, deps: pgDeps, clones: pgClones, cycles: pgCycles, hotspots: pgHotspots, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, admin: pgAdmin, settings: pgSettings };
 
         if (pages[pg]) pages[pg]();
 
@@ -2730,6 +2730,599 @@ function doExp(fmt) {
 
 }
 
+
+
+// =================== ADMIN PANEL ===================
+
+var _adminUsersCache = [];
+var _adminUserFilter = { search: '', role: '', sort: 'name' };
+var _adminPlansCache = [];
+
+function pgAdmin() {
+    if (!Auth.isAuthEnabled() || !Auth.isLoggedIn()) {
+        html('main', '<div class="page-head"><h1>Admin Panel</h1><p>Manage users, plans, and system</p></div>' +
+            '<div class="card"><p style="color:var(--text-2)">Sign in with an admin account to access this panel.</p>' +
+            '<button class="btn btn-s btn-p mt" onclick="navigate(\'login\')">Sign In</button></div>');
+        return;
+    }
+
+    var role = Auth.getUserRole();
+    if (role !== 'superadmin' && role !== 'admin' && role !== 'support') {
+        html('main', '<div class="page-head"><h1>Admin Panel</h1><p>Manage users, plans, and system</p></div>' +
+            '<div class="perm-denied-page"><svg width="48" height="48" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>' +
+            '<h2>Access Restricted</h2><p>You need <b>admin</b> or <b>superadmin</b> role to access this panel.</p>' +
+            '<p style="font-size:12px;color:var(--text-3)">Your role: <code>' + esc(role) + '</code></p></div>');
+        return;
+    }
+
+    // Hero section
+    var h = '<div class="admin-hero">';
+    h += '<div class="admin-hero-left"><h1>Admin Panel</h1><p>Manage users, plans, and system configuration</p></div>';
+    h += '<div class="admin-hero-right">';
+    h += '<div class="admin-role-indicator"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> ' + esc(role) + '</div>';
+    h += '<button class="btn btn-xs btn-g" onclick="adminExportUsers()" title="Export Users CSV"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export</button>';
+    h += '<button class="btn btn-xs btn-p" onclick="adminInviteUser()" title="Invite a new user"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Invite</button>';
+    h += '</div></div>';
+
+    // Tabs
+    h += '<div class="admin-tabs" id="admin-tabs">';
+    h += '<button class="admin-tab active" onclick="adminTab(\'users\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Users <span class="admin-tab-badge" id="admin-tab-users-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'plans\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg> Plans <span class="admin-tab-badge" id="admin-tab-plans-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'activity\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Activity</button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'system\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15H3a2 2 0 110-4h.09"/></svg> System</button>';
+    h += '</div>';
+
+    h += '<div id="admin-content"><div class="loader"><span class="spin"></span> Loading...</div></div>';
+
+    html('main', h);
+    adminTab('users');
+
+    // Load counts for tab badges
+    API.get('/admin/users').then(function(users) {
+        _adminUsersCache = users || [];
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    });
+    API.get('/admin/plans').then(function(plans) {
+        _adminPlansCache = plans || [];
+        var badge = document.getElementById('admin-tab-plans-count');
+        if (badge) badge.textContent = _adminPlansCache.length;
+    });
+}
+
+function adminTab(tab, btn) {
+    if (btn) {
+        document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+    } else {
+        // Auto-select the correct tab button
+        var tabs = document.querySelectorAll('.admin-tab');
+        var tabNames = ['users', 'plans', 'activity', 'system'];
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.toggle('active', tabNames[i] === tab);
+        }
+    }
+    var el = document.getElementById('admin-content');
+    if (!el) return;
+    el.innerHTML = '<div class="loader"><span class="spin"></span> Loading...</div>';
+
+    if (tab === 'users') _adminUsers(el);
+    else if (tab === 'plans') _adminPlans(el);
+    else if (tab === 'activity') _adminActivity(el);
+    else if (tab === 'system') _adminSystem(el);
+}
+
+function _adminUsers(el) {
+    if (_adminUsersCache.length) {
+        _adminUserFilter.search = '';
+        _adminUserFilter.role = '';
+        _adminUserFilter.sort = 'name';
+        _renderAdminUsers(el);
+        return;
+    }
+    API.get('/admin/users').then(function(users) {
+        _adminUsersCache = users || [];
+        _adminUserFilter = { search: '', role: '', sort: 'name' };
+        _renderAdminUsers(el);
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load users: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _renderAdminUsers(el) {
+    var users = _adminUsersCache;
+
+    // Role stats
+    var totalUsers = users.length;
+    var roleCounts = {};
+    for (var i = 0; i < users.length; i++) {
+        var r = users[i].role || 'user';
+        roleCounts[r] = (roleCounts[r] || 0) + 1;
+    }
+
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleList = ['superadmin', 'admin', 'employee', 'support', 'user'];
+
+    var h = '';
+
+    // Invite form (inline, hidden by default)
+    h += '<div class="admin-invite-form" id="admin-invite-form" style="display:none">';
+    h += '<svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
+    h += '<input class="inp" id="invite-email" placeholder="Email address" type="email">';
+    h += '<input class="inp" id="invite-name" placeholder="Display name (optional)">';
+    h += '<select class="inp admin-filter-select" id="invite-role">';
+    for (var ir = 0; ir < roleList.length; ir++) {
+        h += '<option value="' + roleList[ir] + '"' + (roleList[ir] === 'user' ? ' selected' : '') + '>' + roleList[ir] + '</option>';
+    }
+    h += '</select>';
+    h += '<button class="btn btn-xs btn-p" onclick="adminDoInvite()">Send Invite</button>';
+    h += '<button class="btn btn-xs btn-g" onclick="document.getElementById(\'admin-invite-form\').style.display=\'none\'">Cancel</button>';
+    h += '</div>';
+
+    // Stats bar
+    h += '<div class="admin-stats-bar">';
+    h += '<div class="admin-stat-pill"><span class="admin-stat-num">' + totalUsers + '</span> Total Users</div>';
+    for (var ri = 0; ri < roleList.length; ri++) {
+        var rn = roleList[ri];
+        if (roleCounts[rn]) {
+            h += '<div class="admin-stat-pill" style="cursor:pointer" onclick="document.getElementById(\'admin-role-filter\').value=\'' + rn + '\';adminFilterUsers()"><span style="color:' + roleColors[rn] + '">●</span> ' + roleCounts[rn] + ' ' + rn + '</div>';
+        }
+    }
+    h += '</div>';
+
+    // Search, filter, sort toolbar
+    h += '<div class="admin-toolbar">';
+    h += '<div class="admin-search-box"><svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+    h += '<input class="admin-search-inp" id="admin-user-search" placeholder="Search by name, email, or login..." value="' + esc(_adminUserFilter.search) + '" oninput="adminFilterUsers()"></div>';
+    h += '<select class="admin-filter-select" id="admin-role-filter" onchange="adminFilterUsers()">';
+    h += '<option value="">All roles</option>';
+    for (var fi = 0; fi < roleList.length; fi++) {
+        h += '<option value="' + roleList[fi] + '"' + (_adminUserFilter.role === roleList[fi] ? ' selected' : '') + '>' + roleList[fi] + '</option>';
+    }
+    h += '</select>';
+    h += '<select class="admin-sort-select" id="admin-sort" onchange="adminFilterUsers()">';
+    h += '<option value="name"' + (_adminUserFilter.sort === 'name' ? ' selected' : '') + '>Sort: Name</option>';
+    h += '<option value="role"' + (_adminUserFilter.sort === 'role' ? ' selected' : '') + '>Sort: Role</option>';
+    h += '<option value="newest"' + (_adminUserFilter.sort === 'newest' ? ' selected' : '') + '>Sort: Newest</option>';
+    h += '<option value="oldest"' + (_adminUserFilter.sort === 'oldest' ? ' selected' : '') + '>Sort: Oldest</option>';
+    h += '</select>';
+    h += '<button class="btn btn-xs btn-g" onclick="adminRefreshUsers()" title="Refresh users list"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>';
+    h += '</div>';
+
+    // Filter + sort users
+    var filtered = _filterAdminUsers(users);
+    var showing = filtered.length;
+
+    if (showing < totalUsers) {
+        h += '<p style="font-size:11px;color:var(--text-3);margin-bottom:8px">Showing ' + showing + ' of ' + totalUsers + ' users';
+        if (_adminUserFilter.search || _adminUserFilter.role) {
+            h += ' &mdash; <a href="#" onclick="document.getElementById(\'admin-user-search\').value=\'\';document.getElementById(\'admin-role-filter\').value=\'\';adminFilterUsers();return false" style="color:var(--accent)">Clear filters</a>';
+        }
+        h += '</p>';
+    }
+
+    if (!filtered.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><p>No users match your search</p>';
+        h += '<p style="font-size:11px;margin-top:8px"><a href="#" onclick="document.getElementById(\'admin-user-search\').value=\'\';document.getElementById(\'admin-role-filter\').value=\'\';adminFilterUsers();return false" style="color:var(--accent)">Clear filters</a></p></div>';
+        el.innerHTML = h;
+        return;
+    }
+
+    h += '<div class="admin-user-grid">';
+    for (var ui = 0; ui < filtered.length; ui++) {
+        var u = filtered[ui];
+        var joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+        var initials = (u.name || u.github_login || '??').slice(0, 2).toUpperCase();
+        var roleColor = roleColors[u.role] || 'var(--text-3)';
+
+        h += '<div class="admin-user-card" onclick="adminViewUser(\'' + esc(u.id) + '\')" style="cursor:pointer">';
+        h += '<div class="admin-user-card-header">';
+        h += '<div class="admin-user-avatar">' + initials + '</div>';
+        h += '<div class="admin-user-info">';
+        h += '<div class="admin-user-name">' + esc(u.name || u.github_login || 'Unnamed') + '</div>';
+        h += '<div class="admin-user-email">' + esc(u.email || '—') + '</div>';
+        h += '</div>';
+        h += '<span class="admin-role-badge" style="--role-color:' + roleColor + '">' + esc(u.role || 'user') + '</span>';
+        h += '</div>';
+        h += '<div class="admin-user-card-body">';
+        h += '<div class="admin-user-meta"><span>Joined: ' + joined + '</span><span>' + esc(u.auth_provider || 'local') + '</span></div>';
+        h += '<div class="admin-user-actions" onclick="event.stopPropagation()">';
+        h += '<select class="admin-role-select" data-uid="' + esc(u.id) + '">';
+        for (var rx = 0; rx < roleList.length; rx++) {
+            h += '<option value="' + roleList[rx] + '"' + (u.role === roleList[rx] ? ' selected' : '') + '>' + roleList[rx] + '</option>';
+        }
+        h += '</select>';
+        h += '<button class="btn btn-xs btn-p" onclick="adminChangeRole(\'' + esc(u.id) + '\')">Update</button>';
+        h += '<button class="btn btn-xs btn-g" onclick="adminAssignPlan(\'' + esc(u.id) + '\',\'' + esc(u.name || u.github_login || 'User') + '\')" title="Assign plan">Plan</button>';
+        h += '</div></div></div>';
+    }
+    h += '</div>';
+
+    el.innerHTML = h;
+}
+
+function _filterAdminUsers(users) {
+    var s = _adminUserFilter.search.toLowerCase();
+    var r = _adminUserFilter.role;
+    var sort = _adminUserFilter.sort;
+
+    var filtered = users.filter(function(u) {
+        if (r && u.role !== r) return false;
+        if (s) {
+            var haystack = ((u.name || '') + ' ' + (u.email || '') + ' ' + (u.github_login || '') + ' ' + (u.id || '')).toLowerCase();
+            return haystack.indexOf(s) !== -1;
+        }
+        return true;
+    });
+
+    // Sort
+    filtered.sort(function(a, b) {
+        if (sort === 'name') return (a.name || a.github_login || '').localeCompare(b.name || b.github_login || '');
+        if (sort === 'role') return (a.role || '').localeCompare(b.role || '');
+        if (sort === 'newest') return (b.created_at || '').localeCompare(a.created_at || '');
+        if (sort === 'oldest') return (a.created_at || '').localeCompare(b.created_at || '');
+        return 0;
+    });
+
+    return filtered;
+}
+
+function adminFilterUsers() {
+    _adminUserFilter.search = (document.getElementById('admin-user-search') || {}).value || '';
+    _adminUserFilter.role = (document.getElementById('admin-role-filter') || {}).value || '';
+    _adminUserFilter.sort = (document.getElementById('admin-sort') || {}).value || 'name';
+    var el = document.getElementById('admin-content');
+    if (el) _renderAdminUsers(el);
+}
+
+function adminRefreshUsers() {
+    _adminUsersCache = [];
+    var el = document.getElementById('admin-content');
+    if (el) {
+        el.innerHTML = '<div class="loader"><span class="spin"></span> Refreshing...</div>';
+        API.get('/admin/users').then(function(users) {
+            _adminUsersCache = users || [];
+            _adminUserFilter = { search: '', role: '', sort: 'name' };
+            _renderAdminUsers(el);
+            var badge = document.getElementById('admin-tab-users-count');
+            if (badge) badge.textContent = _adminUsersCache.length;
+        }).catch(function(e) {
+            el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load users: ' + esc(e.message) + '</p></div>';
+        });
+    }
+}
+
+function adminInviteUser() {
+    var form = document.getElementById('admin-invite-form');
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+        if (form.style.display !== 'none') {
+            var inp = document.getElementById('invite-email');
+            if (inp) inp.focus();
+        }
+    }
+}
+
+function adminDoInvite() {
+    var email = (document.getElementById('invite-email') || {}).value || '';
+    var name = (document.getElementById('invite-name') || {}).value || '';
+    var role = (document.getElementById('invite-role') || {}).value || 'user';
+    if (!email.trim()) { toast('Email is required', false); return; }
+    // Create user via signup-like endpoint or admin endpoint
+    API.post('/auth/signup', { email: email.trim(), name: name.trim() || email.split('@')[0], password: 'changeme123', role: role }).then(function() {
+        toast('User invited: ' + email);
+        document.getElementById('admin-invite-form').style.display = 'none';
+        adminRefreshUsers();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to invite user', false);
+    });
+}
+
+function adminViewUser(userId) {
+    var u = null;
+    for (var i = 0; i < _adminUsersCache.length; i++) {
+        if (_adminUsersCache[i].id === userId) { u = _adminUsersCache[i]; break; }
+    }
+    if (!u) return;
+
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleColor = roleColors[u.role] || 'var(--text-3)';
+    var joined = u.created_at ? new Date(u.created_at).toLocaleString() : '—';
+    var initials = (u.name || u.github_login || '??').slice(0, 2).toUpperCase();
+
+    var m = '<div class="admin-modal-overlay" id="admin-user-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal" style="max-width:520px">';
+    m += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+    m += '<div class="admin-user-avatar" style="width:48px;height:48px;font-size:16px">' + initials + '</div>';
+    m += '<div><div style="font-size:16px;font-weight:600;color:var(--text-0)">' + esc(u.name || u.github_login || 'Unnamed') + '</div>';
+    m += '<div style="font-size:12px;color:var(--text-3)">' + esc(u.email || '—') + '</div></div>';
+    m += '<span class="admin-role-badge" style="--role-color:' + roleColor + ';margin-left:auto">' + esc(u.role || 'user') + '</span>';
+    m += '</div>';
+
+    m += '<div class="admin-detail-grid">';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">User ID</div><div class="admin-detail-item-val">' + esc(u.id || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Provider</div><div class="admin-detail-item-val">' + esc(u.auth_provider || 'local') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">GitHub Login</div><div class="admin-detail-item-val">' + esc(u.github_login || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Joined</div><div class="admin-detail-item-val">' + joined + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Role</div><div class="admin-detail-item-val">' + esc(u.role || 'user') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Email</div><div class="admin-detail-item-val">' + esc(u.email || '—') + '</div></div>';
+    m += '</div>';
+
+    // Quick actions
+    m += '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px">';
+    m += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-1)">Quick Actions</div>';
+    m += '<div class="row g-8 flex-wrap">';
+    m += '<button class="btn btn-xs btn-p" onclick="adminAssignPlan(\'' + esc(u.id) + '\',\'' + esc(u.name || u.github_login || 'User') + '\')">Assign Plan</button>';
+    m += '<button class="btn btn-xs btn-g" onclick="adminResetPassword(\'' + esc(u.id) + '\')">Reset Password</button>';
+    m += '<button class="btn btn-xs btn-d" onclick="adminDeleteUser(\'' + esc(u.id) + '\',\'' + esc(u.name || u.email || '') + '\')">Delete User</button>';
+    m += '</div></div>';
+
+    m += '<div style="text-align:right;margin-top:16px"><button class="btn btn-xs btn-g" onclick="document.getElementById(\'admin-user-modal\').remove()">Close</button></div>';
+    m += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function adminChangeRole(userId) {
+    var sel = document.querySelector('.admin-role-select[data-uid="' + userId + '"]');
+    if (!sel) return;
+    var newRole = sel.value;
+    API.put('/admin/users/' + userId + '/role', { role: newRole }).then(function(u) {
+        toast('Role updated to "' + u.role + '"');
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            if (_adminUsersCache[i].id === userId) { _adminUsersCache[i].role = u.role; break; }
+        }
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to update role', false);
+    });
+}
+
+function adminResetPassword(userId) {
+    if (!confirm('Reset password for this user? They will need to set a new one.')) return;
+    API.put('/admin/users/' + userId + '/role', { password_reset: true }).then(function() {
+        toast('Password reset initiated');
+    }).catch(function(e) {
+        toast(e.message || 'Failed to reset password', false);
+    });
+}
+
+function adminDeleteUser(userId, userName) {
+    if (!confirm('Delete user "' + userName + '"? This action cannot be undone.')) return;
+    API.del('/admin/users/' + userId).then(function() {
+        toast('User deleted');
+        _adminUsersCache = _adminUsersCache.filter(function(u) { return u.id !== userId; });
+        var el = document.getElementById('admin-content');
+        if (el) _renderAdminUsers(el);
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+        var modal = document.getElementById('admin-user-modal');
+        if (modal) modal.remove();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to delete user', false);
+    });
+}
+
+function adminAssignPlan(userId, userName) {
+    API.get('/admin/plans').then(function(plans) {
+        if (!plans || !plans.length) { toast('No plans available. Create one first.', false); return; }
+        var opts = plans.map(function(p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.description ? ' — ' + esc(p.description) : '') + '</option>'; }).join('');
+        var modal = '<div class="admin-modal-overlay" id="admin-plan-modal" onclick="if(event.target===this)this.remove()">';
+        modal += '<div class="admin-modal">';
+        modal += '<div class="admin-modal-hd">Assign Plan to ' + esc(userName) + '</div>';
+        modal += '<div class="field"><label>Select Plan</label><select class="inp" id="assign-plan-id">' + opts + '</select></div>';
+        modal += '<div class="field" style="margin-top:10px"><label>Expires (optional)</label><input class="inp" id="assign-plan-expires" type="date"></div>';
+        modal += '<div class="row g-8" style="margin-top:14px"><button class="btn btn-s btn-p" onclick="adminDoAssignPlan(\'' + esc(userId) + '\')">Assign</button>';
+        modal += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'admin-plan-modal\').remove()">Cancel</button></div>';
+        modal += '</div></div>';
+        document.body.insertAdjacentHTML('beforeend', modal);
+    }).catch(function(e) { toast(e.message || 'Failed to load plans', false); });
+}
+
+function adminDoAssignPlan(userId) {
+    var planId = (document.getElementById('assign-plan-id') || {}).value;
+    var expires = (document.getElementById('assign-plan-expires') || {}).value;
+    if (!planId) { toast('Select a plan', false); return; }
+    var body = { plan_id: planId };
+    if (expires) body.expires_at = expires + 'T23:59:59Z';
+    API.put('/admin/users/' + userId + '/subscription', body).then(function(res) {
+        toast('Plan "' + (res.plan || 'assigned') + '" assigned');
+        var modal = document.getElementById('admin-plan-modal');
+        if (modal) modal.remove();
+    }).catch(function(e) { toast(e.message || 'Failed to assign plan', false); });
+}
+
+function _adminPlans(el) {
+    var renderPlans = function(plans) {
+        _adminPlansCache = plans || [];
+        var h = '';
+
+        // Create plan form
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create New Plan</div>';
+        h += '<div class="admin-plan-form">';
+        h += '<div class="row g-8 flex-wrap">';
+        h += '<input class="inp" id="plan-name" placeholder="Plan name (e.g. Pro, Enterprise)" style="flex:1;min-width:140px">';
+        h += '<input class="inp" id="plan-desc" placeholder="Short description" style="flex:2;min-width:180px">';
+        h += '</div>';
+        h += '<div class="row g-8 flex-wrap" style="margin-top:8px">';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Max Repos</label><input class="inp" id="plan-repos" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Max Snapshots</label><input class="inp" id="plan-snaps" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Tokens/Day</label><input class="inp" id="plan-tokens" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Users</label><input class="inp" id="plan-users" placeholder="∞" type="number" min="0"></div>';
+        h += '</div>';
+        h += '<button class="btn btn-s btn-p mt" onclick="adminCreatePlan()">Create Plan</button>';
+        h += '</div></div>';
+
+        // Plans grid
+        h += '<div class="card"><div class="card-hd">Active Plans <span style="font-weight:400;color:var(--text-3);font-size:12px">(' + plans.length + ')</span></div>';
+        if (!plans.length) {
+            h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg><p>No plans configured yet. Create your first plan above.</p></div></div>';
+            el.innerHTML = h;
+            return;
+        }
+
+        h += '<div class="admin-plans-grid">';
+        for (var i = 0; i < plans.length; i++) {
+            var p = plans[i];
+            var limits = {};
+            try { limits = typeof p.limits === 'string' ? JSON.parse(p.limits) : (p.limits || {}); } catch(e) {}
+            h += '<div class="admin-plan-card' + (p.is_active !== false ? '' : ' inactive') + '">';
+            h += '<div class="admin-plan-card-hd">';
+            h += '<span class="admin-plan-name">' + esc(p.name) + '</span>';
+            h += '<span class="admin-plan-status">' + (p.is_active !== false ? '<span style="color:var(--green)">● Active</span>' : '<span style="color:var(--text-3)">○ Inactive</span>') + '</span>';
+            h += '</div>';
+            if (p.description) h += '<p class="admin-plan-desc">' + esc(p.description) + '</p>';
+            h += '<div class="admin-plan-limits">';
+            var limitKeys = Object.keys(limits);
+            if (limitKeys.length) {
+                for (var li = 0; li < limitKeys.length; li++) {
+                    var lk = limitKeys[li];
+                    var lv = limits[lk];
+                    var label = lk.replace(/_/g, ' ').replace(/max /i, '');
+                    h += '<div class="admin-plan-limit"><span class="admin-plan-limit-val">' + lv + '</span><span class="admin-plan-limit-label">' + esc(label) + '</span></div>';
+                }
+            } else {
+                h += '<div class="admin-plan-limit"><span class="admin-plan-limit-val">∞</span><span class="admin-plan-limit-label">Unlimited</span></div>';
+            }
+            h += '</div></div>';
+        }
+        h += '</div></div>';
+
+        el.innerHTML = h;
+    };
+
+    if (_adminPlansCache.length) {
+        renderPlans(_adminPlansCache);
+    } else {
+        API.get('/admin/plans').then(renderPlans).catch(function(e) {
+            el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load plans: ' + esc(e.message) + '</p></div>';
+        });
+    }
+}
+
+function adminCreatePlan() {
+    var name = (document.getElementById('plan-name') || {}).value || '';
+    var desc = (document.getElementById('plan-desc') || {}).value || '';
+    var repos = parseInt((document.getElementById('plan-repos') || {}).value) || 0;
+    var snaps = parseInt((document.getElementById('plan-snaps') || {}).value) || 0;
+    var tokens = parseInt((document.getElementById('plan-tokens') || {}).value) || 0;
+    var usersLimit = parseInt((document.getElementById('plan-users') || {}).value) || 0;
+
+    if (!name.trim()) { toast('Plan name is required', false); return; }
+
+    var limits = {};
+    if (repos > 0) limits.max_repos = repos;
+    if (snaps > 0) limits.max_snapshots = snaps;
+    if (tokens > 0) limits.max_tokens_per_day = tokens;
+    if (usersLimit > 0) limits.max_users = usersLimit;
+
+    API.post('/admin/plans', { name: name.trim(), description: desc, limits: limits }).then(function() {
+        toast('Plan "' + name + '" created');
+        _adminPlansCache = [];
+        adminTab('plans');
+        var badge = document.getElementById('admin-tab-plans-count');
+        API.get('/admin/plans').then(function(plans) {
+            _adminPlansCache = plans || [];
+            if (badge) badge.textContent = _adminPlansCache.length;
+        });
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create plan', false);
+    });
+}
+
+function _adminActivity(el) {
+    API.get('/admin/usage?limit=50').then(function(records) {
+        var h = '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Recent Activity</div>';
+
+        if (!records || !records.length) {
+            h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg>';
+            h += '<p>No activity recorded yet.</p><p style="font-size:11px;margin-top:6px;color:var(--text-3)">Usage records will appear here after API calls with token tracking.</p></div></div>';
+            el.innerHTML = h;
+            return;
+        }
+
+        h += '<table class="tbl admin-tbl"><thead><tr><th>User</th><th>Action</th><th>Tokens</th><th>Time</th></tr></thead><tbody>';
+        for (var i = 0; i < records.length; i++) {
+            var r = records[i];
+            var time = r.created_at ? new Date(r.created_at).toLocaleString() : '—';
+            h += '<tr>';
+            h += '<td><code style="font-size:11px">' + esc((r.user_id || '').slice(0, 12)) + '</code></td>';
+            h += '<td style="font-size:12px">' + esc(r.action || '—') + '</td>';
+            h += '<td style="font-size:12px;font-weight:500">' + (r.tokens_used || 0) + '</td>';
+            h += '<td style="font-size:11px;color:var(--text-3)">' + time + '</td>';
+            h += '</tr>';
+        }
+        h += '</tbody></table></div>';
+        el.innerHTML = h;
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load activity: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _adminSystem(el) {
+    API.get('/admin/system').then(function(sys) {
+        var h = '';
+
+        // System health overview
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> System Health</div>';
+        h += '<div class="admin-sys-grid">';
+        h += _adminSysTile(sys.version || '—', 'Version', 'var(--accent)');
+        h += _adminSysTile(sys.edition || '—', 'Edition', 'var(--text-1)');
+        h += _adminSysTile(sys.auth_enabled ? '✓ Enabled' : '✗ Disabled', 'Auth', sys.auth_enabled ? 'var(--green)' : 'var(--red)');
+        h += _adminSysTile((sys.parsers || 0) + ' langs', 'Parsers', 'var(--accent)');
+        h += _adminSysTile(sys.users || 0, 'Users', 'var(--text-0)');
+        h += _adminSysTile(sys.repos || 0, 'Repositories', 'var(--text-0)');
+        h += '</div></div>';
+
+        // Quick actions
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Actions</div>';
+        h += '<div class="row g-8 flex-wrap">';
+        h += '<button class="btn btn-s btn-g" onclick="navigate(\'settings\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06"/></svg> Settings</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'users\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Manage Users</button>';
+        h += '<button class="btn btn-s btn-g" onclick="API.get(\'/health\').then(function(d){toast(\'Backend: \'+d.status)}).catch(function(){toast(\'Backend unreachable\',false)})"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Ping Backend</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminExportUsers()"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export Users</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'activity\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> View Activity</button>';
+        h += '</div></div>';
+
+        // Configuration info
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Configuration</div>';
+        h += '<div class="admin-detail-grid">';
+        if (sys.demo_mode !== undefined) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Demo Mode</div><div class="admin-detail-item-val">' + (sys.demo_mode ? 'Yes' : 'No') + '</div></div>';
+        if (sys.rate_limit_enabled !== undefined) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Rate Limiting</div><div class="admin-detail-item-val">' + (sys.rate_limit_enabled ? 'Enabled' : 'Disabled') + '</div></div>';
+        if (sys.superadmin_email) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Superadmin Email</div><div class="admin-detail-item-val">' + esc(sys.superadmin_email) + '</div></div>';
+        if (sys.python_version) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Python</div><div class="admin-detail-item-val">' + esc(sys.python_version) + '</div></div>';
+        h += '</div></div>';
+
+        el.innerHTML = h;
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load system info: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _adminSysTile(value, label, color) {
+    return '<div class="admin-sys-tile">' +
+        '<div class="admin-sys-tile-val" style="color:' + (color || 'var(--text-0)') + '">' + esc(String(value)) + '</div>' +
+        '<div class="admin-sys-tile-label">' + label + '</div></div>';
+}
+
+function adminExportUsers() {
+    if (!_adminUsersCache.length) { toast('No users to export', false); return; }
+    var csv = 'Name,Email,Role,Login,Provider,Joined\n';
+    for (var i = 0; i < _adminUsersCache.length; i++) {
+        var u = _adminUsersCache[i];
+        csv += '"' + (u.name || '').replace(/"/g, '""') + '","' + (u.email || '') + '","' + (u.role || '') + '","' + (u.github_login || '') + '","' + (u.auth_provider || 'local') + '","' + (u.created_at || '') + '"\n';
+    }
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'eidos_users_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Users exported as CSV');
+}
 
 
 // =================== SETTINGS ===================

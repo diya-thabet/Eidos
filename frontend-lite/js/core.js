@@ -357,6 +357,7 @@ var _navScopes = {
     docs: 'write:docs',
     search: 'read:analysis',
     exports: 'read:export',
+    admin: 'admin:users',
     settings: null // always visible
 };
 
