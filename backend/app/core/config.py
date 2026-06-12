@@ -1,6 +1,12 @@
+from pathlib import Path
 from typing import Any
 
 from pydantic_settings import BaseSettings
+
+# Resolve the .env path relative to the backend/ directory so it works
+# regardless of which directory uvicorn is launched from.
+_BACKEND_DIR = Path(__file__).resolve().parent.parent.parent  # backend/
+_ENV_FILE = _BACKEND_DIR / ".env"
 
 
 class Settings(BaseSettings):
@@ -59,7 +65,7 @@ class Settings(BaseSettings):
     # Webhooks
     webhook_secret: str = ""
 
-    model_config = {"env_prefix": "EIDOS_", "env_file": ".env"}
+    model_config = {"env_prefix": "EIDOS_", "env_file": str(_ENV_FILE)}
 
     @property
     def db_driver(self) -> str:

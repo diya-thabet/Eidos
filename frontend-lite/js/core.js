@@ -331,23 +331,94 @@ var S = {
 function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 function toast(m, ok) {
+    var icon = ok !== false ? '\u2705' : '\u274C';
+    Notif.push(icon, m);
+}
 
-    var c = document.getElementById('toasts');
+// ══════════════════════════════════════════════════════════════
+// Permission-Aware UI Helpers
+// ══════════════════════════════════════════════════════════════
 
-    var d = document.createElement('div');
+// Scope-to-page mapping for sidebar nav buttons
+var _navScopes = {
+    repos: 'read:repos',
+    overview: 'read:analysis',
+    symbols: 'read:analysis',
+    health: 'read:analysis',
+    graph: 'read:analysis',
+    deadcode: 'read:analysis',
+    coupling: 'read:analysis',
+    deps: 'read:analysis',
+    clones: 'read:analysis',
+    cycles: 'read:analysis',
+    hotspots: 'read:analysis',
+    ask: 'read:analysis',
+    review: 'write:reviews',
+    docs: 'write:docs',
+    search: 'read:analysis',
+    exports: 'read:export',
+    settings: null // always visible
+};
 
-    d.className = 'toast ' + (ok !== false ? 'toast-ok' : 'toast-err');
+/**
+ * Apply permission-based visibility to sidebar nav items.
+ * Called after login and on every navigate() to keep UI in sync.
+ */
+function applyPermissions() {
+    // Skip in demo mode — everything visible
+    if (!Auth.isAuthEnabled()) {
+        document.querySelectorAll('.nav-btn').forEach(function(btn) {
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+        });
+        return;
+    }
 
-    d.textContent = m; c.appendChild(d);
+    document.querySelectorAll('.nav-btn[data-p]').forEach(function(btn) {
+        var page = btn.getAttribute('data-p');
+        var scope = _navScopes[page];
+        if (scope === null || scope === undefined) {
+            // Always visible (settings, etc.)
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+            return;
+        }
+        if (Auth.hasScope(scope)) {
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+        } else {
+            btn.classList.add('perm-disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.title = 'Insufficient permissions';
+        }
+    });
+}
 
-    setTimeout(function() {
+/**
+ * Returns HTML for a button only if the user has the required scope.
+ * If not permitted, returns a disabled button with a lock icon.
+ * @param {string} scope - Required scope (e.g. 'write:repos')
+ * @param {string} html - Button HTML to render if permitted
+ * @param {string} [label] - Optional label for the disabled state
+ */
+function guardBtn(scope, btnHtml, label) {
+    if (!Auth.isAuthEnabled() || Auth.hasScope(scope)) return btnHtml;
+    var lbl = label || 'No permission';
+    return '<button class="btn btn-s btn-g perm-locked" disabled title="' + esc(lbl) + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></button>';
+}
 
-        d.classList.add('toast-exit');
-
-        setTimeout(function() { d.remove(); }, 180);
-
-    }, 3800);
-
+/**
+ * Check if the current user can access a page. If not, show a permission denied screen.
+ * Returns true if access is allowed, false if blocked.
+ * @param {string} scope - Required scope
+ */
+function guardPage(scope) {
+    if (!Auth.isAuthEnabled() || Auth.hasScope(scope)) return true;
+    html('main', '<div class="empty perm-denied-page"><div class="perm-denied-icon"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h3>Access Restricted</h3><p>You don\'t have permission to view this page.</p><p class="perm-denied-detail">Required: <code>' + esc(scope) + '</code><br>Your role: <code>' + esc(Auth.getUserRole()) + '</code></p><button class="btn btn-p" onclick="navigate(\'repos\')">Go to Repositories</button></div>');
+    return false;
 }
 
 function $(id) { return document.getElementById(id); }
@@ -856,9 +927,9 @@ function _renderAuthBadge() {
     var user = Auth.getUser();
     if (!user || user.id === 'anonymous') {
         if (!Auth.isAuthEnabled()) {
-            container.innerHTML = '<div class="demo-badge">DEMO MODE</div>';
+            container.innerHTML = '<div class="auth-badge-wrap"><div class="demo-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> DEMO MODE</div></div>';
         } else {
-            container.innerHTML = '<a href="#" onclick="navigate(\'login\');return false" style="font-size:12px;color:var(--accent)">Sign in</a>';
+            container.innerHTML = '<div class="auth-badge-wrap auth-badge-signin"><a href="#" onclick="navigate(\'login\');return false" class="auth-signin-link"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign in</a></div>';
         }
         return;
     }
@@ -870,7 +941,68 @@ function _renderAuthBadge() {
         avatarHtml = '<div class="auth-avatar">' + initials + '</div>';
     }
     var roleClass = 'role-' + (user.role || 'user');
-    container.innerHTML = '<div class="auth-user-badge">' + avatarHtml + '<div class="auth-info"><div class="auth-name">' + esc(user.name || user.github_login) + '</div><span class="auth-role-badge ' + roleClass + '">' + esc(user.role || 'user') + '</span></div></div>';
+    var provider = user.auth_provider || 'oauth';
+    var providerIcon = provider === 'local' ? '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+        : provider === 'google' ? '<svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>';
+    var emailLine = user.email ? '<div class="auth-email">' + esc(user.email) + '</div>' : '';
+    var h = '<div class="auth-badge-wrap">';
+    h += '<div class="auth-user-badge" onclick="_toggleProfileMenu()">';
+    h += avatarHtml;
+    h += '<div class="auth-info">';
+    h += '<div class="auth-name">' + esc(user.name || user.github_login) + '</div>';
+    h += emailLine;
+    h += '</div>';
+    h += '<svg class="auth-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+    h += '</div>';
+    h += '<div class="auth-profile-menu" id="auth-profile-menu">';
+    h += '<div class="apm-header">';
+    h += '<span class="auth-role-badge ' + roleClass + '">' + esc(user.role || 'user') + '</span>';
+    h += '<span class="apm-provider">' + providerIcon + ' ' + esc(provider) + '</span>';
+    h += '</div>';
+    h += '<button class="apm-item" onclick="navigate(\'settings\');_closeProfileMenu()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33"/></svg> Settings</button>';
+    h += '<button class="apm-item apm-signout" onclick="Auth.logout()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</button>';
+    h += '</div>';
+    h += '</div>';
+    container.innerHTML = h;
+}
+
+function _toggleProfileMenu() {
+    var menu = document.getElementById('auth-profile-menu');
+    if (!menu) return;
+    var isOpen = menu.classList.contains('apm-visible');
+    if (isOpen) {
+        _closeProfileMenu();
+        return;
+    }
+    // Position the menu above the badge
+    var badge = document.querySelector('.auth-user-badge');
+    if (!badge) return;
+    var rect = badge.getBoundingClientRect();
+    menu.style.left = rect.left + 'px';
+    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    menu.style.top = 'auto';
+    menu.classList.add('apm-visible');
+    document.querySelector('.auth-badge-wrap').classList.add('open');
+    setTimeout(function() {
+        document.addEventListener('click', _profileOutsideClick);
+    }, 0);
+}
+
+function _closeProfileMenu() {
+    var menu = document.getElementById('auth-profile-menu');
+    if (menu) menu.classList.remove('apm-visible');
+    var wrap = document.querySelector('.auth-badge-wrap');
+    if (wrap) wrap.classList.remove('open');
+    document.removeEventListener('click', _profileOutsideClick);
+}
+
+function _profileOutsideClick(e) {
+    var menu = document.getElementById('auth-profile-menu');
+    var badge = document.querySelector('.auth-user-badge');
+    if (menu && !menu.contains(e.target) && badge && !badge.contains(e.target)) {
+        _closeProfileMenu();
+    }
 }
 
 // -- Risk Radar SVG Builder -----------------------------------

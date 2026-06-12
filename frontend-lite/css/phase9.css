@@ -524,18 +524,97 @@
     text-align: left;
 }
 
+/* Permission-aware UI */
+.perm-disabled {
+    opacity: 0.4;
+    pointer-events: none;
+    position: relative;
+}
+.perm-disabled::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    cursor: not-allowed;
+    pointer-events: auto;
+}
+.perm-hidden {
+    display: none !important;
+}
+.perm-locked {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.perm-locked svg {
+    opacity: 0.7;
+}
+.perm-denied-page {
+    text-align: center;
+    padding: 60px 20px;
+}
+.perm-denied-icon {
+    margin-bottom: 16px;
+    color: var(--text-3);
+}
+.perm-denied-page h3 {
+    font-size: 20px;
+    color: var(--text-0);
+    margin-bottom: 8px;
+}
+.perm-denied-page p {
+    color: var(--text-2);
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+.perm-denied-detail {
+    font-size: 12px !important;
+    color: var(--text-3) !important;
+    margin-bottom: 20px !important;
+}
+.perm-denied-detail code {
+    background: var(--bg-2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 11px;
+}
+
 /* Auth badge in sidebar */
+.auth-badge-wrap {
+    padding: 6px 10px;
+    border-top: 1px solid var(--border);
+    margin-top: auto;
+    position: relative;
+}
+.auth-badge-signin {
+    padding: 10px 12px;
+}
+.auth-signin-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: none;
+    transition: opacity 0.15s;
+}
+.auth-signin-link:hover {
+    opacity: 0.8;
+}
 .auth-user-badge {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 12px;
-    border-top: 1px solid var(--border);
-    margin-top: 8px;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.auth-user-badge:hover {
+    background: var(--hover);
 }
 .auth-avatar {
-    width: 28px;
-    height: 28px;
+    width: 30px;
+    height: 30px;
     border-radius: 50%;
     background: var(--accent);
     color: #fff;
@@ -559,11 +638,28 @@
 }
 .auth-name {
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-0);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.auth-email {
+    font-size: 10px;
+    color: var(--text-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+.auth-chevron {
+    flex-shrink: 0;
+    color: var(--text-3);
+    transition: transform 0.2s;
+}
+.auth-badge-wrap.open .auth-chevron {
+    transform: rotate(180deg);
 }
 .auth-role {
     font-size: 10px;
@@ -585,12 +681,73 @@
 .auth-role-badge.role-support { background: rgba(234,179,8,0.15); color: #ca8a04; }
 .auth-role-badge.role-user { background: rgba(100,116,139,0.15); color: #64748b; }
 
+/* Profile dropdown menu */
+.auth-profile-menu {
+    display: none;
+    position: fixed;
+    width: 200px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    padding: 6px;
+    z-index: 1000;
+    animation: apm-in 0.15s cubic-bezier(0.2,0.8,0.2,1);
+}
+.auth-profile-menu.apm-visible {
+    display: block;
+}
+@keyframes apm-in {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.apm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 8px 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 4px;
+}
+.apm-provider {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: capitalize;
+}
+.apm-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 10px;
+    border: none;
+    background: none;
+    border-radius: 5px;
+    font-size: 12px;
+    color: var(--text-1);
+    cursor: pointer;
+    transition: background 0.12s;
+    text-align: left;
+}
+.apm-item:hover {
+    background: var(--hover);
+}
+.apm-item.apm-signout {
+    color: #ef4444;
+}
+.apm-item.apm-signout:hover {
+    background: rgba(239,68,68,0.08);
+}
+
 /* Demo mode indicator */
 .demo-badge {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 2px 8px;
+    padding: 3px 10px;
     background: rgba(234,179,8,0.12);
     color: #ca8a04;
     border-radius: 4px;

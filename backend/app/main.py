@@ -99,6 +99,18 @@ def _sqlite_add_missing_columns(connection: Any) -> None:
             connection.execute(
                 text("ALTER TABLE repo_snapshots ADD COLUMN commit_count INTEGER DEFAULT 0")
             )
+
+        # Ensure users table has password_hash and auth_provider columns
+        result = connection.execute(text("PRAGMA table_info(users)"))
+        user_cols = {row[1] for row in result.fetchall()}
+        if "password_hash" not in user_cols:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN password_hash TEXT DEFAULT ''")
+            )
+        if "auth_provider" not in user_cols:
+            connection.execute(
+                text("ALTER TABLE users ADD COLUMN auth_provider TEXT DEFAULT 'github'")
+            )
     except Exception:
         pass
 

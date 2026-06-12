@@ -92,6 +92,27 @@ def _inject_token(url: str, token: str) -> str:
     return urlunparse(authed)
 
 
+def _force_remove_tree(dest: Path) -> None:
+    """Remove a directory tree, handling Windows read-only .git files."""
+    import stat
+
+    def _on_rm_error(_func, path, _exc_info):  # noqa: ANN001
+        # Clear read-only flag and retry
+        try:
+            os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
+            _func(path)
+        except OSError:
+            pass
+
+    if not dest.exists():
+        return
+    # Try normal removal first, fall back to force removal on Windows
+    try:
+        shutil.rmtree(dest)
+    except (PermissionError, OSError):
+        shutil.rmtree(dest, onexc=_on_rm_error)
+
+
 def clone_repo(
     url: str,
     branch: str,
@@ -100,9 +121,10 @@ def clone_repo(
     token: str = "",
 ) -> str:
     """Clone a repo and checkout the requested commit. Returns the resolved SHA."""
-    if dest.exists():
-        shutil.rmtree(dest)
-    dest.mkdir(parents=True, exist_ok=True)
+    _force_remove_tree(dest)
+    # Only create the PARENT directory; let git clone create 'dest' itself.
+    # git clone fails if the target directory already exists (even empty).
+    dest.parent.mkdir(parents=True, exist_ok=True)
 
     clone_url = _inject_token(url, token)
 
@@ -118,9 +140,7 @@ def clone_repo(
             logger.warning(
                 "Branch '%s' not found, falling back to default branch", branch
             )
-            if dest.exists():
-                shutil.rmtree(dest)
-            dest.mkdir(parents=True, exist_ok=True)
+            _force_remove_tree(dest)
             repo = git.Repo.clone_from(
                 clone_url, str(dest),
             )

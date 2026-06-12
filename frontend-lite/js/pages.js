@@ -16,6 +16,9 @@ function navigate(pg) {
     // Restore sidebar/statusbar for non-login pages
     if (pg !== 'login') _restoreAppChrome();
 
+    // Apply permission-based visibility to nav items
+    if (pg !== 'login') applyPermissions();
+
     document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
 
     var btn = document.querySelector('[data-p="' + pg + '"]');
@@ -222,7 +225,12 @@ function _doLocalAuth() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
     }).then(function(r) {
-        return r.json().then(function(data) { return { status: r.status, data: data }; });
+        var status = r.status;
+        return r.text().then(function(text) {
+            var data = {};
+            try { data = JSON.parse(text); } catch(e) {}
+            return { status: status, data: data };
+        });
     }).then(function(res) {
         if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _loginMode === 'signup' ? 'Create Account' : 'Sign In'; }
 
@@ -233,7 +241,7 @@ function _doLocalAuth() {
             _restoreAppChrome();
             navigate('repos');
         } else {
-            var msg = res.data.detail || 'Authentication failed';
+            var msg = res.data.detail || (res.status >= 500 ? 'Server error (' + res.status + '). Please try again.' : 'Authentication failed');
             if (errEl) errEl.textContent = msg;
         }
     }).catch(function(e) {
@@ -256,7 +264,9 @@ function pgRepos() {
     // Restore sidebar/statusbar if coming from login
     _restoreAppChrome();
 
-    html('main', '<div class="page-head between row"><div><h1>Repositories</h1><p>Manage and analyze Git repositories</p></div><button class="btn btn-p" onclick="toggleForm()">+ Add Repo</button></div>' +
+    var addBtn = guardBtn('write:repos', '<button class="btn btn-p" onclick="toggleForm()">+ Add Repo</button>', 'No permission to add repos');
+
+    html('main', '<div class="page-head between row"><div><h1>Repositories</h1><p>Manage and analyze Git repositories</p></div>' + addBtn + '</div>' +
 
         '<div class="card hidden" id="rf">' +
 
@@ -348,7 +358,9 @@ function loadRepos() {
 
         repos.forEach(function(r) {
 
-            h += '<tr><td><strong>' + esc(r.name) + '</strong></td><td style="font-size:12px;color:var(--text-2)">' + esc(r.url) + '</td><td style="font-size:12px">' + new Date(r.created_at).toLocaleDateString() + '</td><td class="row g-8"><button class="btn btn-s btn-p" onclick="selRepo(\'' + r.id + '\')">Select</button><button class="btn btn-s btn-g" onclick="ingest(\'' + r.id + '\')">Ingest</button><button class="btn btn-s btn-d" onclick="delRepo(\'' + r.id + '\')">Del</button></td></tr>';
+            var ingestBtn = guardBtn('write:repos', '<button class="btn btn-s btn-g" onclick="ingest(\'' + r.id + '\')">Ingest</button>', 'No permission to ingest');
+            var delBtn = guardBtn('delete:snapshots', '<button class="btn btn-s btn-d" onclick="delRepo(\'' + r.id + '\')">Del</button>', 'No permission to delete');
+            h += '<tr><td><strong>' + esc(r.name) + '</strong></td><td style="font-size:12px;color:var(--text-2)">' + esc(r.url) + '</td><td style="font-size:12px">' + new Date(r.created_at).toLocaleDateString() + '</td><td class="row g-8"><button class="btn btn-s btn-p" onclick="selRepo(\'' + r.id + '\')">Select</button>' + ingestBtn + delBtn + '</td></tr>';
 
         });
 
@@ -361,6 +373,8 @@ function loadRepos() {
 }
 
 function addRepo() {
+
+    if (!Auth.hasScope('write:repos')) { toast('Permission denied', false); return; }
 
     var n = $('rn').value.trim(), u = $('ru').value.trim();
 
@@ -377,6 +391,8 @@ function addRepo() {
 }
 
 function ingest(id) {
+
+    if (!Auth.hasScope('write:repos')) { toast('Permission denied', false); return; }
 
     API.post('/repos/' + id + '/ingest').then(function(r) {
 
@@ -490,9 +506,7 @@ function pollIngest(rid, sid, startTime) {
 
                 Recents.add(rid, sid, rid);
 
-                toast('Done! ' + (snap.file_count || '') + ' files indexed');
-
-                Notif.push('\u2705', 'Ingestion complete', (snap.file_count || 0) + ' files indexed \u2014 ' + sid.slice(0, 8));
+                toast('Ingestion complete: ' + (snap.file_count || '') + ' files indexed');
 
                 setTimeout(function() { loadRepos(); }, 1500);
 
@@ -506,9 +520,7 @@ function pollIngest(rid, sid, startTime) {
 
                 msgEl.textContent = snap.error_message || 'Unknown error';
 
-                toast('Ingestion failed', false);
-
-                Notif.push('\u274C', 'Ingestion failed', snap.error_message || 'Unknown error');
+                toast('Ingestion failed: ' + (snap.error_message || 'Unknown error'), false);
 
             } else {
 
@@ -548,7 +560,7 @@ function selRepo(id) {
 
 }
 
-function delRepo(id) { if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { if (S.repo === id) S.set(null, null); toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
+function delRepo(id) { if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; } if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { if (S.repo === id) S.set(null, null); toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
 
 
 
@@ -943,6 +955,8 @@ function _fbOpenFile(filePath) {
 
 function delSnap() {
 
+    if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; }
+
     if (!confirm('Delete current snapshot?')) return;
 
     API.del(S.path()).then(function() { S.set(S.repo, null); toast('Snapshot deleted'); navigate('repos'); }).catch(function(e) { toast(e.message, false); });
@@ -950,6 +964,8 @@ function delSnap() {
 }
 
 function delSnapById(sid) {
+
+    if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; }
 
     if (!confirm('Delete snapshot ' + sid.slice(0, 8) + '?')) return;
 
@@ -2600,6 +2616,8 @@ function sendQ() {
 
 function pgReview() {
 
+    if (!guardPage('write:reviews')) return;
+
     if (!S.ok()) { html('main', noSnap()); return; }
 
     html('main', '<div class="page-head"><h1>PR Review</h1><p>Paste a unified diff for risk analysis</p></div><div class="card"><div class="field"><label>Diff</label><textarea class="inp" id="rd" placeholder="--- a/file.py\n+++ b/file.py\n@@ ...\n-old\n+new"></textarea></div><button class="btn btn-p" onclick="doReview()">Analyze</button></div><div id="rr"></div>');
@@ -2633,6 +2651,8 @@ function doReview() {
 // =================== DOCS ===================
 
 function pgDocs() {
+
+    if (!guardPage('write:docs')) return;
 
     if (!S.ok()) { html('main', noSnap()); return; }
 
@@ -2691,6 +2711,8 @@ function doSearch() {
 // =================== EXPORTS ===================
 
 function pgExports() {
+
+    if (!guardPage('read:export')) return;
 
     if (!S.ok()) { html('main', noSnap()); return; }
 

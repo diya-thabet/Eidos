@@ -72,10 +72,10 @@ select.inp { appearance: none; padding-right: 28px; background-image: url("data:
 .prog { height: 5px; background: var(--bg-3); border-radius: 3px; overflow: hidden; }
 .prog-fill { height: 100%; border-radius: 3px; transition: width 0.3s; }
 
-.toast-area { position: fixed; top: 14px; right: 14px; z-index: 9999; }
-.toast { padding: 10px 16px; border-radius: 7px; font-size: 13px; margin-bottom: 6px; animation: fadeIn 0.2s; border: 1px solid; }
-.toast-ok { background: var(--green-soft); border-color: var(--green); color: var(--green); }
-.toast-err { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+.toast-area { display: none; }
+.toast { display: none; }
+.toast-ok { display: none; }
+.toast-err { display: none; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 
 .spin { display: inline-block; width: 16px; height: 16px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: r 0.6s linear infinite; }
