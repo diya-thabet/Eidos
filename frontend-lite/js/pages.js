@@ -2768,6 +2768,7 @@ function pgAdmin() {
     h += '<div class="admin-tabs" id="admin-tabs">';
     h += '<button class="admin-tab active" onclick="adminTab(\'users\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Users <span class="admin-tab-badge" id="admin-tab-users-count">…</span></button>';
     h += '<button class="admin-tab" onclick="adminTab(\'plans\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg> Plans <span class="admin-tab-badge" id="admin-tab-plans-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'teams\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Teams <span class="admin-tab-badge" id="admin-tab-teams-count">…</span></button>';
     h += '<button class="admin-tab" onclick="adminTab(\'audit\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Audit Log</button>';
     h += '<button class="admin-tab" onclick="adminTab(\'system\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15H3a2 2 0 110-4h.09"/></svg> System</button>';
     h += '</div>';
@@ -2788,6 +2789,10 @@ function pgAdmin() {
         var badge = document.getElementById('admin-tab-plans-count');
         if (badge) badge.textContent = _adminPlansCache.length;
     });
+    API.get('/teams').then(function(teams) {
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = (teams || []).length;
+    }).catch(function() {});
 }
 
 function adminTab(tab, btn) {
@@ -2797,7 +2802,7 @@ function adminTab(tab, btn) {
     } else {
         // Auto-select the correct tab button
         var tabs = document.querySelectorAll('.admin-tab');
-        var tabNames = ['users', 'plans', 'audit', 'system'];
+        var tabNames = ['users', 'plans', 'teams', 'audit', 'system'];
         for (var i = 0; i < tabs.length; i++) {
             tabs[i].classList.toggle('active', tabNames[i] === tab);
         }
@@ -2808,6 +2813,7 @@ function adminTab(tab, btn) {
 
     if (tab === 'users') _adminUsers(el);
     else if (tab === 'plans') _adminPlans(el);
+    else if (tab === 'teams') _adminTeams(el);
     else if (tab === 'audit') _adminAudit(el);
     else if (tab === 'system') _adminSystem(el);
 }
@@ -3554,6 +3560,393 @@ function adminExportUsers() {
     document.body.appendChild(a); a.click(); document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast('Users exported as CSV');
+}
+
+
+// =================== TEAM MANAGEMENT ===================
+
+var _teamsCache = [];
+var _teamSelectedId = null;
+
+function _adminTeams(el) {
+    API.get('/teams').then(function(teams) {
+        _teamsCache = teams || [];
+        _teamSelectedId = null;
+        _renderTeams(el);
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load teams: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _renderTeams(el) {
+    var teams = _teamsCache;
+    var h = '';
+
+    // Create team form
+    h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create New Team</div>';
+    h += '<div class="admin-plan-form">';
+    h += '<div class="row g-8 flex-wrap">';
+    h += '<input class="inp" id="team-name" placeholder="Team name (e.g. Backend, Platform)" style="flex:1;min-width:160px">';
+    h += '<input class="inp" id="team-desc" placeholder="Description (optional)" style="flex:2;min-width:200px">';
+    h += '<button class="btn btn-s btn-p" onclick="teamCreate()">Create Team</button>';
+    h += '</div></div></div>';
+
+    // Teams list + detail split
+    h += '<div class="admin-teams-layout" id="teams-layout">';
+
+    // Left: teams list
+    h += '<div class="admin-teams-list">';
+    if (!teams.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p>No teams yet. Create your first team above.</p></div>';
+    } else {
+        for (var i = 0; i < teams.length; i++) {
+            var t = teams[i];
+            var isActive = _teamSelectedId === t.id;
+            h += '<div class="admin-team-item' + (isActive ? ' active' : '') + '" onclick="teamSelect(\'' + esc(t.id) + '\')">';
+            h += '<div class="admin-team-item-hd">';
+            h += '<div class="admin-team-item-name">' + esc(t.name) + '</div>';
+            h += '<span class="admin-stat-pill" style="font-size:10px"><span class="admin-stat-num">' + (t.member_count || 0) + '</span> members</span>';
+            h += '</div>';
+            if (t.description) h += '<div class="admin-team-item-desc">' + esc(t.description) + '</div>';
+            h += '</div>';
+        }
+    }
+    h += '</div>';
+
+    // Right: team detail
+    h += '<div class="admin-team-detail" id="team-detail">';
+    if (_teamSelectedId) {
+        h += '<div class="loader"><span class="spin"></span> Loading...</div>';
+    } else {
+        h += '<div class="admin-empty" style="padding:30px"><svg width="28" height="28" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Select a team to view details</p></div>';
+    }
+    h += '</div>';
+
+    h += '</div>';
+    el.innerHTML = h;
+
+    if (_teamSelectedId) _loadTeamDetail(_teamSelectedId);
+}
+
+function teamCreate() {
+    var name = (document.getElementById('team-name') || {}).value || '';
+    var desc = (document.getElementById('team-desc') || {}).value || '';
+    if (!name.trim()) { toast('Team name is required', false); return; }
+
+    API.post('/teams', { name: name.trim(), description: desc }).then(function(team) {
+        toast('Team "' + team.name + '" created');
+        _teamsCache.unshift(team);
+        _teamSelectedId = team.id;
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = _teamsCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create team', false);
+    });
+}
+
+function teamSelect(teamId) {
+    _teamSelectedId = teamId;
+    // Highlight active
+    document.querySelectorAll('.admin-team-item').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    var items = document.querySelectorAll('.admin-team-item');
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId && items[i]) {
+            items[i].classList.add('active');
+            break;
+        }
+    }
+    _loadTeamDetail(teamId);
+}
+
+function _loadTeamDetail(teamId) {
+    var detail = document.getElementById('team-detail');
+    if (!detail) return;
+    detail.innerHTML = '<div class="loader"><span class="spin"></span> Loading...</div>';
+
+    var teamData = null;
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId) { teamData = _teamsCache[i]; break; }
+    }
+
+    // Load members and repos in parallel
+    var membersP = API.get('/teams/' + teamId + '/members').catch(function() { return []; });
+    var reposP = API.get('/teams/' + teamId + '/repos').catch(function() { return []; });
+
+    Promise.all([membersP, reposP]).then(function(results) {
+        var members = results[0] || [];
+        var repos = results[1] || [];
+        _renderTeamDetail(detail, teamData, members, repos);
+    });
+}
+
+function _renderTeamDetail(container, team, members, repos) {
+    if (!team) { container.innerHTML = ''; return; }
+
+    var h = '';
+    // Team header
+    h += '<div class="admin-team-detail-hd">';
+    h += '<div>';
+    h += '<h3 style="margin:0;font-size:16px;color:var(--text-0)">' + esc(team.name) + '</h3>';
+    if (team.description) h += '<p style="font-size:12px;color:var(--text-2);margin:4px 0 0">' + esc(team.description) + '</p>';
+    h += '</div>';
+    h += '<div class="row g-6">';
+    h += '<button class="btn btn-xs btn-g" onclick="teamEdit(\'' + esc(team.id) + '\')" title="Edit team">Edit</button>';
+    h += '<button class="btn btn-xs btn-d" onclick="teamDelete(\'' + esc(team.id) + '\',\'' + esc(team.name) + '\')" title="Delete team">Delete</button>';
+    h += '</div></div>';
+
+    // Members section
+    h += '<div class="admin-team-section">';
+    h += '<div class="admin-team-section-hd"><span><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Members (' + members.length + ')</span>';
+    h += '<button class="btn btn-xs btn-p" onclick="teamAddMember(\'' + esc(team.id) + '\')">+ Add</button></div>';
+
+    if (!members.length) {
+        h += '<p style="font-size:12px;color:var(--text-3);padding:8px 0">No members yet. Add users to this team.</p>';
+    } else {
+        h += '<div class="admin-team-members">';
+        for (var mi = 0; mi < members.length; mi++) {
+            var m = members[mi];
+            var mName = _teamGetUserName(m.user_id);
+            var roleColor = m.role === 'admin' ? 'var(--accent)' : 'var(--text-3)';
+            h += '<div class="admin-team-member-row">';
+            h += '<div class="admin-team-member-info">';
+            h += '<span class="admin-team-member-name">' + esc(mName) + '</span>';
+            h += '<span class="admin-role-badge" style="--role-color:' + roleColor + ';font-size:9px">' + esc(m.role) + '</span>';
+            h += '</div>';
+            h += '<div class="admin-team-member-actions">';
+            h += '<select class="admin-role-select" style="font-size:10px" data-team="' + esc(team.id) + '" data-member="' + esc(m.user_id) + '" onchange="teamChangeMemberRole(this)">';
+            h += '<option value="member"' + (m.role === 'member' ? ' selected' : '') + '>member</option>';
+            h += '<option value="admin"' + (m.role === 'admin' ? ' selected' : '') + '>admin</option>';
+            h += '</select>';
+            h += '<button class="btn btn-xs btn-d" onclick="teamRemoveMember(\'' + esc(team.id) + '\',\'' + esc(m.user_id) + '\')" title="Remove">&times;</button>';
+            h += '</div></div>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
+    // Repos section
+    h += '<div class="admin-team-section">';
+    h += '<div class="admin-team-section-hd"><span><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg> Repositories (' + repos.length + ')</span>';
+    h += '<button class="btn btn-xs btn-p" onclick="teamGrantRepo(\'' + esc(team.id) + '\')">+ Grant Access</button></div>';
+
+    if (!repos.length) {
+        h += '<p style="font-size:12px;color:var(--text-3);padding:8px 0">No repositories linked. Grant access to repos for this team.</p>';
+    } else {
+        h += '<div class="admin-team-repos">';
+        for (var ri = 0; ri < repos.length; ri++) {
+            var ra = repos[ri];
+            var levelColor = { admin: 'var(--red)', maintainer: 'var(--accent)', contributor: 'var(--green)', viewer: 'var(--text-3)' }[ra.level] || 'var(--text-3)';
+            h += '<div class="admin-team-repo-row">';
+            h += '<code style="font-size:11px">' + esc((ra.repo_id || '').slice(0, 12)) + '</code>';
+            h += '<span class="admin-role-badge" style="--role-color:' + levelColor + ';font-size:9px">' + esc(ra.level) + '</span>';
+            h += '</div>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
+    // Meta
+    h += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-3)">';
+    h += 'Created: ' + (team.created_at ? new Date(team.created_at).toLocaleDateString() : '—');
+    h += ' &middot; ID: <code>' + esc(team.id) + '</code>';
+    h += '</div>';
+
+    container.innerHTML = h;
+}
+
+function _teamGetUserName(userId) {
+    // Try to find in users cache
+    if (window._adminUsersCache) {
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            if (_adminUsersCache[i].id === userId) {
+                return _adminUsersCache[i].name || _adminUsersCache[i].github_login || userId.slice(0, 10);
+            }
+        }
+    }
+    return userId.slice(0, 12);
+}
+
+function teamEdit(teamId) {
+    var team = null;
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId) { team = _teamsCache[i]; break; }
+    }
+    if (!team) return;
+
+    var m = '<div class="admin-modal-overlay" id="team-edit-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Edit Team</div>';
+    m += '<div class="field"><label>Name</label><input class="inp" id="team-edit-name" value="' + esc(team.name) + '"></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Description</label><input class="inp" id="team-edit-desc" value="' + esc(team.description || '') + '"></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoEdit(\'' + esc(teamId) + '\')">Save</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-edit-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function teamDoEdit(teamId) {
+    var name = (document.getElementById('team-edit-name') || {}).value || '';
+    var desc = (document.getElementById('team-edit-desc') || {}).value || '';
+    if (!name.trim()) { toast('Team name required', false); return; }
+
+    API.req('/teams/' + teamId, 'PATCH', { name: name.trim(), description: desc }).then(function(updated) {
+        toast('Team updated');
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) {
+                _teamsCache[i].name = updated.name;
+                _teamsCache[i].description = updated.description;
+                break;
+            }
+        }
+        var modal = document.getElementById('team-edit-modal');
+        if (modal) modal.remove();
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to update team', false);
+    });
+}
+
+function teamDelete(teamId, teamName) {
+    if (!confirm('Delete team "' + teamName + '"? This will remove all members and repo access.')) return;
+    API.del('/teams/' + teamId).then(function() {
+        toast('Team "' + teamName + '" deleted');
+        _teamsCache = _teamsCache.filter(function(t) { return t.id !== teamId; });
+        _teamSelectedId = null;
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = _teamsCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to delete team', false);
+    });
+}
+
+function teamAddMember(teamId) {
+    var m = '<div class="admin-modal-overlay" id="team-member-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Add Member to Team</div>';
+    m += '<div class="field"><label>User</label><select class="inp" id="team-add-user-id">';
+    if (window._adminUsersCache && _adminUsersCache.length) {
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            var u = _adminUsersCache[i];
+            m += '<option value="' + esc(u.id) + '">' + esc(u.name || u.github_login || u.email) + ' (' + esc(u.email || u.id.slice(0, 8)) + ')</option>';
+        }
+    } else {
+        m += '<option value="">Loading users...</option>';
+    }
+    m += '</select></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Role</label><select class="inp" id="team-add-role">';
+    m += '<option value="member">member</option>';
+    m += '<option value="admin">admin</option>';
+    m += '</select></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoAddMember(\'' + esc(teamId) + '\')">Add Member</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-member-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+
+    // Load users if not cached
+    if (!window._adminUsersCache || !_adminUsersCache.length) {
+        API.get('/admin/users').then(function(users) {
+            _adminUsersCache = users || [];
+            var sel = document.getElementById('team-add-user-id');
+            if (sel) {
+                var opts = '';
+                for (var i = 0; i < _adminUsersCache.length; i++) {
+                    var u = _adminUsersCache[i];
+                    opts += '<option value="' + esc(u.id) + '">' + esc(u.name || u.github_login || u.email) + ' (' + esc(u.email || u.id.slice(0, 8)) + ')</option>';
+                }
+                sel.innerHTML = opts;
+            }
+        });
+    }
+}
+
+function teamDoAddMember(teamId) {
+    var userId = (document.getElementById('team-add-user-id') || {}).value;
+    var role = (document.getElementById('team-add-role') || {}).value || 'member';
+    if (!userId) { toast('Select a user', false); return; }
+
+    API.post('/teams/' + teamId + '/members', { user_id: userId, role: role }).then(function() {
+        toast('Member added');
+        var modal = document.getElementById('team-member-modal');
+        if (modal) modal.remove();
+        _loadTeamDetail(teamId);
+        // Update member count in cache
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) { _teamsCache[i].member_count = (_teamsCache[i].member_count || 0) + 1; break; }
+        }
+    }).catch(function(e) {
+        toast(e.message || 'Failed to add member', false);
+    });
+}
+
+function teamRemoveMember(teamId, userId) {
+    if (!confirm('Remove this member from the team?')) return;
+    API.del('/teams/' + teamId + '/members/' + userId).then(function() {
+        toast('Member removed');
+        _loadTeamDetail(teamId);
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) { _teamsCache[i].member_count = Math.max(0, (_teamsCache[i].member_count || 1) - 1); break; }
+        }
+    }).catch(function(e) {
+        toast(e.message || 'Failed to remove member', false);
+    });
+}
+
+function teamChangeMemberRole(selectEl) {
+    var teamId = selectEl.getAttribute('data-team');
+    var userId = selectEl.getAttribute('data-member');
+    var newRole = selectEl.value;
+    // The backend add-member endpoint might not support role change directly;
+    // we remove and re-add with new role
+    API.del('/teams/' + teamId + '/members/' + userId).then(function() {
+        return API.post('/teams/' + teamId + '/members', { user_id: userId, role: newRole });
+    }).then(function() {
+        toast('Role updated to ' + newRole);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to change role', false);
+        _loadTeamDetail(teamId);
+    });
+}
+
+function teamGrantRepo(teamId) {
+    var m = '<div class="admin-modal-overlay" id="team-repo-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Grant Repository Access</div>';
+    m += '<div class="field"><label>Repository ID</label><input class="inp" id="team-repo-id" placeholder="Paste repository ID"></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Access Level</label><select class="inp" id="team-repo-level">';
+    m += '<option value="viewer">viewer</option>';
+    m += '<option value="contributor">contributor</option>';
+    m += '<option value="maintainer">maintainer</option>';
+    m += '<option value="admin">admin</option>';
+    m += '</select></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoGrantRepo(\'' + esc(teamId) + '\')">Grant Access</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-repo-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function teamDoGrantRepo(teamId) {
+    var repoId = (document.getElementById('team-repo-id') || {}).value || '';
+    var level = (document.getElementById('team-repo-level') || {}).value || 'viewer';
+    if (!repoId.trim()) { toast('Repository ID is required', false); return; }
+
+    API.post('/teams/' + teamId + '/repos', { repo_id: repoId.trim(), level: level }).then(function() {
+        toast('Repo access granted');
+        var modal = document.getElementById('team-repo-modal');
+        if (modal) modal.remove();
+        _loadTeamDetail(teamId);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to grant access', false);
+    });
 }
 
 

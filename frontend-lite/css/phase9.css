@@ -1351,3 +1351,150 @@
     flex: 1;
     min-width: 160px;
 }
+
+/* =================== Team Management =================== */
+
+.admin-teams-layout {
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 16px;
+    min-height: 300px;
+}
+
+@media (max-width: 768px) {
+    .admin-teams-layout {
+        grid-template-columns: 1fr;
+    }
+}
+
+.admin-teams-list {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px;
+    overflow-y: auto;
+    max-height: 500px;
+}
+
+.admin-team-item {
+    padding: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+    border: 1px solid transparent;
+    margin-bottom: 4px;
+}
+
+.admin-team-item:hover {
+    background: var(--bg-1);
+}
+
+.admin-team-item.active {
+    background: var(--bg-1);
+    border-color: var(--accent);
+}
+
+.admin-team-item-hd {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+}
+
+.admin-team-item-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-0);
+}
+
+.admin-team-item-desc {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-team-detail {
+    background: var(--bg-0);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+}
+
+.admin-team-detail-hd {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+}
+
+.admin-team-section {
+    margin-bottom: 16px;
+}
+
+.admin-team-section-hd {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 8px;
+}
+
+.admin-team-section-hd span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.admin-team-members,
+.admin-team-repos {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.admin-team-member-row,
+.admin-team-repo-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: var(--bg-1);
+    border-radius: 6px;
+    gap: 8px;
+}
+
+.admin-team-member-row:hover,
+.admin-team-repo-row:hover {
+    background: var(--bg-2);
+}
+
+.admin-team-member-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.admin-team-member-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.admin-team-member-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
