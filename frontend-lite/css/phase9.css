@@ -773,3 +773,55 @@
         border: 1px solid #ddd !important;
     }
 }
+
+/* =================== API Key Management =================== */
+
+.btn-xs {
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 4px;
+}
+
+.apikey-created-banner {
+    background: var(--green-soft, rgba(34, 197, 94, 0.08));
+    border: 1px solid var(--green, #22c55e);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+}
+
+.apikey-raw-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    word-break: break-all;
+}
+
+.apikey-raw-display code {
+    flex: 1;
+    color: var(--text-0);
+    user-select: all;
+}
+
+#apikeys-list .tbl {
+    font-size: 12px;
+}
+
+#apikeys-list .tbl th {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--text-3);
+    padding: 6px 10px;
+}
+
+#apikeys-list .tbl td {
+    padding: 8px 10px;
+    vertical-align: middle;
+}

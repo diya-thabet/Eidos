@@ -2765,6 +2765,18 @@ function pgSettings() {
 
         authSection +
 
+        '<div class="card" id="apikeys-card"><div class="card-hd">API Keys</div>' +
+        (Auth.isAuthEnabled() && Auth.isLoggedIn()
+            ? '<p style="font-size:13px;color:var(--text-2);margin-bottom:12px">Create keys for CI/CD pipelines and programmatic access. Keys are shown <b>once</b> at creation.</p>' +
+              '<div id="apikeys-form" class="row g-8 flex-wrap" style="margin-bottom:14px">' +
+              '<input class="inp" id="ak-name" placeholder="Key name (e.g. CI Pipeline)" style="flex:1;min-width:160px">' +
+              '<input class="inp" id="ak-scopes" placeholder="Scopes: * or read:repos,write:repos" style="flex:1;min-width:180px" value="*">' +
+              '<select class="inp" id="ak-expiry" style="width:130px"><option value="">No expiry</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option></select>' +
+              '<button class="btn btn-s btn-p" onclick="createApiKey()">Create Key</button></div>' +
+              '<div id="apikeys-list"><div class="loader"><span class="spin"></span> Loading keys...</div></div>'
+            : '<p style="font-size:13px;color:var(--text-3)">Sign in to manage API keys.</p>') +
+        '</div>' +
+
         '<div class="card"><div class="card-hd">API Connection</div><div class="field"><label>Backend URL</label><input class="inp" id="su" value="' + esc(API.base) + '"></div><div class="row g-8"><button class="btn btn-p" onclick="saveUrl()">Save & Test</button></div><div id="ss" class="mt"></div></div>' +
 
         '<div class="card"><div class="card-hd">Active Context</div><p style="font-size:13px;color:var(--text-2)">Repo: <b style="color:var(--text-0)">' + (S.repo || 'none') + '</b></p><p style="font-size:13px;color:var(--text-2)">Snap: <b style="color:var(--text-0)">' + (S.snap || 'none') + '</b></p><button class="btn btn-s btn-g mt" onclick="S.set(null,null);toast(\'Cleared\');pgSettings()">Clear Selection</button></div>' +
@@ -2773,9 +2785,124 @@ function pgSettings() {
 
         '<div id="cfg"><div class="loader"><span class="spin"></span> Loading configuration...</div></div>');
 
+    if (Auth.isAuthEnabled() && Auth.isLoggedIn()) loadApiKeys();
     loadCfg();
 
 }
+
+// =================== API KEY MANAGEMENT ===================
+
+function loadApiKeys() {
+    API.get('/auth/api-keys').then(function(keys) {
+        var el = document.getElementById('apikeys-list');
+        if (!el) return;
+        if (!keys || keys.length === 0) {
+            el.innerHTML = '<p style="font-size:13px;color:var(--text-3)">No API keys yet. Create one above.</p>';
+            return;
+        }
+        var h = '<table class="tbl"><thead><tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Expires</th><th>Last Used</th><th>Uses</th><th></th></tr></thead><tbody>';
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var exp = k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '<span style="color:var(--text-3)">Never</span>';
+            var lastUsed = k.last_used_at ? _timeAgo(new Date(k.last_used_at)) : '<span style="color:var(--text-3)">Never</span>';
+            var scopes = (k.scopes || ['*']).join(', ');
+            h += '<tr>';
+            h += '<td><b style="color:var(--text-0)">' + esc(k.name) + '</b></td>';
+            h += '<td><code style="font-size:11px;color:var(--accent)">' + esc(k.prefix) + '...</code></td>';
+            h += '<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(scopes) + '">' + esc(scopes) + '</td>';
+            h += '<td style="font-size:12px">' + exp + '</td>';
+            h += '<td style="font-size:12px">' + lastUsed + '</td>';
+            h += '<td style="font-size:12px">' + (k.usage_count || 0) + '</td>';
+            h += '<td><button class="btn btn-xs btn-d" onclick="revokeApiKey(\'' + esc(k.id) + '\',\'' + esc(k.name) + '\')">Revoke</button></td>';
+            h += '</tr>';
+        }
+        h += '</tbody></table>';
+        el.innerHTML = h;
+    }).catch(function(e) {
+        var el = document.getElementById('apikeys-list');
+        if (el) el.innerHTML = '<p style="font-size:12px;color:var(--red)">Could not load API keys: ' + esc(e.message) + '</p>';
+    });
+}
+
+function createApiKey() {
+    var nameEl = document.getElementById('ak-name');
+    var scopesEl = document.getElementById('ak-scopes');
+    var expiryEl = document.getElementById('ak-expiry');
+    var name = (nameEl && nameEl.value || '').trim();
+    if (!name) { toast('Please enter a key name', false); return; }
+    var scopes = (scopesEl && scopesEl.value || '*').trim();
+    var expiry = expiryEl && expiryEl.value ? parseInt(expiryEl.value) : null;
+
+    var url = '/auth/api-keys?name=' + encodeURIComponent(name) + '&scopes=' + encodeURIComponent(scopes);
+    if (expiry) url += '&expires_in_days=' + expiry;
+
+    API.post(url).then(function(data) {
+        // Show the raw key once in a prominent way
+        var listEl = document.getElementById('apikeys-list');
+        var keyHtml = '<div class="apikey-created-banner">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+            '<svg width="18" height="18" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
+            '<b style="color:var(--text-0)">Key created! Copy it now — it won\'t be shown again.</b></div>' +
+            '<div class="apikey-raw-display">' +
+            '<code id="ak-raw-value">' + esc(data.key) + '</code>' +
+            '<button class="btn btn-xs btn-g" onclick="copyApiKey()" title="Copy to clipboard">Copy</button>' +
+            '</div></div>';
+        if (listEl) listEl.innerHTML = keyHtml;
+
+        // Clear form
+        if (nameEl) nameEl.value = '';
+        if (expiryEl) expiryEl.value = '';
+
+        toast('API key "' + name + '" created');
+
+        // Reload the key list after a moment
+        setTimeout(loadApiKeys, 2500);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create API key', false);
+    });
+}
+
+function copyApiKey() {
+    var code = document.getElementById('ak-raw-value');
+    if (!code) return;
+    var text = code.textContent || code.innerText;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() { toast('Copied to clipboard'); });
+    } else {
+        // Fallback
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Copied to clipboard');
+    }
+}
+
+function revokeApiKey(id, name) {
+    if (!confirm('Revoke API key "' + name + '"? This cannot be undone.')) return;
+    API.del('/auth/api-keys/' + id).then(function() {
+        toast('Key "' + name + '" revoked');
+        loadApiKeys();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to revoke key', false);
+    });
+}
+
+function _timeAgo(date) {
+    var seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    return date.toLocaleDateString();
+}
+
+// =================== SETTINGS CONFIG ===================
 
 function loadCfg() {
 
