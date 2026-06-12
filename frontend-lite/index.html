@@ -51,6 +51,7 @@
 <div class="nav-group">System</div>
 <button class="nav-btn" data-p="settings" onclick="navigate('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09"/></svg><span>Settings</span></button>
 </nav>
+<div id="auth-badge"></div>
 <div class="sidebar-bottom">
 <div class="conn-badge"><span class="conn-dot off" id="cd"></span><span id="ct">Offline</span></div>
 <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark/light theme">&#x263D;</button>
@@ -76,13 +77,31 @@
 var t=localStorage.getItem('eidos_theme')||'dark';
 document.documentElement.setAttribute('data-theme',t);
 document.getElementById('theme-btn').textContent=t==='dark'?'\u2600':'\u263D';
-checkConn();
-// Phase 9: Restore deep-link state or navigate to repos
-if(!DeepLink.restore()) navigate('repos');
-setInterval(checkConn,25000);
-setInterval(updateStatusBar, 2000); updateStatusBar();
-Notif.init(); Perf.init();
-if(!localStorage.getItem('eidos_onboarded')) setTimeout(function(){Tour.start();},800);
+
+// Handle OAuth callback token in URL
+Auth.handleCallback();
+
+// Detect auth mode and initialize
+Auth.detectAuthMode().then(function(result) {
+    checkConn();
+    if (result.authEnabled && !Auth.isLoggedIn()) {
+        navigate('login');
+    } else if (!DeepLink.restore()) {
+        navigate('repos');
+    }
+    setInterval(checkConn, 25000);
+    setInterval(updateStatusBar, 2000); updateStatusBar();
+    Notif.init(); Perf.init();
+    if(!localStorage.getItem('eidos_onboarded')) setTimeout(function(){Tour.start();},800);
+}).catch(function() {
+    // Fallback: if detection fails, proceed in demo mode
+    checkConn();
+    if (!DeepLink.restore()) navigate('repos');
+    setInterval(checkConn, 25000);
+    setInterval(updateStatusBar, 2000); updateStatusBar();
+    Notif.init(); Perf.init();
+});
+
 document.addEventListener('click',function(e){var p=document.getElementById('notif-panel');var b=document.getElementById('notif-bell');if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!b.contains(e.target))p.classList.remove('open');});
 })();
 </script>

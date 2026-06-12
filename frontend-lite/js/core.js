@@ -1,3 +1,217 @@
+// ══════════════════════════════════════════════════════════════
+// Auth & Token Management (RBAC Integration)
+// ══════════════════════════════════════════════════════════════
+
+var Auth = {
+    _tokenKey: 'eidos_token',
+    _userKey: 'eidos_user',
+    _modeKey: 'eidos_auth_mode',
+    _user: null,
+    _authEnabled: null,
+
+    // --- Token ---
+    getToken: function() {
+        return localStorage.getItem(this._tokenKey) || null;
+    },
+
+    setToken: function(token) {
+        if (token) {
+            localStorage.setItem(this._tokenKey, token);
+        } else {
+            localStorage.removeItem(this._tokenKey);
+        }
+    },
+
+    clearToken: function() {
+        localStorage.removeItem(this._tokenKey);
+        localStorage.removeItem(this._userKey);
+        this._user = null;
+    },
+
+    isLoggedIn: function() {
+        return !!this.getToken();
+    },
+
+    // --- Token Decode (without verification, for expiry check) ---
+    decodePayload: function(token) {
+        if (!token) return null;
+        try {
+            var parts = token.split('.');
+            if (parts.length !== 3) return null;
+            var payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            var decoded = atob(payload);
+            return JSON.parse(decoded);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    isTokenExpired: function() {
+        var token = this.getToken();
+        if (!token) return true;
+        var payload = this.decodePayload(token);
+        if (!payload || !payload.exp) return false; // No exp = never expires (or can't check)
+        var now = Math.floor(Date.now() / 1000);
+        return now >= payload.exp;
+    },
+
+    // --- User ---
+    getUser: function() {
+        if (this._user) return this._user;
+        try {
+            var stored = localStorage.getItem(this._userKey);
+            if (stored) {
+                this._user = JSON.parse(stored);
+                return this._user;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    setUser: function(user) {
+        this._user = user;
+        if (user) {
+            localStorage.setItem(this._userKey, JSON.stringify(user));
+        } else {
+            localStorage.removeItem(this._userKey);
+        }
+    },
+
+    getUserRole: function() {
+        var u = this.getUser();
+        return u ? (u.role || 'user') : 'user';
+    },
+
+    // --- Auth Mode Detection ---
+    isAuthEnabled: function() {
+        if (this._authEnabled !== null) return this._authEnabled;
+        var stored = localStorage.getItem(this._modeKey);
+        if (stored !== null) {
+            this._authEnabled = stored === 'true';
+            return this._authEnabled;
+        }
+        return false; // Default to demo mode until detected
+    },
+
+    setAuthEnabled: function(enabled) {
+        this._authEnabled = enabled;
+        localStorage.setItem(this._modeKey, enabled ? 'true' : 'false');
+    },
+
+    // Detect auth mode from backend
+    detectAuthMode: function() {
+        var self = this;
+        return fetch(API.base + '/auth/me', {
+            headers: self.getToken() ? { 'Authorization': 'Bearer ' + self.getToken() } : {}
+        }).then(function(r) {
+            if (r.status === 401) {
+                // Auth is enabled but we're not logged in
+                self.setAuthEnabled(true);
+                return { authEnabled: true, user: null };
+            }
+            if (r.ok) {
+                return r.json().then(function(user) {
+                    // If user.id === 'anonymous', auth is disabled (demo mode)
+                    var isDemo = user.id === 'anonymous' || user.github_login === 'anonymous';
+                    self.setAuthEnabled(!isDemo);
+                    if (!isDemo) {
+                        self.setUser(user);
+                    } else {
+                        self.setUser({ id: 'anonymous', name: 'Anonymous', role: 'superadmin', github_login: 'anonymous', avatar_url: '' });
+                    }
+                    return { authEnabled: !isDemo, user: user };
+                });
+            }
+            // 501 = auth not configured, treat as demo
+            if (r.status === 501) {
+                self.setAuthEnabled(false);
+                self.setUser({ id: 'anonymous', name: 'Anonymous', role: 'superadmin', github_login: 'anonymous', avatar_url: '' });
+                return { authEnabled: false, user: null };
+            }
+            self.setAuthEnabled(false);
+            return { authEnabled: false, user: null };
+        }).catch(function() {
+            // Backend unreachable — keep current state
+            return { authEnabled: self.isAuthEnabled(), user: self.getUser() };
+        });
+    },
+
+    // Fetch and cache current user from backend
+    fetchMe: function() {
+        var self = this;
+        return API.get('/auth/me').then(function(user) {
+            self.setUser(user);
+            return user;
+        }).catch(function(e) {
+            // If 401, token is invalid
+            if (e.message && e.message.indexOf('401') !== -1) {
+                self.clearToken();
+            }
+            return null;
+        });
+    },
+
+    // --- Logout ---
+    logout: function() {
+        this.clearToken();
+        this._user = null;
+        toast('Logged out');
+        navigate('login');
+    },
+
+    // --- Scopes (derived from role) ---
+    _roleScopes: {
+        superadmin: ['*'],
+        admin: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export','admin:users','admin:plans','admin:audit'],
+        employee: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export'],
+        support: ['read:repos','read:snapshots','read:analysis','read:coverage','read:gates','read:export','admin:audit'],
+        user: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export']
+    },
+
+    hasScope: function(scope) {
+        if (!this.isAuthEnabled()) return true; // Demo mode = all access
+        var role = this.getUserRole();
+        var scopes = this._roleScopes[role] || this._roleScopes.user;
+        if (scopes.indexOf('*') !== -1) return true;
+        return scopes.indexOf(scope) !== -1;
+    },
+
+    hasRole: function(role) {
+        if (!this.isAuthEnabled()) return true; // Demo mode
+        var hierarchy = { user: 0, support: 1, employee: 2, admin: 3, superadmin: 4 };
+        var current = hierarchy[this.getUserRole()] || 0;
+        var required = hierarchy[role] || 0;
+        return current >= required;
+    },
+
+    // --- OAuth URL builders ---
+    getGitHubLoginUrl: function() {
+        return API.base + '/auth/login';
+    },
+
+    getGoogleLoginUrl: function() {
+        return API.base + '/auth/google/login';
+    },
+
+    // --- Handle OAuth callback token ---
+    handleCallback: function() {
+        // Check URL params for token (returned from backend callback)
+        var params = new URLSearchParams(window.location.search);
+        var token = params.get('token');
+        if (token) {
+            this.setToken(token);
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+            return true;
+        }
+        return false;
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// API Object (with auth interceptor)
+// ══════════════════════════════════════════════════════════════
+
 var API = {
 
     base: localStorage.getItem('eidos_url') || 'http://localhost:8000',
@@ -8,9 +222,33 @@ var API = {
 
         var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
 
+        // Attach auth token if available
+        var token = Auth.getToken();
+        if (token) {
+            opts.headers['Authorization'] = 'Bearer ' + token;
+        }
+
         if (body) opts.body = JSON.stringify(body);
 
         return fetch(this.base + path, opts).then(function(r) {
+
+            // Global 401 handler: token expired or invalid
+            if (r.status === 401 && Auth.isAuthEnabled()) {
+                Auth.clearToken();
+                toast('Session expired. Please log in again.', false);
+                navigate('login');
+                return Promise.reject(new Error('Unauthorized'));
+            }
+
+            // Global 403 handler: permission denied
+            if (r.status === 403) {
+                return r.text().then(function(t) {
+                    var msg = 'Permission denied';
+                    try { var parsed = JSON.parse(t); msg = parsed.detail || msg; } catch(e) {}
+                    toast(msg, false);
+                    return Promise.reject(new Error(msg));
+                });
+            }
 
             if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'HTTP ' + r.status); });
 
@@ -28,13 +266,31 @@ var API = {
 
     post: function(p, b) { return this.req(p, 'POST', b); },
 
+    put: function(p, b) { return this.req(p, 'PUT', b); },
+
     patch: function(p, b) { return this.req(p, 'PATCH', b); },
 
     del: function(p) { return this.req(p, 'DELETE'); },
 
     download: function(path, name) {
 
-        return fetch(this.base + path).then(function(r) {
+        var headers = {};
+        var token = Auth.getToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        return fetch(this.base + path, { headers: headers }).then(function(r) {
+
+            if (r.status === 401 && Auth.isAuthEnabled()) {
+                Auth.clearToken();
+                toast('Session expired', false);
+                navigate('login');
+                return Promise.reject(new Error('Unauthorized'));
+            }
+
+            if (r.status === 403) {
+                toast('Permission denied', false);
+                return Promise.reject(new Error('Forbidden'));
+            }
 
             if (!r.ok) throw new Error('HTTP ' + r.status);
 
@@ -367,6 +623,14 @@ var CMD = {
             { group: 'Actions', title: 'Clear Active Snapshot', icon: '\uD83D\uDDD1\uFE0F', action: function() { S.set(null, null); toast('Cleared selection'); navigate('repos'); } },
             { group: 'Actions', title: 'Clear Recent History', icon: '\uD83E\uDDF9', action: function() { Recents.clear(); toast('Recents cleared'); } }
         ];
+        // Auth actions
+        if (Auth.isAuthEnabled()) {
+            if (Auth.isLoggedIn()) {
+                cmds.push({ group: 'Account', title: 'Sign Out', icon: '\uD83D\uDEAA', action: function() { Auth.logout(); } });
+            } else {
+                cmds.push({ group: 'Account', title: 'Sign In', icon: '\uD83D\uDD11', action: function() { navigate('login'); } });
+            }
+        }
         // Add recents
         var recents = Recents.get();
         recents.forEach(function(r) {
@@ -581,6 +845,32 @@ function updateStatusBar() {
     }
     repo.textContent = S.repo ? S.repo.slice(0, 12) : 'none';
     snap.textContent = S.snap ? S.snap.slice(0, 8) : 'none';
+
+    // Update user badge in sidebar
+    _renderAuthBadge();
+}
+
+function _renderAuthBadge() {
+    var container = $('auth-badge');
+    if (!container) return;
+    var user = Auth.getUser();
+    if (!user || user.id === 'anonymous') {
+        if (!Auth.isAuthEnabled()) {
+            container.innerHTML = '<div class="demo-badge">DEMO MODE</div>';
+        } else {
+            container.innerHTML = '<a href="#" onclick="navigate(\'login\');return false" style="font-size:12px;color:var(--accent)">Sign in</a>';
+        }
+        return;
+    }
+    var avatarHtml = '';
+    if (user.avatar_url) {
+        avatarHtml = '<div class="auth-avatar"><img src="' + esc(user.avatar_url) + '" alt=""></div>';
+    } else {
+        var initials = (user.name || user.github_login || 'U').split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+        avatarHtml = '<div class="auth-avatar">' + initials + '</div>';
+    }
+    var roleClass = 'role-' + (user.role || 'user');
+    container.innerHTML = '<div class="auth-user-badge">' + avatarHtml + '<div class="auth-info"><div class="auth-name">' + esc(user.name || user.github_login) + '</div><span class="auth-role-badge ' + roleClass + '">' + esc(user.role || 'user') + '</span></div></div>';
 }
 
 // -- Risk Radar SVG Builder -----------------------------------
@@ -1633,5 +1923,14 @@ var Presence = {
     setTimeout(function() {
         Ambient.init();
     }, 300);
+
+    // Periodic token expiry check (every 60s)
+    setInterval(function() {
+        if (Auth.isAuthEnabled() && Auth.isLoggedIn() && Auth.isTokenExpired()) {
+            Auth.clearToken();
+            toast('Session expired. Please sign in again.', false);
+            navigate('login');
+        }
+    }, 60000);
 })();
 

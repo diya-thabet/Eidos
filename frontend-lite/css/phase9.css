@@ -378,6 +378,190 @@
     flex-wrap: wrap;
 }
 
+/* --- Login / Auth Page --- */
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 24px;
+    background: var(--bg-0);
+}
+.login-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 48px 40px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+}
+.login-logo {
+    margin-bottom: 20px;
+}
+.login-logo-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
+}
+.login-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-0);
+    margin-bottom: 6px;
+}
+.login-subtitle {
+    font-size: 13px;
+    color: var(--text-3);
+    margin-bottom: 32px;
+    line-height: 1.5;
+}
+.login-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+.login-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.15s;
+    cursor: pointer;
+    border: 1px solid var(--border);
+}
+.login-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.login-btn:active {
+    transform: translateY(0);
+}
+.login-btn-github {
+    background: #24292f;
+    color: #fff;
+    border-color: #24292f;
+}
+.login-btn-github:hover {
+    background: #1b1f23;
+}
+[data-theme="light"] .login-btn-github {
+    background: #24292f;
+    color: #fff;
+}
+.login-btn-google {
+    background: var(--card-bg);
+    color: var(--text-0);
+    border: 1px solid var(--border);
+}
+.login-btn-google:hover {
+    background: var(--bg-1);
+}
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0;
+    color: var(--text-3);
+    font-size: 12px;
+}
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+.login-demo {
+    text-align: center;
+}
+.login-demo-note {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 8px;
+}
+
+/* Auth badge in sidebar */
+.auth-user-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-top: 1px solid var(--border);
+    margin-top: 8px;
+}
+.auth-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+.auth-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.auth-info {
+    overflow: hidden;
+    flex: 1;
+    min-width: 0;
+}
+.auth-name {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-0);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.auth-role {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: capitalize;
+}
+.auth-role-badge {
+    display: inline-block;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+.auth-role-badge.role-superadmin { background: rgba(147,51,234,0.15); color: #9333ea; }
+.auth-role-badge.role-admin { background: rgba(59,130,246,0.15); color: #3b82f6; }
+.auth-role-badge.role-employee { background: rgba(34,197,94,0.15); color: #22c55e; }
+.auth-role-badge.role-support { background: rgba(234,179,8,0.15); color: #ca8a04; }
+.auth-role-badge.role-user { background: rgba(100,116,139,0.15); color: #64748b; }
+
+/* Demo mode indicator */
+.demo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(234,179,8,0.12);
+    color: #ca8a04;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+}
+
 /* Print styles for PDF-like output */
 @media print {
     .sidebar, .status-bar, .notif-panel, .cmd-overlay,

@@ -1,221 +1,442 @@
-/* ===============================================================
-   Phase 4 — Power User Experience
-   Command palette, keyboard shortcuts, recents, quick compare
-   =============================================================== */
-
-/* -- Command Palette Overlay --------------------------------- */
-.cmd-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.45);
-    z-index: 900;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-    padding-top: 18vh;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity var(--dur-fast, 140ms) var(--ease-out, ease);
-}
-.cmd-overlay.open {
-    opacity: 1;
-    pointer-events: auto;
-}
-
-/* -- Command Palette Container ------------------------------- */
-.cmd-palette {
-    width: min(520px, 92vw);
-    background: var(--bg-1);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22), 0 0 0 1px var(--border);
-    transform: scale(0.96) translateY(-8px);
-    transition: transform var(--dur-fast, 140ms) var(--ease-out, ease);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    max-height: 420px;
-}
-.cmd-overlay.open .cmd-palette {
-    transform: scale(1) translateY(0);
-}
-
-/* -- Search Input -------------------------------------------- */
-.cmd-input-wrap {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 18px;
-    border-bottom: 1px solid var(--border);
-}
-.cmd-input-wrap svg {
-    width: 18px; height: 18px;
-    color: var(--text-3);
-    flex-shrink: 0;
-}
-.cmd-input {
-    flex: 1;
-    border: none;
-    background: none;
-    font-size: 15px;
-    font-family: var(--font);
-    color: var(--text-0);
-    outline: none;
-}
-.cmd-input::placeholder {
-    color: var(--text-3);
-}
-.cmd-kbd {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    background: var(--bg-3);
-    color: var(--text-3);
-    font-family: var(--mono);
-    border: 1px solid var(--border);
-}
-
-/* -- Results List -------------------------------------------- */
-.cmd-results {
-    flex: 1;
-    overflow-y: auto;
-    padding: 6px;
-}
-.cmd-group-label {
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--text-3);
-    padding: 8px 12px 4px;
-}
-.cmd-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background 0.08s;
-}
-.cmd-item:hover,
-.cmd-item.active {
-    background: var(--accent-soft);
-}
-.cmd-item.active {
-    outline: 2px solid var(--accent);
-    outline-offset: -2px;
-}
-.cmd-item-icon {
-    width: 28px; height: 28px;
-    border-radius: 6px;
-    display: grid;
-    place-items: center;
-    font-size: 13px;
-    flex-shrink: 0;
-    background: var(--bg-2);
-    color: var(--text-2);
-}
-.cmd-item-body {
-    flex: 1;
-    min-width: 0;
-}
-.cmd-item-title {
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-0);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.cmd-item-sub {
-    font-size: 11px;
-    color: var(--text-3);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-.cmd-item-shortcut {
-    font-size: 10px;
-    color: var(--text-3);
-    font-family: var(--mono);
-    flex-shrink: 0;
-}
-.cmd-empty {
-    text-align: center;
-    padding: 28px 16px;
-    color: var(--text-3);
-    font-size: 13px;
-}
-
-/* -- Footer Hints -------------------------------------------- */
-.cmd-footer {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 8px 16px;
-    border-top: 1px solid var(--border);
-    font-size: 10px;
-    color: var(--text-3);
-}
-.cmd-footer kbd {
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    font-family: var(--mono);
-    margin-right: 3px;
-}
-
-/* -- Shortcut Hint Badge ------------------------------------- */
-.shortcut-hint {
-    position: fixed;
-    bottom: 14px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 6px 14px;
-    background: var(--bg-1);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    font-size: 11px;
-    color: var(--text-2);
-    box-shadow: var(--shadow-md);
-    z-index: 700;
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.2s, transform 0.2s;
-}
-.shortcut-hint.show {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-}
-.shortcut-hint kbd {
-    font-size: 10px;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: var(--bg-3);
-    border: 1px solid var(--border);
-    font-family: var(--mono);
-    margin: 0 2px;
-}
-
-/* -- Recent Items Badge -------------------------------------- */
-.recent-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 9px;
-    font-weight: 500;
-    background: var(--accent-soft);
-    color: var(--accent);
-}
-
-/* -- Reduced motion ------------------------------------------ */
-@media (prefers-reduced-motion: reduce) {
-    .cmd-overlay { transition: none; }
-    .cmd-palette { transition: none; }
-    .shortcut-hint { transition: none; }
-}
+/* ===============================================================
+
+   Phase 4 — Power User Experience
+
+   Command palette, keyboard shortcuts, recents, quick compare
+
+   =============================================================== */
+
+
+
+/* -- Command Palette Overlay --------------------------------- */
+
+.cmd-overlay {
+
+    position: fixed;
+
+    top: 0; left: 0; right: 0; bottom: 0;
+
+    background: rgba(0, 0, 0, 0.45);
+
+    z-index: 900;
+
+    display: flex;
+
+    align-items: flex-start;
+
+    justify-content: center;
+
+    padding-top: 18vh;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: opacity var(--dur-fast, 140ms) var(--ease-out, ease);
+
+}
+
+.cmd-overlay.open {
+
+    opacity: 1;
+
+    pointer-events: auto;
+
+}
+
+
+
+/* -- Command Palette Container ------------------------------- */
+
+.cmd-palette {
+
+    width: min(520px, 92vw);
+
+    background: var(--bg-1);
+
+    border: 1px solid var(--border);
+
+    border-radius: 14px;
+
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22), 0 0 0 1px var(--border);
+
+    transform: scale(0.96) translateY(-8px);
+
+    transition: transform var(--dur-fast, 140ms) var(--ease-out, ease);
+
+    overflow: hidden;
+
+    display: flex;
+
+    flex-direction: column;
+
+    max-height: 420px;
+
+}
+
+.cmd-overlay.open .cmd-palette {
+
+    transform: scale(1) translateY(0);
+
+}
+
+
+
+/* -- Search Input -------------------------------------------- */
+
+.cmd-input-wrap {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 14px 18px;
+
+    border-bottom: 1px solid var(--border);
+
+}
+
+.cmd-input-wrap svg {
+
+    width: 18px; height: 18px;
+
+    color: var(--text-3);
+
+    flex-shrink: 0;
+
+}
+
+.cmd-input {
+
+    flex: 1;
+
+    border: none;
+
+    background: none;
+
+    font-size: 15px;
+
+    font-family: var(--font);
+
+    color: var(--text-0);
+
+    outline: none;
+
+}
+
+.cmd-input::placeholder {
+
+    color: var(--text-3);
+
+}
+
+.cmd-kbd {
+
+    font-size: 10px;
+
+    padding: 2px 6px;
+
+    border-radius: 4px;
+
+    background: var(--bg-3);
+
+    color: var(--text-3);
+
+    font-family: var(--mono);
+
+    border: 1px solid var(--border);
+
+}
+
+
+
+/* -- Results List -------------------------------------------- */
+
+.cmd-results {
+
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding: 6px;
+
+}
+
+.cmd-group-label {
+
+    font-size: 9px;
+
+    font-weight: 600;
+
+    text-transform: uppercase;
+
+    letter-spacing: 0.5px;
+
+    color: var(--text-3);
+
+    padding: 8px 12px 4px;
+
+}
+
+.cmd-item {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    padding: 10px 14px;
+
+    border-radius: 8px;
+
+    cursor: pointer;
+
+    transition: background 0.08s;
+
+}
+
+.cmd-item:hover,
+
+.cmd-item.active {
+
+    background: var(--accent-soft);
+
+}
+
+.cmd-item.active {
+
+    outline: 2px solid var(--accent);
+
+    outline-offset: -2px;
+
+}
+
+.cmd-item-icon {
+
+    width: 28px; height: 28px;
+
+    border-radius: 6px;
+
+    display: grid;
+
+    place-items: center;
+
+    font-size: 13px;
+
+    flex-shrink: 0;
+
+    background: var(--bg-2);
+
+    color: var(--text-2);
+
+}
+
+.cmd-item-body {
+
+    flex: 1;
+
+    min-width: 0;
+
+}
+
+.cmd-item-title {
+
+    font-size: 13px;
+
+    font-weight: 500;
+
+    color: var(--text-0);
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+}
+
+.cmd-item-sub {
+
+    font-size: 11px;
+
+    color: var(--text-3);
+
+    white-space: nowrap;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+
+}
+
+.cmd-item-shortcut {
+
+    font-size: 10px;
+
+    color: var(--text-3);
+
+    font-family: var(--mono);
+
+    flex-shrink: 0;
+
+}
+
+.cmd-empty {
+
+    text-align: center;
+
+    padding: 28px 16px;
+
+    color: var(--text-3);
+
+    font-size: 13px;
+
+}
+
+
+
+/* -- Footer Hints -------------------------------------------- */
+
+.cmd-footer {
+
+    display: flex;
+
+    align-items: center;
+
+    gap: 14px;
+
+    padding: 8px 16px;
+
+    border-top: 1px solid var(--border);
+
+    font-size: 10px;
+
+    color: var(--text-3);
+
+}
+
+.cmd-footer kbd {
+
+    font-size: 9px;
+
+    padding: 1px 5px;
+
+    border-radius: 3px;
+
+    background: var(--bg-3);
+
+    border: 1px solid var(--border);
+
+    font-family: var(--mono);
+
+    margin-right: 3px;
+
+}
+
+
+
+/* -- Shortcut Hint Badge ------------------------------------- */
+
+.shortcut-hint {
+
+    position: fixed;
+
+    bottom: 14px;
+
+    left: 50%;
+
+    transform: translateX(-50%);
+
+    padding: 6px 14px;
+
+    background: var(--bg-1);
+
+    border: 1px solid var(--border);
+
+    border-radius: 8px;
+
+    font-size: 11px;
+
+    color: var(--text-2);
+
+    box-shadow: var(--shadow-md);
+
+    z-index: 700;
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition: opacity 0.2s, transform 0.2s;
+
+}
+
+.shortcut-hint.show {
+
+    opacity: 1;
+
+    transform: translateX(-50%) translateY(0);
+
+}
+
+.shortcut-hint kbd {
+
+    font-size: 10px;
+
+    padding: 1px 5px;
+
+    border-radius: 3px;
+
+    background: var(--bg-3);
+
+    border: 1px solid var(--border);
+
+    font-family: var(--mono);
+
+    margin: 0 2px;
+
+}
+
+
+
+/* -- Recent Items Badge -------------------------------------- */
+
+.recent-badge {
+
+    display: inline-flex;
+
+    align-items: center;
+
+    gap: 4px;
+
+    padding: 2px 8px;
+
+    border-radius: 4px;
+
+    font-size: 9px;
+
+    font-weight: 500;
+
+    background: var(--accent-soft);
+
+    color: var(--accent);
+
+}
+
+
+
+/* -- Reduced motion ------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+
+    .cmd-overlay { transition: none; }
+
+    .cmd-palette { transition: none; }
+
+    .shortcut-hint { transition: none; }
+
+}
+
