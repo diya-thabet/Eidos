@@ -13,6 +13,12 @@ function navigate(pg) {
     // Phase 8: Performance mark
     Perf.mark('page.render');
 
+    // Restore sidebar/statusbar for non-login pages
+    if (pg !== 'login') _restoreAppChrome();
+
+    // Apply permission-based visibility to nav items
+    if (pg !== 'login') applyPermissions();
+
     document.querySelectorAll('.nav-btn').forEach(function(b) { b.classList.remove('active'); });
 
     var btn = document.querySelector('[data-p="' + pg + '"]');
@@ -32,7 +38,7 @@ function navigate(pg) {
 
     setTimeout(function() {
 
-        var pages = { repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, deps: pgDeps, clones: pgClones, cycles: pgCycles, hotspots: pgHotspots, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, settings: pgSettings };
+        var pages = { login: pgLogin, repos: pgRepos, overview: pgOverview, symbols: pgSymbols, health: pgHealth, graph: pgGraph, deadcode: pgDead, coupling: pgCoupling, deps: pgDeps, clones: pgClones, cycles: pgCycles, hotspots: pgHotspots, ask: pgAsk, review: pgReview, docs: pgDocs, search: pgSearch, exports: pgExports, admin: pgAdmin, settings: pgSettings };
 
         if (pages[pg]) pages[pg]();
 
@@ -103,11 +109,164 @@ function checkConn() {
 
 
 
+// =================== LOGIN ===================
+
+function pgLogin() {
+    // If auth is not enabled, skip login
+    if (!Auth.isAuthEnabled()) {
+        navigate('repos');
+        return;
+    }
+
+    // If already logged in, go to repos
+    if (Auth.isLoggedIn() && !Auth.isTokenExpired()) {
+        navigate('repos');
+        return;
+    }
+
+    // Hide sidebar in login view
+    var sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = 'none';
+    var statusBar = document.querySelector('.status-bar');
+    if (statusBar) statusBar.style.display = 'none';
+
+    var h = '<div class="login-page">';
+    h += '<div class="login-card">';
+    h += '<div class="login-logo"><img src="images/logo.svg" alt="Eidos" class="login-logo-img"></div>';
+    h += '<h1 class="login-title">Welcome to Eidos</h1>';
+    h += '<p class="login-subtitle">Code intelligence platform — sign in to continue</p>';
+
+    // Local email/password form
+    h += '<div class="login-form" id="login-form">';
+    h += '<div class="login-tabs"><button class="login-tab active" id="tab-signin" onclick="_loginTab(\'signin\')">Sign In</button><button class="login-tab" id="tab-signup" onclick="_loginTab(\'signup\')">Sign Up</button></div>';
+    h += '<div id="login-fields">';
+    h += '<div class="field" id="signup-name-field" style="display:none"><label>Name</label><input class="inp" id="auth-name" placeholder="Your name" autocomplete="name"></div>';
+    h += '<div class="field"><label>Email</label><input class="inp" id="auth-email" type="email" placeholder="you@example.com" autocomplete="email"></div>';
+    h += '<div class="field"><label>Password</label><input class="inp" id="auth-pass" type="password" placeholder="Min. 6 characters" autocomplete="current-password"></div>';
+    h += '<div id="auth-error" class="login-error"></div>';
+    h += '<button class="btn btn-p" style="width:100%" id="auth-submit" onclick="_doLocalAuth()">Sign In</button>';
+    h += '</div>';
+    h += '</div>';
+
+    h += '<div class="login-divider"><span>or continue with</span></div>';
+
+    // OAuth buttons
+    h += '<div class="login-buttons">';
+    h += '<a href="' + Auth.getGitHubLoginUrl() + '" class="login-btn login-btn-github"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg> GitHub</a>';
+    h += '<a href="' + Auth.getGoogleLoginUrl() + '" class="login-btn login-btn-google"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg> Google</a>';
+    h += '</div>';
+
+    h += '<div class="login-divider"><span>or</span></div>';
+    h += '<div class="login-demo">';
+    h += '<button class="btn btn-s btn-g" onclick="Auth.setAuthEnabled(false);Auth.setUser({id:\'anonymous\',name:\'Anonymous\',role:\'superadmin\',github_login:\'anonymous\',avatar_url:\'\'});_restoreAppChrome();navigate(\'repos\')">Continue in Demo Mode</button>';
+    h += '<p class="login-demo-note">Demo mode has full access without authentication</p>';
+    h += '</div>';
+    h += '</div>';
+    h += '</div>';
+
+    html('main', h);
+
+    // Enter key handler
+    setTimeout(function() {
+        var passInput = document.getElementById('auth-pass');
+        if (passInput) passInput.addEventListener('keydown', function(e) { if (e.key === 'Enter') _doLocalAuth(); });
+    }, 100);
+}
+
+var _loginMode = 'signin';
+
+function _loginTab(mode) {
+    _loginMode = mode;
+    var tabSignin = document.getElementById('tab-signin');
+    var tabSignup = document.getElementById('tab-signup');
+    var nameField = document.getElementById('signup-name-field');
+    var submitBtn = document.getElementById('auth-submit');
+    var errEl = document.getElementById('auth-error');
+    if (errEl) errEl.textContent = '';
+
+    if (mode === 'signup') {
+        if (tabSignin) tabSignin.classList.remove('active');
+        if (tabSignup) tabSignup.classList.add('active');
+        if (nameField) nameField.style.display = '';
+        if (submitBtn) submitBtn.textContent = 'Create Account';
+    } else {
+        if (tabSignin) tabSignin.classList.add('active');
+        if (tabSignup) tabSignup.classList.remove('active');
+        if (nameField) nameField.style.display = 'none';
+        if (submitBtn) submitBtn.textContent = 'Sign In';
+    }
+}
+
+function _doLocalAuth() {
+    var email = (document.getElementById('auth-email') || {}).value || '';
+    var pass = (document.getElementById('auth-pass') || {}).value || '';
+    var name = (document.getElementById('auth-name') || {}).value || '';
+    var errEl = document.getElementById('auth-error');
+    var submitBtn = document.getElementById('auth-submit');
+
+    if (!email || !pass) {
+        if (errEl) errEl.textContent = 'Please enter email and password.';
+        return;
+    }
+    if (pass.length < 6) {
+        if (errEl) errEl.textContent = 'Password must be at least 6 characters.';
+        return;
+    }
+
+    if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = 'Please wait...'; }
+    if (errEl) errEl.textContent = '';
+
+    var endpoint = _loginMode === 'signup' ? '/auth/signup' : '/auth/login';
+    var body = { email: email, password: pass };
+    if (_loginMode === 'signup' && name) body.name = name;
+
+    fetch(API.base + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    }).then(function(r) {
+        var status = r.status;
+        return r.text().then(function(text) {
+            var data = {};
+            try { data = JSON.parse(text); } catch(e) {}
+            return { status: status, data: data };
+        });
+    }).then(function(res) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _loginMode === 'signup' ? 'Create Account' : 'Sign In'; }
+
+        if (res.status === 200 && res.data.access_token) {
+            Auth.setToken(res.data.access_token);
+            Auth.setUser(res.data.user);
+            toast('Welcome, ' + (res.data.user.name || res.data.user.email));
+            _restoreAppChrome();
+            navigate('repos');
+        } else {
+            var msg = res.data.detail || (res.status >= 500 ? 'Server error (' + res.status + '). Please try again.' : 'Authentication failed');
+            if (errEl) errEl.textContent = msg;
+        }
+    }).catch(function(e) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = _loginMode === 'signup' ? 'Create Account' : 'Sign In'; }
+        if (errEl) errEl.textContent = 'Connection error. Is the backend running?';
+    });
+}
+
+function _restoreAppChrome() {
+    var sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.style.display = '';
+    var statusBar = document.querySelector('.status-bar');
+    if (statusBar) statusBar.style.display = '';
+}
+
 // =================== REPOS ===================
 
 function pgRepos() {
 
-    html('main', '<div class="page-head between row"><div><h1>Repositories</h1><p>Manage and analyze Git repositories</p></div><button class="btn btn-p" onclick="toggleForm()">+ Add Repo</button></div>' +
+    // Restore sidebar/statusbar if coming from login
+    _restoreAppChrome();
+
+    var addBtn = guardBtn('write:repos', '<button class="btn btn-p" onclick="toggleForm()">+ Add Repo</button>', 'No permission to add repos');
+
+    html('main', '<div class="page-head between row"><div><h1>Repositories</h1><p>Manage and analyze Git repositories</p></div>' + addBtn + '</div>' +
 
         '<div class="card hidden" id="rf">' +
 
@@ -199,7 +358,9 @@ function loadRepos() {
 
         repos.forEach(function(r) {
 
-            h += '<tr><td><strong>' + esc(r.name) + '</strong></td><td style="font-size:12px;color:var(--text-2)">' + esc(r.url) + '</td><td style="font-size:12px">' + new Date(r.created_at).toLocaleDateString() + '</td><td class="row g-8"><button class="btn btn-s btn-p" onclick="selRepo(\'' + r.id + '\')">Select</button><button class="btn btn-s btn-g" onclick="ingest(\'' + r.id + '\')">Ingest</button><button class="btn btn-s btn-d" onclick="delRepo(\'' + r.id + '\')">Del</button></td></tr>';
+            var ingestBtn = guardBtn('write:repos', '<button class="btn btn-s btn-g" onclick="ingest(\'' + r.id + '\')">Ingest</button>', 'No permission to ingest');
+            var delBtn = guardBtn('delete:snapshots', '<button class="btn btn-s btn-d" onclick="delRepo(\'' + r.id + '\')">Del</button>', 'No permission to delete');
+            h += '<tr><td><strong>' + esc(r.name) + '</strong></td><td style="font-size:12px;color:var(--text-2)">' + esc(r.url) + '</td><td style="font-size:12px">' + new Date(r.created_at).toLocaleDateString() + '</td><td class="row g-8"><button class="btn btn-s btn-p" onclick="selRepo(\'' + r.id + '\')">Select</button>' + ingestBtn + delBtn + '</td></tr>';
 
         });
 
@@ -212,6 +373,8 @@ function loadRepos() {
 }
 
 function addRepo() {
+
+    if (!Auth.hasScope('write:repos')) { toast('Permission denied', false); return; }
 
     var n = $('rn').value.trim(), u = $('ru').value.trim();
 
@@ -228,6 +391,8 @@ function addRepo() {
 }
 
 function ingest(id) {
+
+    if (!Auth.hasScope('write:repos')) { toast('Permission denied', false); return; }
 
     API.post('/repos/' + id + '/ingest').then(function(r) {
 
@@ -341,9 +506,7 @@ function pollIngest(rid, sid, startTime) {
 
                 Recents.add(rid, sid, rid);
 
-                toast('Done! ' + (snap.file_count || '') + ' files indexed');
-
-                Notif.push('\u2705', 'Ingestion complete', (snap.file_count || 0) + ' files indexed \u2014 ' + sid.slice(0, 8));
+                toast('Ingestion complete: ' + (snap.file_count || '') + ' files indexed');
 
                 setTimeout(function() { loadRepos(); }, 1500);
 
@@ -357,9 +520,7 @@ function pollIngest(rid, sid, startTime) {
 
                 msgEl.textContent = snap.error_message || 'Unknown error';
 
-                toast('Ingestion failed', false);
-
-                Notif.push('\u274C', 'Ingestion failed', snap.error_message || 'Unknown error');
+                toast('Ingestion failed: ' + (snap.error_message || 'Unknown error'), false);
 
             } else {
 
@@ -399,7 +560,7 @@ function selRepo(id) {
 
 }
 
-function delRepo(id) { if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { if (S.repo === id) S.set(null, null); toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
+function delRepo(id) { if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; } if (!confirm('Delete?')) return; API.del('/repos/' + id).then(function() { if (S.repo === id) S.set(null, null); toast('Deleted'); loadRepos(); }).catch(function(e) { toast(e.message, false); }); }
 
 
 
@@ -794,6 +955,8 @@ function _fbOpenFile(filePath) {
 
 function delSnap() {
 
+    if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; }
+
     if (!confirm('Delete current snapshot?')) return;
 
     API.del(S.path()).then(function() { S.set(S.repo, null); toast('Snapshot deleted'); navigate('repos'); }).catch(function(e) { toast(e.message, false); });
@@ -801,6 +964,8 @@ function delSnap() {
 }
 
 function delSnapById(sid) {
+
+    if (!Auth.hasScope('delete:snapshots')) { toast('Permission denied', false); return; }
 
     if (!confirm('Delete snapshot ' + sid.slice(0, 8) + '?')) return;
 
@@ -2451,6 +2616,8 @@ function sendQ() {
 
 function pgReview() {
 
+    if (!guardPage('write:reviews')) return;
+
     if (!S.ok()) { html('main', noSnap()); return; }
 
     html('main', '<div class="page-head"><h1>PR Review</h1><p>Paste a unified diff for risk analysis</p></div><div class="card"><div class="field"><label>Diff</label><textarea class="inp" id="rd" placeholder="--- a/file.py\n+++ b/file.py\n@@ ...\n-old\n+new"></textarea></div><button class="btn btn-p" onclick="doReview()">Analyze</button></div><div id="rr"></div>');
@@ -2484,6 +2651,8 @@ function doReview() {
 // =================== DOCS ===================
 
 function pgDocs() {
+
+    if (!guardPage('write:docs')) return;
 
     if (!S.ok()) { html('main', noSnap()); return; }
 
@@ -2543,6 +2712,8 @@ function doSearch() {
 
 function pgExports() {
 
+    if (!guardPage('read:export')) return;
+
     if (!S.ok()) { html('main', noSnap()); return; }
 
     html('main', '<div class="page-head"><div class="page-head-row"><div><h1>Exports</h1><p>Download analysis in various formats</p></div><div class="share-bar">' + deepLinkBtn() + '</div></div></div><div class="export-grid"><div class="export-card" onclick="openPdfDialog()"><div class="ico">\uD83D\uDCC4</div><h4>PDF Report</h4><p>Shareable analysis summary</p></div><div class="export-card" onclick="doExp(\'json\')"><div class="ico">{ }</div><h4>JSON</h4><p>Full analysis data</p></div><div class="export-card" onclick="doExp(\'portable\')"><div class="ico">\uD83D\uDCE6</div><h4>Portable .eidos</h4><p>Compact archive</p></div><div class="export-card" onclick="doExp(\'sarif\')"><div class="ico">\u26A0</div><h4>SARIF</h4><p>Code scanning format</p></div><div class="export-card" onclick="doExp(\'csv\')"><div class="ico">\uD83D\uDCCA</div><h4>CSV</h4><p>Spreadsheet data</p></div><div class="export-card" onclick="doExp(\'sbom\')"><div class="ico">\uD83D\uDCCB</div><h4>SBOM</h4><p>Bill of Materials</p></div><div class="export-card" onclick="doExp(\'md\')"><div class="ico">\uD83D\uDCDD</div><h4>Markdown</h4><p>Health report</p></div></div>');
@@ -2561,11 +2732,1268 @@ function doExp(fmt) {
 
 
 
+// =================== ADMIN PANEL ===================
+
+var _adminUsersCache = [];
+var _adminUserFilter = { search: '', role: '', sort: 'name' };
+var _adminPlansCache = [];
+
+function pgAdmin() {
+    if (!Auth.isAuthEnabled() || !Auth.isLoggedIn()) {
+        html('main', '<div class="page-head"><h1>Admin Panel</h1><p>Manage users, plans, and system</p></div>' +
+            '<div class="card"><p style="color:var(--text-2)">Sign in with an admin account to access this panel.</p>' +
+            '<button class="btn btn-s btn-p mt" onclick="navigate(\'login\')">Sign In</button></div>');
+        return;
+    }
+
+    var role = Auth.getUserRole();
+    if (role !== 'superadmin' && role !== 'admin' && role !== 'support') {
+        html('main', '<div class="page-head"><h1>Admin Panel</h1><p>Manage users, plans, and system</p></div>' +
+            '<div class="perm-denied-page"><svg width="48" height="48" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>' +
+            '<h2>Access Restricted</h2><p>You need <b>admin</b> or <b>superadmin</b> role to access this panel.</p>' +
+            '<p style="font-size:12px;color:var(--text-3)">Your role: <code>' + esc(role) + '</code></p></div>');
+        return;
+    }
+
+    // Hero section
+    var h = '<div class="admin-hero">';
+    h += '<div class="admin-hero-left"><h1>Admin Panel</h1><p>Manage users, plans, and system configuration</p></div>';
+    h += '<div class="admin-hero-right">';
+    h += '<div class="admin-role-indicator"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg> ' + esc(role) + '</div>';
+    h += '<button class="btn btn-xs btn-g" onclick="adminExportUsers()" title="Export Users CSV"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export</button>';
+    h += '<button class="btn btn-xs btn-p" onclick="adminInviteUser()" title="Invite a new user"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg> Invite</button>';
+    h += '</div></div>';
+
+    // Tabs
+    h += '<div class="admin-tabs" id="admin-tabs">';
+    h += '<button class="admin-tab active" onclick="adminTab(\'users\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Users <span class="admin-tab-badge" id="admin-tab-users-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'plans\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg> Plans <span class="admin-tab-badge" id="admin-tab-plans-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'teams\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Teams <span class="admin-tab-badge" id="admin-tab-teams-count">…</span></button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'audit\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Audit Log</button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'system\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15H3a2 2 0 110-4h.09"/></svg> System</button>';
+    h += '</div>';
+
+    h += '<div id="admin-content"><div class="loader"><span class="spin"></span> Loading...</div></div>';
+
+    html('main', h);
+    adminTab('users');
+
+    // Load counts for tab badges
+    API.get('/admin/users').then(function(users) {
+        _adminUsersCache = users || [];
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    });
+    API.get('/admin/plans').then(function(plans) {
+        _adminPlansCache = plans || [];
+        var badge = document.getElementById('admin-tab-plans-count');
+        if (badge) badge.textContent = _adminPlansCache.length;
+    });
+    API.get('/teams').then(function(teams) {
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = (teams || []).length;
+    }).catch(function() {});
+}
+
+function adminTab(tab, btn) {
+    if (btn) {
+        document.querySelectorAll('.admin-tab').forEach(function(t) { t.classList.remove('active'); });
+        btn.classList.add('active');
+    } else {
+        // Auto-select the correct tab button
+        var tabs = document.querySelectorAll('.admin-tab');
+        var tabNames = ['users', 'plans', 'teams', 'audit', 'system'];
+        for (var i = 0; i < tabs.length; i++) {
+            tabs[i].classList.toggle('active', tabNames[i] === tab);
+        }
+    }
+    var el = document.getElementById('admin-content');
+    if (!el) return;
+    el.innerHTML = '<div class="loader"><span class="spin"></span> Loading...</div>';
+
+    if (tab === 'users') _adminUsers(el);
+    else if (tab === 'plans') _adminPlans(el);
+    else if (tab === 'teams') _adminTeams(el);
+    else if (tab === 'audit') _adminAudit(el);
+    else if (tab === 'system') _adminSystem(el);
+}
+
+function _adminUsers(el) {
+    if (_adminUsersCache.length) {
+        _adminUserFilter.search = '';
+        _adminUserFilter.role = '';
+        _adminUserFilter.sort = 'name';
+        _renderAdminUsers(el);
+        return;
+    }
+    API.get('/admin/users').then(function(users) {
+        _adminUsersCache = users || [];
+        _adminUserFilter = { search: '', role: '', sort: 'name' };
+        _renderAdminUsers(el);
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load users: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _renderAdminUsers(el) {
+    var users = _adminUsersCache;
+
+    // Role stats
+    var totalUsers = users.length;
+    var roleCounts = {};
+    for (var i = 0; i < users.length; i++) {
+        var r = users[i].role || 'user';
+        roleCounts[r] = (roleCounts[r] || 0) + 1;
+    }
+
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleList = ['superadmin', 'admin', 'employee', 'support', 'user'];
+
+    var h = '';
+
+    // Invite form (inline, hidden by default)
+    h += '<div class="admin-invite-form" id="admin-invite-form" style="display:none">';
+    h += '<svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>';
+    h += '<input class="inp" id="invite-email" placeholder="Email address" type="email">';
+    h += '<input class="inp" id="invite-name" placeholder="Display name (optional)">';
+    h += '<select class="inp admin-filter-select" id="invite-role">';
+    for (var ir = 0; ir < roleList.length; ir++) {
+        h += '<option value="' + roleList[ir] + '"' + (roleList[ir] === 'user' ? ' selected' : '') + '>' + roleList[ir] + '</option>';
+    }
+    h += '</select>';
+    h += '<button class="btn btn-xs btn-p" onclick="adminDoInvite()">Send Invite</button>';
+    h += '<button class="btn btn-xs btn-g" onclick="document.getElementById(\'admin-invite-form\').style.display=\'none\'">Cancel</button>';
+    h += '</div>';
+
+    // Stats bar
+    h += '<div class="admin-stats-bar">';
+    h += '<div class="admin-stat-pill"><span class="admin-stat-num">' + totalUsers + '</span> Total Users</div>';
+    for (var ri = 0; ri < roleList.length; ri++) {
+        var rn = roleList[ri];
+        if (roleCounts[rn]) {
+            h += '<div class="admin-stat-pill" style="cursor:pointer" onclick="document.getElementById(\'admin-role-filter\').value=\'' + rn + '\';adminFilterUsers()"><span style="color:' + roleColors[rn] + '">●</span> ' + roleCounts[rn] + ' ' + rn + '</div>';
+        }
+    }
+    h += '</div>';
+
+    // Search, filter, sort toolbar
+    h += '<div class="admin-toolbar">';
+    h += '<div class="admin-search-box"><svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+    h += '<input class="admin-search-inp" id="admin-user-search" placeholder="Search by name, email, or login..." value="' + esc(_adminUserFilter.search) + '" oninput="adminFilterUsers()"></div>';
+    h += '<select class="admin-filter-select" id="admin-role-filter" onchange="adminFilterUsers()">';
+    h += '<option value="">All roles</option>';
+    for (var fi = 0; fi < roleList.length; fi++) {
+        h += '<option value="' + roleList[fi] + '"' + (_adminUserFilter.role === roleList[fi] ? ' selected' : '') + '>' + roleList[fi] + '</option>';
+    }
+    h += '</select>';
+    h += '<select class="admin-sort-select" id="admin-sort" onchange="adminFilterUsers()">';
+    h += '<option value="name"' + (_adminUserFilter.sort === 'name' ? ' selected' : '') + '>Sort: Name</option>';
+    h += '<option value="role"' + (_adminUserFilter.sort === 'role' ? ' selected' : '') + '>Sort: Role</option>';
+    h += '<option value="newest"' + (_adminUserFilter.sort === 'newest' ? ' selected' : '') + '>Sort: Newest</option>';
+    h += '<option value="oldest"' + (_adminUserFilter.sort === 'oldest' ? ' selected' : '') + '>Sort: Oldest</option>';
+    h += '</select>';
+    h += '<button class="btn btn-xs btn-g" onclick="adminRefreshUsers()" title="Refresh users list"><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg></button>';
+    h += '</div>';
+
+    // Results container (this is the part that gets updated on filter)
+    h += '<div id="admin-users-results"></div>';
+
+    el.innerHTML = h;
+
+    // Render results into the sub-container
+    _updateAdminResults();
+}
+
+function _updateAdminResults() {
+    var container = document.getElementById('admin-users-results');
+    if (!container) return;
+
+    var users = _adminUsersCache;
+    var totalUsers = users.length;
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleList = ['superadmin', 'admin', 'employee', 'support', 'user'];
+
+    var filtered = _filterAdminUsers(users);
+    var showing = filtered.length;
+    var h = '';
+
+    if (showing < totalUsers) {
+        h += '<p style="font-size:11px;color:var(--text-3);margin-bottom:8px">Showing ' + showing + ' of ' + totalUsers + ' users';
+        if (_adminUserFilter.search || _adminUserFilter.role) {
+            h += ' &mdash; <a href="#" onclick="document.getElementById(\'admin-user-search\').value=\'\';document.getElementById(\'admin-role-filter\').value=\'\';adminFilterUsers();return false" style="color:var(--accent)">Clear filters</a>';
+        }
+        h += '</p>';
+    }
+
+    if (!filtered.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg><p>No users match your search</p>';
+        h += '<p style="font-size:11px;margin-top:8px"><a href="#" onclick="document.getElementById(\'admin-user-search\').value=\'\';document.getElementById(\'admin-role-filter\').value=\'\';adminFilterUsers();return false" style="color:var(--accent)">Clear filters</a></p></div>';
+        container.innerHTML = h;
+        return;
+    }
+
+    h += '<div class="admin-user-grid">';
+    for (var ui = 0; ui < filtered.length; ui++) {
+        var u = filtered[ui];
+        var joined = u.created_at ? new Date(u.created_at).toLocaleDateString() : '—';
+        var initials = (u.name || u.github_login || '??').slice(0, 2).toUpperCase();
+        var roleColor = roleColors[u.role] || 'var(--text-3)';
+
+        h += '<div class="admin-user-card" onclick="adminViewUser(\'' + esc(u.id) + '\')" style="cursor:pointer">';
+        h += '<div class="admin-user-card-header">';
+        h += '<div class="admin-user-avatar">' + initials + '</div>';
+        h += '<div class="admin-user-info">';
+        h += '<div class="admin-user-name">' + esc(u.name || u.github_login || 'Unnamed') + '</div>';
+        h += '<div class="admin-user-email">' + esc(u.email || '—') + '</div>';
+        h += '</div>';
+        h += '<span class="admin-role-badge" style="--role-color:' + roleColor + '">' + esc(u.role || 'user') + '</span>';
+        h += '</div>';
+        h += '<div class="admin-user-card-body">';
+        h += '<div class="admin-user-meta"><span>Joined: ' + joined + '</span><span>' + esc(u.auth_provider || 'local') + '</span></div>';
+        h += '<div class="admin-user-actions" onclick="event.stopPropagation()">';
+        h += '<select class="admin-role-select" data-uid="' + esc(u.id) + '">';
+        for (var rx = 0; rx < roleList.length; rx++) {
+            h += '<option value="' + roleList[rx] + '"' + (u.role === roleList[rx] ? ' selected' : '') + '>' + roleList[rx] + '</option>';
+        }
+        h += '</select>';
+        h += '<button class="btn btn-xs btn-p" onclick="adminChangeRole(\'' + esc(u.id) + '\')">Update</button>';
+        h += '<button class="btn btn-xs btn-g" onclick="adminAssignPlan(\'' + esc(u.id) + '\',\'' + esc(u.name || u.github_login || 'User') + '\')" title="Assign plan">Plan</button>';
+        h += '</div></div></div>';
+    }
+    h += '</div>';
+
+    container.innerHTML = h;
+}
+
+function _filterAdminUsers(users) {
+    var s = _adminUserFilter.search.toLowerCase();
+    var r = _adminUserFilter.role;
+    var sort = _adminUserFilter.sort;
+
+    var filtered = users.filter(function(u) {
+        if (r && u.role !== r) return false;
+        if (s) {
+            var haystack = ((u.name || '') + ' ' + (u.email || '') + ' ' + (u.github_login || '') + ' ' + (u.id || '')).toLowerCase();
+            return haystack.indexOf(s) !== -1;
+        }
+        return true;
+    });
+
+    // Sort
+    filtered.sort(function(a, b) {
+        if (sort === 'name') return (a.name || a.github_login || '').localeCompare(b.name || b.github_login || '');
+        if (sort === 'role') return (a.role || '').localeCompare(b.role || '');
+        if (sort === 'newest') return (b.created_at || '').localeCompare(a.created_at || '');
+        if (sort === 'oldest') return (a.created_at || '').localeCompare(b.created_at || '');
+        return 0;
+    });
+
+    return filtered;
+}
+
+function adminFilterUsers() {
+    _adminUserFilter.search = (document.getElementById('admin-user-search') || {}).value || '';
+    _adminUserFilter.role = (document.getElementById('admin-role-filter') || {}).value || '';
+    _adminUserFilter.sort = (document.getElementById('admin-sort') || {}).value || 'name';
+    _updateAdminResults();
+}
+
+function adminRefreshUsers() {
+    _adminUsersCache = [];
+    var el = document.getElementById('admin-content');
+    if (el) {
+        el.innerHTML = '<div class="loader"><span class="spin"></span> Refreshing...</div>';
+        API.get('/admin/users').then(function(users) {
+            _adminUsersCache = users || [];
+            _adminUserFilter = { search: '', role: '', sort: 'name' };
+            _renderAdminUsers(el);
+            var badge = document.getElementById('admin-tab-users-count');
+            if (badge) badge.textContent = _adminUsersCache.length;
+        }).catch(function(e) {
+            el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load users: ' + esc(e.message) + '</p></div>';
+        });
+    }
+}
+
+function adminInviteUser() {
+    var form = document.getElementById('admin-invite-form');
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'flex' : 'none';
+        if (form.style.display !== 'none') {
+            var inp = document.getElementById('invite-email');
+            if (inp) inp.focus();
+        }
+    }
+}
+
+function adminDoInvite() {
+    var email = (document.getElementById('invite-email') || {}).value || '';
+    var name = (document.getElementById('invite-name') || {}).value || '';
+    var role = (document.getElementById('invite-role') || {}).value || 'user';
+    if (!email.trim()) { toast('Email is required', false); return; }
+    // Create user via signup-like endpoint or admin endpoint
+    API.post('/auth/signup', { email: email.trim(), name: name.trim() || email.split('@')[0], password: 'changeme123', role: role }).then(function() {
+        toast('User invited: ' + email);
+        document.getElementById('admin-invite-form').style.display = 'none';
+        adminRefreshUsers();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to invite user', false);
+    });
+}
+
+function adminViewUser(userId) {
+    var u = null;
+    for (var i = 0; i < _adminUsersCache.length; i++) {
+        if (_adminUsersCache[i].id === userId) { u = _adminUsersCache[i]; break; }
+    }
+    if (!u) return;
+
+    var roleColors = { superadmin: 'var(--red)', admin: 'var(--accent)', employee: 'var(--green)', support: 'var(--yellow, #f59e0b)', user: 'var(--text-3)' };
+    var roleColor = roleColors[u.role] || 'var(--text-3)';
+    var joined = u.created_at ? new Date(u.created_at).toLocaleString() : '—';
+    var initials = (u.name || u.github_login || '??').slice(0, 2).toUpperCase();
+
+    var m = '<div class="admin-modal-overlay" id="admin-user-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal" style="max-width:520px">';
+    m += '<div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">';
+    m += '<div class="admin-user-avatar" style="width:48px;height:48px;font-size:16px">' + initials + '</div>';
+    m += '<div><div style="font-size:16px;font-weight:600;color:var(--text-0)">' + esc(u.name || u.github_login || 'Unnamed') + '</div>';
+    m += '<div style="font-size:12px;color:var(--text-3)">' + esc(u.email || '—') + '</div></div>';
+    m += '<span class="admin-role-badge" style="--role-color:' + roleColor + ';margin-left:auto">' + esc(u.role || 'user') + '</span>';
+    m += '</div>';
+
+    m += '<div class="admin-detail-grid">';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">User ID</div><div class="admin-detail-item-val">' + esc(u.id || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Provider</div><div class="admin-detail-item-val">' + esc(u.auth_provider || 'local') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">GitHub Login</div><div class="admin-detail-item-val">' + esc(u.github_login || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Joined</div><div class="admin-detail-item-val">' + joined + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Role</div><div class="admin-detail-item-val">' + esc(u.role || 'user') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Email</div><div class="admin-detail-item-val">' + esc(u.email || '—') + '</div></div>';
+    m += '</div>';
+
+    // Quick actions
+    m += '<div style="border-top:1px solid var(--border);padding-top:14px;margin-top:14px">';
+    m += '<div style="font-size:12px;font-weight:600;margin-bottom:8px;color:var(--text-1)">Quick Actions</div>';
+    m += '<div class="row g-8 flex-wrap">';
+    m += '<button class="btn btn-xs btn-p" onclick="adminAssignPlan(\'' + esc(u.id) + '\',\'' + esc(u.name || u.github_login || 'User') + '\')">Assign Plan</button>';
+    m += '<button class="btn btn-xs btn-g" onclick="adminResetPassword(\'' + esc(u.id) + '\')">Reset Password</button>';
+    m += '<button class="btn btn-xs btn-d" onclick="adminDeleteUser(\'' + esc(u.id) + '\',\'' + esc(u.name || u.email || '') + '\')">Delete User</button>';
+    m += '</div></div>';
+
+    m += '<div style="text-align:right;margin-top:16px"><button class="btn btn-xs btn-g" onclick="document.getElementById(\'admin-user-modal\').remove()">Close</button></div>';
+    m += '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function adminChangeRole(userId) {
+    var sel = document.querySelector('.admin-role-select[data-uid="' + userId + '"]');
+    if (!sel) return;
+    var newRole = sel.value;
+    API.put('/admin/users/' + userId + '/role', { role: newRole }).then(function(u) {
+        toast('Role updated to "' + u.role + '"');
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            if (_adminUsersCache[i].id === userId) { _adminUsersCache[i].role = u.role; break; }
+        }
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to update role', false);
+    });
+}
+
+function adminResetPassword(userId) {
+    if (!confirm('Reset password for this user? They will need to set a new one.')) return;
+    API.put('/admin/users/' + userId + '/role', { password_reset: true }).then(function() {
+        toast('Password reset initiated');
+    }).catch(function(e) {
+        toast(e.message || 'Failed to reset password', false);
+    });
+}
+
+function adminDeleteUser(userId, userName) {
+    if (!confirm('Delete user "' + userName + '"? This action cannot be undone.')) return;
+    API.del('/admin/users/' + userId).then(function() {
+        toast('User deleted');
+        _adminUsersCache = _adminUsersCache.filter(function(u) { return u.id !== userId; });
+        var el = document.getElementById('admin-content');
+        if (el) _renderAdminUsers(el);
+        var badge = document.getElementById('admin-tab-users-count');
+        if (badge) badge.textContent = _adminUsersCache.length;
+        var modal = document.getElementById('admin-user-modal');
+        if (modal) modal.remove();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to delete user', false);
+    });
+}
+
+function adminAssignPlan(userId, userName) {
+    API.get('/admin/plans').then(function(plans) {
+        if (!plans || !plans.length) { toast('No plans available. Create one first.', false); return; }
+        var opts = plans.map(function(p) { return '<option value="' + esc(p.id) + '">' + esc(p.name) + (p.description ? ' — ' + esc(p.description) : '') + '</option>'; }).join('');
+        var modal = '<div class="admin-modal-overlay" id="admin-plan-modal" onclick="if(event.target===this)this.remove()">';
+        modal += '<div class="admin-modal">';
+        modal += '<div class="admin-modal-hd">Assign Plan to ' + esc(userName) + '</div>';
+        modal += '<div class="field"><label>Select Plan</label><select class="inp" id="assign-plan-id">' + opts + '</select></div>';
+        modal += '<div class="field" style="margin-top:10px"><label>Expires (optional)</label><input class="inp" id="assign-plan-expires" type="date"></div>';
+        modal += '<div class="row g-8" style="margin-top:14px"><button class="btn btn-s btn-p" onclick="adminDoAssignPlan(\'' + esc(userId) + '\')">Assign</button>';
+        modal += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'admin-plan-modal\').remove()">Cancel</button></div>';
+        modal += '</div></div>';
+        document.body.insertAdjacentHTML('beforeend', modal);
+    }).catch(function(e) { toast(e.message || 'Failed to load plans', false); });
+}
+
+function adminDoAssignPlan(userId) {
+    var planId = (document.getElementById('assign-plan-id') || {}).value;
+    var expires = (document.getElementById('assign-plan-expires') || {}).value;
+    if (!planId) { toast('Select a plan', false); return; }
+    var body = { plan_id: planId };
+    if (expires) body.expires_at = expires + 'T23:59:59Z';
+    API.put('/admin/users/' + userId + '/subscription', body).then(function(res) {
+        toast('Plan "' + (res.plan || 'assigned') + '" assigned');
+        var modal = document.getElementById('admin-plan-modal');
+        if (modal) modal.remove();
+    }).catch(function(e) { toast(e.message || 'Failed to assign plan', false); });
+}
+
+function _adminPlans(el) {
+    var renderPlans = function(plans) {
+        _adminPlansCache = plans || [];
+        var h = '';
+
+        // Create plan form
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create New Plan</div>';
+        h += '<div class="admin-plan-form">';
+        h += '<div class="row g-8 flex-wrap">';
+        h += '<input class="inp" id="plan-name" placeholder="Plan name (e.g. Pro, Enterprise)" style="flex:1;min-width:140px">';
+        h += '<input class="inp" id="plan-desc" placeholder="Short description" style="flex:2;min-width:180px">';
+        h += '</div>';
+        h += '<div class="row g-8 flex-wrap" style="margin-top:8px">';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Max Repos</label><input class="inp" id="plan-repos" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Max Snapshots</label><input class="inp" id="plan-snaps" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Tokens/Day</label><input class="inp" id="plan-tokens" placeholder="∞" type="number" min="0"></div>';
+        h += '<div class="field" style="flex:1;min-width:100px"><label style="font-size:10px">Users</label><input class="inp" id="plan-users" placeholder="∞" type="number" min="0"></div>';
+        h += '</div>';
+        h += '<button class="btn btn-s btn-p mt" onclick="adminCreatePlan()">Create Plan</button>';
+        h += '</div></div>';
+
+        // Plans grid
+        h += '<div class="card"><div class="card-hd">Active Plans <span style="font-weight:400;color:var(--text-3);font-size:12px">(' + plans.length + ')</span></div>';
+        if (!plans.length) {
+            h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 3h-8l-2 4h12l-2-4z"/></svg><p>No plans configured yet. Create your first plan above.</p></div></div>';
+            el.innerHTML = h;
+            return;
+        }
+
+        h += '<div class="admin-plans-grid">';
+        for (var i = 0; i < plans.length; i++) {
+            var p = plans[i];
+            var limits = {};
+            try { limits = typeof p.limits === 'string' ? JSON.parse(p.limits) : (p.limits || {}); } catch(e) {}
+            h += '<div class="admin-plan-card' + (p.is_active !== false ? '' : ' inactive') + '">';
+            h += '<div class="admin-plan-card-hd">';
+            h += '<span class="admin-plan-name">' + esc(p.name) + '</span>';
+            h += '<span class="admin-plan-status">' + (p.is_active !== false ? '<span style="color:var(--green)">● Active</span>' : '<span style="color:var(--text-3)">○ Inactive</span>') + '</span>';
+            h += '</div>';
+            if (p.description) h += '<p class="admin-plan-desc">' + esc(p.description) + '</p>';
+            h += '<div class="admin-plan-limits">';
+            var limitKeys = Object.keys(limits);
+            if (limitKeys.length) {
+                for (var li = 0; li < limitKeys.length; li++) {
+                    var lk = limitKeys[li];
+                    var lv = limits[lk];
+                    var label = lk.replace(/_/g, ' ').replace(/max /i, '');
+                    h += '<div class="admin-plan-limit"><span class="admin-plan-limit-val">' + lv + '</span><span class="admin-plan-limit-label">' + esc(label) + '</span></div>';
+                }
+            } else {
+                h += '<div class="admin-plan-limit"><span class="admin-plan-limit-val">∞</span><span class="admin-plan-limit-label">Unlimited</span></div>';
+            }
+            h += '</div></div>';
+        }
+        h += '</div></div>';
+
+        el.innerHTML = h;
+    };
+
+    if (_adminPlansCache.length) {
+        renderPlans(_adminPlansCache);
+    } else {
+        API.get('/admin/plans').then(renderPlans).catch(function(e) {
+            el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load plans: ' + esc(e.message) + '</p></div>';
+        });
+    }
+}
+
+function adminCreatePlan() {
+    var name = (document.getElementById('plan-name') || {}).value || '';
+    var desc = (document.getElementById('plan-desc') || {}).value || '';
+    var repos = parseInt((document.getElementById('plan-repos') || {}).value) || 0;
+    var snaps = parseInt((document.getElementById('plan-snaps') || {}).value) || 0;
+    var tokens = parseInt((document.getElementById('plan-tokens') || {}).value) || 0;
+    var usersLimit = parseInt((document.getElementById('plan-users') || {}).value) || 0;
+
+    if (!name.trim()) { toast('Plan name is required', false); return; }
+
+    var limits = {};
+    if (repos > 0) limits.max_repos = repos;
+    if (snaps > 0) limits.max_snapshots = snaps;
+    if (tokens > 0) limits.max_tokens_per_day = tokens;
+    if (usersLimit > 0) limits.max_users = usersLimit;
+
+    API.post('/admin/plans', { name: name.trim(), description: desc, limits: limits }).then(function() {
+        toast('Plan "' + name + '" created');
+        _adminPlansCache = [];
+        adminTab('plans');
+        var badge = document.getElementById('admin-tab-plans-count');
+        API.get('/admin/plans').then(function(plans) {
+            _adminPlansCache = plans || [];
+            if (badge) badge.textContent = _adminPlansCache.length;
+        });
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create plan', false);
+    });
+}
+
+var _auditState = { events: [], total: 0, offset: 0, limit: 50, filter: { action: '', user: '', success: '', method: '' } };
+
+function _adminAudit(el) {
+    // Load stats + events in parallel
+    var statsPromise = API.get('/admin/audit-log/stats').catch(function() { return null; });
+    var eventsPromise = _auditFetchEvents();
+
+    Promise.all([statsPromise, eventsPromise]).then(function(results) {
+        var stats = results[0];
+        var eventsData = results[1];
+        _auditState.events = (eventsData && eventsData.events) || [];
+        _auditState.total = (eventsData && eventsData.total) || 0;
+        _auditState.offset = 0;
+
+        var h = '';
+
+        // Stats overview
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Audit Log Overview</div>';
+        if (stats) {
+            h += '<div class="admin-sys-grid">';
+            h += _adminSysTile(stats.total_events || 0, 'Total Events', 'var(--accent)');
+            h += _adminSysTile(stats.unique_users || 0, 'Unique Users', 'var(--text-0)');
+            h += _adminSysTile(stats.recent_failures || 0, 'Failures', stats.recent_failures > 0 ? 'var(--red)' : 'var(--green)');
+            // Top actions
+            var topActions = stats.actions ? Object.keys(stats.actions) : [];
+            h += _adminSysTile(topActions.length, 'Action Types', 'var(--text-1)');
+            h += '</div>';
+            if (topActions.length) {
+                h += '<div style="margin-top:12px"><span style="font-size:11px;font-weight:600;color:var(--text-2)">Top Actions:</span> ';
+                var sorted = topActions.sort(function(a,b) { return (stats.actions[b]||0) - (stats.actions[a]||0); });
+                for (var ai = 0; ai < Math.min(sorted.length, 8); ai++) {
+                    h += '<span class="admin-stat-pill" style="font-size:10px;cursor:pointer" onclick="_auditSetFilter(\'action\',\'' + esc(sorted[ai]) + '\')"><span class="admin-stat-num">' + stats.actions[sorted[ai]] + '</span> ' + esc(sorted[ai]) + '</span> ';
+                }
+                h += '</div>';
+            }
+        } else {
+            h += '<p style="font-size:12px;color:var(--text-3)">Audit stats unavailable.</p>';
+        }
+        h += '</div>';
+
+        // Filters toolbar
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg> Filters & Search</div>';
+        h += '<div class="admin-toolbar" style="margin-bottom:0">';
+        h += '<div class="admin-search-box" style="min-width:160px"><svg width="14" height="14" fill="none" stroke="var(--text-3)" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>';
+        h += '<input class="admin-search-inp" id="audit-filter-user" placeholder="User ID or email..." value="' + esc(_auditState.filter.user) + '" onchange="_auditApplyFilters()"></div>';
+        h += '<input class="admin-search-inp" id="audit-filter-action" placeholder="Action..." value="' + esc(_auditState.filter.action) + '" style="border:1px solid var(--border);border-radius:8px;padding:7px 10px;font-size:12px;min-width:120px" onchange="_auditApplyFilters()">';
+        h += '<select class="admin-filter-select" id="audit-filter-success" onchange="_auditApplyFilters()">';
+        h += '<option value="">All status</option>';
+        h += '<option value="true"' + (_auditState.filter.success === 'true' ? ' selected' : '') + '>✓ Success</option>';
+        h += '<option value="false"' + (_auditState.filter.success === 'false' ? ' selected' : '') + '>✗ Failed</option>';
+        h += '</select>';
+        h += '<select class="admin-filter-select" id="audit-filter-method" onchange="_auditApplyFilters()">';
+        h += '<option value="">All methods</option>';
+        h += '<option value="GET"' + (_auditState.filter.method === 'GET' ? ' selected' : '') + '>GET</option>';
+        h += '<option value="POST"' + (_auditState.filter.method === 'POST' ? ' selected' : '') + '>POST</option>';
+        h += '<option value="PUT"' + (_auditState.filter.method === 'PUT' ? ' selected' : '') + '>PUT</option>';
+        h += '<option value="DELETE"' + (_auditState.filter.method === 'DELETE' ? ' selected' : '') + '>DELETE</option>';
+        h += '</select>';
+        h += '<button class="btn btn-xs btn-g" onclick="_auditClearFilters()" title="Clear all filters">Clear</button>';
+        h += '<button class="btn btn-xs btn-g" onclick="_auditExportCsv()" title="Export audit log as CSV"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> CSV</button>';
+        h += '</div></div>';
+
+        // Events table
+        h += '<div id="audit-events-container"></div>';
+
+        // Purge section
+        h += '<div class="card" style="margin-top:12px"><div class="card-hd" style="color:var(--red)"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg> Data Retention</div>';
+        h += '<p style="font-size:12px;color:var(--text-2);margin-bottom:10px">Purge audit events older than a specified number of days. This action is irreversible.</p>';
+        h += '<div class="row g-8" style="align-items:center">';
+        h += '<input class="inp" id="audit-purge-days" type="number" value="90" min="1" max="3650" style="width:80px;font-size:12px">';
+        h += '<span style="font-size:12px;color:var(--text-2)">days</span>';
+        h += '<button class="btn btn-xs btn-d" onclick="_auditPurge()">Purge Old Events</button>';
+        h += '</div></div>';
+
+        el.innerHTML = h;
+        _auditRenderEvents();
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load audit log: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _auditFetchEvents() {
+    var params = '?limit=' + _auditState.limit + '&offset=' + _auditState.offset;
+    if (_auditState.filter.action) params += '&action=' + encodeURIComponent(_auditState.filter.action);
+    if (_auditState.filter.user) params += '&user_id=' + encodeURIComponent(_auditState.filter.user);
+    if (_auditState.filter.success) params += '&success=' + _auditState.filter.success;
+    if (_auditState.filter.method) params += '&method=' + encodeURIComponent(_auditState.filter.method);
+    return API.get('/admin/audit-log' + params);
+}
+
+function _auditRenderEvents() {
+    var container = document.getElementById('audit-events-container');
+    if (!container) return;
+
+    var events = _auditState.events;
+    var total = _auditState.total;
+    var h = '';
+
+    h += '<div class="card">';
+    h += '<div class="card-hd" style="display:flex;justify-content:space-between;align-items:center"><span><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M12 20V10M18 20V4M6 20v-4"/></svg> Events</span>';
+    h += '<span style="font-size:11px;color:var(--text-3)">' + total + ' total &middot; showing ' + (_auditState.offset + 1) + '–' + Math.min(_auditState.offset + events.length, total) + '</span></div>';
+
+    if (!events.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>';
+        h += '<p>No audit events found.</p>';
+        if (_auditState.filter.action || _auditState.filter.user || _auditState.filter.success || _auditState.filter.method) {
+            h += '<p style="font-size:11px;margin-top:6px"><a href="#" onclick="_auditClearFilters();return false" style="color:var(--accent)">Clear filters</a></p>';
+        }
+        h += '</div></div>';
+        container.innerHTML = h;
+        return;
+    }
+
+    h += '<div style="overflow-x:auto"><table class="tbl admin-tbl"><thead><tr>';
+    h += '<th>Time</th><th>User</th><th>Action</th><th>Method</th><th>Path</th><th>Status</th><th>Success</th>';
+    h += '</tr></thead><tbody>';
+
+    for (var i = 0; i < events.length; i++) {
+        var e = events[i];
+        var time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '—';
+        var statusColor = e.success ? 'var(--green)' : 'var(--red)';
+        var methodColor = { GET: 'var(--green)', POST: 'var(--accent)', PUT: 'var(--yellow,#f59e0b)', DELETE: 'var(--red)' }[e.method] || 'var(--text-2)';
+
+        h += '<tr style="cursor:pointer" onclick="_auditShowDetail(' + i + ')">';
+        h += '<td style="font-size:11px;white-space:nowrap;color:var(--text-2)">' + time + '</td>';
+        h += '<td style="font-size:11px"><code>' + esc((e.user_email || e.user_id || '—').slice(0, 24)) + '</code></td>';
+        h += '<td style="font-size:12px;font-weight:500">' + esc(e.action || '—') + '</td>';
+        h += '<td><span style="font-size:10px;font-weight:600;color:' + methodColor + '">' + esc(e.method || '—') + '</span></td>';
+        h += '<td style="font-size:11px;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(e.path || '') + '">' + esc(e.path || '—') + '</td>';
+        h += '<td style="font-size:11px">' + (e.status_code || '—') + '</td>';
+        h += '<td><span style="color:' + statusColor + ';font-size:11px">' + (e.success ? '✓' : '✗') + '</span></td>';
+        h += '</tr>';
+    }
+    h += '</tbody></table></div>';
+
+    // Pagination
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
+    h += '<button class="btn btn-xs btn-g"' + (_auditState.offset <= 0 ? ' disabled' : '') + ' onclick="_auditPage(-1)">← Previous</button>';
+    h += '<span style="font-size:11px;color:var(--text-3)">Page ' + (Math.floor(_auditState.offset / _auditState.limit) + 1) + ' of ' + Math.max(1, Math.ceil(total / _auditState.limit)) + '</span>';
+    h += '<button class="btn btn-xs btn-g"' + ((_auditState.offset + _auditState.limit >= total) ? ' disabled' : '') + ' onclick="_auditPage(1)">Next →</button>';
+    h += '</div>';
+
+    h += '</div>';
+    container.innerHTML = h;
+}
+
+function _auditPage(dir) {
+    _auditState.offset = Math.max(0, _auditState.offset + (dir * _auditState.limit));
+    _auditFetchEvents().then(function(data) {
+        _auditState.events = (data && data.events) || [];
+        _auditState.total = (data && data.total) || 0;
+        _auditRenderEvents();
+    }).catch(function(e) {
+        toast('Failed to load events: ' + e.message, false);
+    });
+}
+
+function _auditApplyFilters() {
+    _auditState.filter.user = (document.getElementById('audit-filter-user') || {}).value || '';
+    _auditState.filter.action = (document.getElementById('audit-filter-action') || {}).value || '';
+    _auditState.filter.success = (document.getElementById('audit-filter-success') || {}).value || '';
+    _auditState.filter.method = (document.getElementById('audit-filter-method') || {}).value || '';
+    _auditState.offset = 0;
+    _auditFetchEvents().then(function(data) {
+        _auditState.events = (data && data.events) || [];
+        _auditState.total = (data && data.total) || 0;
+        _auditRenderEvents();
+    }).catch(function(e) {
+        toast('Failed to filter events: ' + e.message, false);
+    });
+}
+
+function _auditClearFilters() {
+    _auditState.filter = { action: '', user: '', success: '', method: '' };
+    _auditState.offset = 0;
+    var el = document.getElementById('admin-content');
+    if (el) _adminAudit(el);
+}
+
+function _auditSetFilter(key, value) {
+    _auditState.filter[key] = value;
+    _auditState.offset = 0;
+    var el = document.getElementById('admin-content');
+    if (el) _adminAudit(el);
+}
+
+function _auditShowDetail(idx) {
+    var e = _auditState.events[idx];
+    if (!e) return;
+    var time = e.timestamp ? new Date(e.timestamp).toLocaleString() : '—';
+    var statusColor = e.success ? 'var(--green)' : 'var(--red)';
+
+    var m = '<div class="admin-modal-overlay" id="audit-detail-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal" style="max-width:560px">';
+    m += '<div class="admin-modal-hd">Audit Event #' + (e.id || idx) + '</div>';
+    m += '<div class="admin-detail-grid">';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Timestamp</div><div class="admin-detail-item-val">' + time + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">User</div><div class="admin-detail-item-val">' + esc(e.user_email || e.user_id || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Action</div><div class="admin-detail-item-val">' + esc(e.action || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Method</div><div class="admin-detail-item-val">' + esc(e.method || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Path</div><div class="admin-detail-item-val" style="word-break:break-all">' + esc(e.path || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Status Code</div><div class="admin-detail-item-val">' + (e.status_code || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Success</div><div class="admin-detail-item-val" style="color:' + statusColor + '">' + (e.success ? '✓ Yes' : '✗ No') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">IP Address</div><div class="admin-detail-item-val">' + esc(e.ip_address || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Resource Type</div><div class="admin-detail-item-val">' + esc(e.resource_type || '—') + '</div></div>';
+    m += '<div class="admin-detail-item"><div class="admin-detail-item-label">Resource ID</div><div class="admin-detail-item-val">' + esc(e.resource_id || '—') + '</div></div>';
+    m += '</div>';
+
+    // Metadata
+    if (e.metadata && Object.keys(e.metadata).length) {
+        m += '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">';
+        m += '<div style="font-size:11px;font-weight:600;color:var(--text-2);margin-bottom:6px">Metadata</div>';
+        m += '<pre style="font-size:11px;background:var(--bg-1);padding:10px;border-radius:6px;overflow-x:auto;max-height:200px">' + esc(JSON.stringify(e.metadata, null, 2)) + '</pre>';
+        m += '</div>';
+    }
+
+    m += '<div style="text-align:right;margin-top:14px"><button class="btn btn-xs btn-g" onclick="document.getElementById(\'audit-detail-modal\').remove()">Close</button></div>';
+    m += '</div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function _auditExportCsv() {
+    var params = '?limit=10000';
+    if (_auditState.filter.action) params += '&action=' + encodeURIComponent(_auditState.filter.action);
+    if (_auditState.filter.user) params += '&user_id=' + encodeURIComponent(_auditState.filter.user);
+    API.download('/admin/audit-log/export' + params, 'audit-log.csv').then(function() {
+        toast('Audit log exported');
+    }).catch(function(e) {
+        toast('Export failed: ' + (e.message || 'Unknown error'), false);
+    });
+}
+
+function _auditPurge() {
+    var days = parseInt((document.getElementById('audit-purge-days') || {}).value) || 90;
+    if (!confirm('Purge all audit events older than ' + days + ' days? This cannot be undone.')) return;
+    API.del('/admin/audit-log/purge?older_than_days=' + days).then(function(res) {
+        toast('Purged ' + (res.purged || 0) + ' events older than ' + days + ' days');
+        var el = document.getElementById('admin-content');
+        if (el) _adminAudit(el);
+    }).catch(function(e) {
+        toast('Purge failed: ' + (e.message || 'Unknown error'), false);
+    });
+}
+
+function _adminSystem(el) {
+    API.get('/admin/system').then(function(sys) {
+        var h = '';
+
+        // System health overview
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> System Health</div>';
+        h += '<div class="admin-sys-grid">';
+        h += _adminSysTile(sys.version || '—', 'Version', 'var(--accent)');
+        h += _adminSysTile(sys.edition || '—', 'Edition', 'var(--text-1)');
+        h += _adminSysTile(sys.auth_enabled ? '✓ Enabled' : '✗ Disabled', 'Auth', sys.auth_enabled ? 'var(--green)' : 'var(--red)');
+        h += _adminSysTile((sys.parsers || 0) + ' langs', 'Parsers', 'var(--accent)');
+        h += _adminSysTile(sys.users || 0, 'Users', 'var(--text-0)');
+        h += _adminSysTile(sys.repos || 0, 'Repositories', 'var(--text-0)');
+        h += '</div></div>';
+
+        // Quick actions
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> Quick Actions</div>';
+        h += '<div class="row g-8 flex-wrap">';
+        h += '<button class="btn btn-s btn-g" onclick="navigate(\'settings\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06"/></svg> Settings</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'users\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Manage Users</button>';
+        h += '<button class="btn btn-s btn-g" onclick="API.get(\'/health\').then(function(d){toast(\'Backend: \'+d.status)}).catch(function(){toast(\'Backend unreachable\',false)})"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg> Ping Backend</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminExportUsers()"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Export Users</button>';
+        h += '<button class="btn btn-s btn-g" onclick="adminTab(\'audit\')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Audit Log</button>';
+        h += '</div></div>';
+
+        // Configuration info
+        h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> Configuration</div>';
+        h += '<div class="admin-detail-grid">';
+        if (sys.demo_mode !== undefined) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Demo Mode</div><div class="admin-detail-item-val">' + (sys.demo_mode ? 'Yes' : 'No') + '</div></div>';
+        if (sys.rate_limit_enabled !== undefined) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Rate Limiting</div><div class="admin-detail-item-val">' + (sys.rate_limit_enabled ? 'Enabled' : 'Disabled') + '</div></div>';
+        if (sys.superadmin_email) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Superadmin Email</div><div class="admin-detail-item-val">' + esc(sys.superadmin_email) + '</div></div>';
+        if (sys.python_version) h += '<div class="admin-detail-item"><div class="admin-detail-item-label">Python</div><div class="admin-detail-item-val">' + esc(sys.python_version) + '</div></div>';
+        h += '</div></div>';
+
+        el.innerHTML = h;
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load system info: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _adminSysTile(value, label, color) {
+    return '<div class="admin-sys-tile">' +
+        '<div class="admin-sys-tile-val" style="color:' + (color || 'var(--text-0)') + '">' + esc(String(value)) + '</div>' +
+        '<div class="admin-sys-tile-label">' + label + '</div></div>';
+}
+
+function adminExportUsers() {
+    if (!_adminUsersCache.length) { toast('No users to export', false); return; }
+    var csv = 'Name,Email,Role,Login,Provider,Joined\n';
+    for (var i = 0; i < _adminUsersCache.length; i++) {
+        var u = _adminUsersCache[i];
+        csv += '"' + (u.name || '').replace(/"/g, '""') + '","' + (u.email || '') + '","' + (u.role || '') + '","' + (u.github_login || '') + '","' + (u.auth_provider || 'local') + '","' + (u.created_at || '') + '"\n';
+    }
+    var blob = new Blob([csv], { type: 'text/csv' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'eidos_users_' + new Date().toISOString().slice(0, 10) + '.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast('Users exported as CSV');
+}
+
+
+// =================== TEAM MANAGEMENT ===================
+
+var _teamsCache = [];
+var _teamSelectedId = null;
+
+function _adminTeams(el) {
+    API.get('/teams').then(function(teams) {
+        _teamsCache = teams || [];
+        _teamSelectedId = null;
+        _renderTeams(el);
+    }).catch(function(e) {
+        el.innerHTML = '<div class="card"><p style="color:var(--red)">Failed to load teams: ' + esc(e.message) + '</p></div>';
+    });
+}
+
+function _renderTeams(el) {
+    var teams = _teamsCache;
+    var h = '';
+
+    // Create team form
+    h += '<div class="card"><div class="card-hd"><svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg> Create New Team</div>';
+    h += '<div class="admin-plan-form">';
+    h += '<div class="row g-8 flex-wrap">';
+    h += '<input class="inp" id="team-name" placeholder="Team name (e.g. Backend, Platform)" style="flex:1;min-width:160px">';
+    h += '<input class="inp" id="team-desc" placeholder="Description (optional)" style="flex:2;min-width:200px">';
+    h += '<button class="btn btn-s btn-p" onclick="teamCreate()">Create Team</button>';
+    h += '</div></div></div>';
+
+    // Teams list + detail split
+    h += '<div class="admin-teams-layout" id="teams-layout">';
+
+    // Left: teams list
+    h += '<div class="admin-teams-list">';
+    if (!teams.length) {
+        h += '<div class="admin-empty"><svg width="32" height="32" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p>No teams yet. Create your first team above.</p></div>';
+    } else {
+        for (var i = 0; i < teams.length; i++) {
+            var t = teams[i];
+            var isActive = _teamSelectedId === t.id;
+            h += '<div class="admin-team-item' + (isActive ? ' active' : '') + '" onclick="teamSelect(\'' + esc(t.id) + '\')">';
+            h += '<div class="admin-team-item-hd">';
+            h += '<div class="admin-team-item-name">' + esc(t.name) + '</div>';
+            h += '<span class="admin-stat-pill" style="font-size:10px"><span class="admin-stat-num">' + (t.member_count || 0) + '</span> members</span>';
+            h += '</div>';
+            if (t.description) h += '<div class="admin-team-item-desc">' + esc(t.description) + '</div>';
+            h += '</div>';
+        }
+    }
+    h += '</div>';
+
+    // Right: team detail
+    h += '<div class="admin-team-detail" id="team-detail">';
+    if (_teamSelectedId) {
+        h += '<div class="loader"><span class="spin"></span> Loading...</div>';
+    } else {
+        h += '<div class="admin-empty" style="padding:30px"><svg width="28" height="28" fill="none" stroke="var(--text-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg><p>Select a team to view details</p></div>';
+    }
+    h += '</div>';
+
+    h += '</div>';
+    el.innerHTML = h;
+
+    if (_teamSelectedId) _loadTeamDetail(_teamSelectedId);
+}
+
+function teamCreate() {
+    var name = (document.getElementById('team-name') || {}).value || '';
+    var desc = (document.getElementById('team-desc') || {}).value || '';
+    if (!name.trim()) { toast('Team name is required', false); return; }
+
+    API.post('/teams', { name: name.trim(), description: desc }).then(function(team) {
+        toast('Team "' + team.name + '" created');
+        _teamsCache.unshift(team);
+        _teamSelectedId = team.id;
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = _teamsCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create team', false);
+    });
+}
+
+function teamSelect(teamId) {
+    _teamSelectedId = teamId;
+    // Highlight active
+    document.querySelectorAll('.admin-team-item').forEach(function(el) {
+        el.classList.remove('active');
+    });
+    var items = document.querySelectorAll('.admin-team-item');
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId && items[i]) {
+            items[i].classList.add('active');
+            break;
+        }
+    }
+    _loadTeamDetail(teamId);
+}
+
+function _loadTeamDetail(teamId) {
+    var detail = document.getElementById('team-detail');
+    if (!detail) return;
+    detail.innerHTML = '<div class="loader"><span class="spin"></span> Loading...</div>';
+
+    var teamData = null;
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId) { teamData = _teamsCache[i]; break; }
+    }
+
+    // Load members and repos in parallel
+    var membersP = API.get('/teams/' + teamId + '/members').catch(function() { return []; });
+    var reposP = API.get('/teams/' + teamId + '/repos').catch(function() { return []; });
+
+    Promise.all([membersP, reposP]).then(function(results) {
+        var members = results[0] || [];
+        var repos = results[1] || [];
+        _renderTeamDetail(detail, teamData, members, repos);
+    });
+}
+
+function _renderTeamDetail(container, team, members, repos) {
+    if (!team) { container.innerHTML = ''; return; }
+
+    var h = '';
+    // Team header
+    h += '<div class="admin-team-detail-hd">';
+    h += '<div>';
+    h += '<h3 style="margin:0;font-size:16px;color:var(--text-0)">' + esc(team.name) + '</h3>';
+    if (team.description) h += '<p style="font-size:12px;color:var(--text-2);margin:4px 0 0">' + esc(team.description) + '</p>';
+    h += '</div>';
+    h += '<div class="row g-6">';
+    h += '<button class="btn btn-xs btn-g" onclick="teamEdit(\'' + esc(team.id) + '\')" title="Edit team">Edit</button>';
+    h += '<button class="btn btn-xs btn-d" onclick="teamDelete(\'' + esc(team.id) + '\',\'' + esc(team.name) + '\')" title="Delete team">Delete</button>';
+    h += '</div></div>';
+
+    // Members section
+    h += '<div class="admin-team-section">';
+    h += '<div class="admin-team-section-hd"><span><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg> Members (' + members.length + ')</span>';
+    h += '<button class="btn btn-xs btn-p" onclick="teamAddMember(\'' + esc(team.id) + '\')">+ Add</button></div>';
+
+    if (!members.length) {
+        h += '<p style="font-size:12px;color:var(--text-3);padding:8px 0">No members yet. Add users to this team.</p>';
+    } else {
+        h += '<div class="admin-team-members">';
+        for (var mi = 0; mi < members.length; mi++) {
+            var m = members[mi];
+            var mName = _teamGetUserName(m.user_id);
+            var roleColor = m.role === 'admin' ? 'var(--accent)' : 'var(--text-3)';
+            h += '<div class="admin-team-member-row">';
+            h += '<div class="admin-team-member-info">';
+            h += '<span class="admin-team-member-name">' + esc(mName) + '</span>';
+            h += '<span class="admin-role-badge" style="--role-color:' + roleColor + ';font-size:9px">' + esc(m.role) + '</span>';
+            h += '</div>';
+            h += '<div class="admin-team-member-actions">';
+            h += '<select class="admin-role-select" style="font-size:10px" data-team="' + esc(team.id) + '" data-member="' + esc(m.user_id) + '" onchange="teamChangeMemberRole(this)">';
+            h += '<option value="member"' + (m.role === 'member' ? ' selected' : '') + '>member</option>';
+            h += '<option value="admin"' + (m.role === 'admin' ? ' selected' : '') + '>admin</option>';
+            h += '</select>';
+            h += '<button class="btn btn-xs btn-d" onclick="teamRemoveMember(\'' + esc(team.id) + '\',\'' + esc(m.user_id) + '\')" title="Remove">&times;</button>';
+            h += '</div></div>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
+    // Repos section
+    h += '<div class="admin-team-section">';
+    h += '<div class="admin-team-section-hd"><span><svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 19a2 2 0 01-2 2H4a2 2 0 01-2-2V5a2 2 0 012-2h5l2 3h9a2 2 0 012 2z"/></svg> Repositories (' + repos.length + ')</span>';
+    h += '<button class="btn btn-xs btn-p" onclick="teamGrantRepo(\'' + esc(team.id) + '\')">+ Grant Access</button></div>';
+
+    if (!repos.length) {
+        h += '<p style="font-size:12px;color:var(--text-3);padding:8px 0">No repositories linked. Grant access to repos for this team.</p>';
+    } else {
+        h += '<div class="admin-team-repos">';
+        for (var ri = 0; ri < repos.length; ri++) {
+            var ra = repos[ri];
+            var levelColor = { admin: 'var(--red)', maintainer: 'var(--accent)', contributor: 'var(--green)', viewer: 'var(--text-3)' }[ra.level] || 'var(--text-3)';
+            h += '<div class="admin-team-repo-row">';
+            h += '<code style="font-size:11px">' + esc((ra.repo_id || '').slice(0, 12)) + '</code>';
+            h += '<span class="admin-role-badge" style="--role-color:' + levelColor + ';font-size:9px">' + esc(ra.level) + '</span>';
+            h += '</div>';
+        }
+        h += '</div>';
+    }
+    h += '</div>';
+
+    // Meta
+    h += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);font-size:11px;color:var(--text-3)">';
+    h += 'Created: ' + (team.created_at ? new Date(team.created_at).toLocaleDateString() : '—');
+    h += ' &middot; ID: <code>' + esc(team.id) + '</code>';
+    h += '</div>';
+
+    container.innerHTML = h;
+}
+
+function _teamGetUserName(userId) {
+    // Try to find in users cache
+    if (window._adminUsersCache) {
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            if (_adminUsersCache[i].id === userId) {
+                return _adminUsersCache[i].name || _adminUsersCache[i].github_login || userId.slice(0, 10);
+            }
+        }
+    }
+    return userId.slice(0, 12);
+}
+
+function teamEdit(teamId) {
+    var team = null;
+    for (var i = 0; i < _teamsCache.length; i++) {
+        if (_teamsCache[i].id === teamId) { team = _teamsCache[i]; break; }
+    }
+    if (!team) return;
+
+    var m = '<div class="admin-modal-overlay" id="team-edit-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Edit Team</div>';
+    m += '<div class="field"><label>Name</label><input class="inp" id="team-edit-name" value="' + esc(team.name) + '"></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Description</label><input class="inp" id="team-edit-desc" value="' + esc(team.description || '') + '"></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoEdit(\'' + esc(teamId) + '\')">Save</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-edit-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function teamDoEdit(teamId) {
+    var name = (document.getElementById('team-edit-name') || {}).value || '';
+    var desc = (document.getElementById('team-edit-desc') || {}).value || '';
+    if (!name.trim()) { toast('Team name required', false); return; }
+
+    API.req('/teams/' + teamId, 'PATCH', { name: name.trim(), description: desc }).then(function(updated) {
+        toast('Team updated');
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) {
+                _teamsCache[i].name = updated.name;
+                _teamsCache[i].description = updated.description;
+                break;
+            }
+        }
+        var modal = document.getElementById('team-edit-modal');
+        if (modal) modal.remove();
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to update team', false);
+    });
+}
+
+function teamDelete(teamId, teamName) {
+    if (!confirm('Delete team "' + teamName + '"? This will remove all members and repo access.')) return;
+    API.del('/teams/' + teamId).then(function() {
+        toast('Team "' + teamName + '" deleted');
+        _teamsCache = _teamsCache.filter(function(t) { return t.id !== teamId; });
+        _teamSelectedId = null;
+        var el = document.getElementById('admin-content');
+        if (el) _renderTeams(el);
+        var badge = document.getElementById('admin-tab-teams-count');
+        if (badge) badge.textContent = _teamsCache.length;
+    }).catch(function(e) {
+        toast(e.message || 'Failed to delete team', false);
+    });
+}
+
+function teamAddMember(teamId) {
+    var m = '<div class="admin-modal-overlay" id="team-member-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Add Member to Team</div>';
+    m += '<div class="field"><label>User</label><select class="inp" id="team-add-user-id">';
+    if (window._adminUsersCache && _adminUsersCache.length) {
+        for (var i = 0; i < _adminUsersCache.length; i++) {
+            var u = _adminUsersCache[i];
+            m += '<option value="' + esc(u.id) + '">' + esc(u.name || u.github_login || u.email) + ' (' + esc(u.email || u.id.slice(0, 8)) + ')</option>';
+        }
+    } else {
+        m += '<option value="">Loading users...</option>';
+    }
+    m += '</select></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Role</label><select class="inp" id="team-add-role">';
+    m += '<option value="member">member</option>';
+    m += '<option value="admin">admin</option>';
+    m += '</select></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoAddMember(\'' + esc(teamId) + '\')">Add Member</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-member-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+
+    // Load users if not cached
+    if (!window._adminUsersCache || !_adminUsersCache.length) {
+        API.get('/admin/users').then(function(users) {
+            _adminUsersCache = users || [];
+            var sel = document.getElementById('team-add-user-id');
+            if (sel) {
+                var opts = '';
+                for (var i = 0; i < _adminUsersCache.length; i++) {
+                    var u = _adminUsersCache[i];
+                    opts += '<option value="' + esc(u.id) + '">' + esc(u.name || u.github_login || u.email) + ' (' + esc(u.email || u.id.slice(0, 8)) + ')</option>';
+                }
+                sel.innerHTML = opts;
+            }
+        });
+    }
+}
+
+function teamDoAddMember(teamId) {
+    var userId = (document.getElementById('team-add-user-id') || {}).value;
+    var role = (document.getElementById('team-add-role') || {}).value || 'member';
+    if (!userId) { toast('Select a user', false); return; }
+
+    API.post('/teams/' + teamId + '/members', { user_id: userId, role: role }).then(function() {
+        toast('Member added');
+        var modal = document.getElementById('team-member-modal');
+        if (modal) modal.remove();
+        _loadTeamDetail(teamId);
+        // Update member count in cache
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) { _teamsCache[i].member_count = (_teamsCache[i].member_count || 0) + 1; break; }
+        }
+    }).catch(function(e) {
+        toast(e.message || 'Failed to add member', false);
+    });
+}
+
+function teamRemoveMember(teamId, userId) {
+    if (!confirm('Remove this member from the team?')) return;
+    API.del('/teams/' + teamId + '/members/' + userId).then(function() {
+        toast('Member removed');
+        _loadTeamDetail(teamId);
+        for (var i = 0; i < _teamsCache.length; i++) {
+            if (_teamsCache[i].id === teamId) { _teamsCache[i].member_count = Math.max(0, (_teamsCache[i].member_count || 1) - 1); break; }
+        }
+    }).catch(function(e) {
+        toast(e.message || 'Failed to remove member', false);
+    });
+}
+
+function teamChangeMemberRole(selectEl) {
+    var teamId = selectEl.getAttribute('data-team');
+    var userId = selectEl.getAttribute('data-member');
+    var newRole = selectEl.value;
+    // The backend add-member endpoint might not support role change directly;
+    // we remove and re-add with new role
+    API.del('/teams/' + teamId + '/members/' + userId).then(function() {
+        return API.post('/teams/' + teamId + '/members', { user_id: userId, role: newRole });
+    }).then(function() {
+        toast('Role updated to ' + newRole);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to change role', false);
+        _loadTeamDetail(teamId);
+    });
+}
+
+function teamGrantRepo(teamId) {
+    var m = '<div class="admin-modal-overlay" id="team-repo-modal" onclick="if(event.target===this)this.remove()">';
+    m += '<div class="admin-modal">';
+    m += '<div class="admin-modal-hd">Grant Repository Access</div>';
+    m += '<div class="field"><label>Repository ID</label><input class="inp" id="team-repo-id" placeholder="Paste repository ID"></div>';
+    m += '<div class="field" style="margin-top:10px"><label>Access Level</label><select class="inp" id="team-repo-level">';
+    m += '<option value="viewer">viewer</option>';
+    m += '<option value="contributor">contributor</option>';
+    m += '<option value="maintainer">maintainer</option>';
+    m += '<option value="admin">admin</option>';
+    m += '</select></div>';
+    m += '<div class="row g-8" style="margin-top:14px">';
+    m += '<button class="btn btn-s btn-p" onclick="teamDoGrantRepo(\'' + esc(teamId) + '\')">Grant Access</button>';
+    m += '<button class="btn btn-s btn-g" onclick="document.getElementById(\'team-repo-modal\').remove()">Cancel</button>';
+    m += '</div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', m);
+}
+
+function teamDoGrantRepo(teamId) {
+    var repoId = (document.getElementById('team-repo-id') || {}).value || '';
+    var level = (document.getElementById('team-repo-level') || {}).value || 'viewer';
+    if (!repoId.trim()) { toast('Repository ID is required', false); return; }
+
+    API.post('/teams/' + teamId + '/repos', { repo_id: repoId.trim(), level: level }).then(function() {
+        toast('Repo access granted');
+        var modal = document.getElementById('team-repo-modal');
+        if (modal) modal.remove();
+        _loadTeamDetail(teamId);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to grant access', false);
+    });
+}
+
+
 // =================== SETTINGS ===================
 
 function pgSettings() {
 
+    // Build auth section based on mode
+    var authSection = '';
+    if (Auth.isAuthEnabled()) {
+        var user = Auth.getUser();
+        authSection = '<div class="card"><div class="card-hd">Account</div>';
+        if (user && user.id !== 'anonymous') {
+            authSection += '<div class="row g-12" style="align-items:center;margin-bottom:12px">';
+            if (user.avatar_url) {
+                authSection += '<img src="' + esc(user.avatar_url) + '" style="width:40px;height:40px;border-radius:50%">';
+            }
+            authSection += '<div><p style="font-size:14px;font-weight:600;color:var(--text-0)">' + esc(user.name || user.github_login) + '</p>';
+            authSection += '<p style="font-size:12px;color:var(--text-2)">' + esc(user.email || '') + '</p></div>';
+            authSection += '<span class="auth-role-badge role-' + (user.role || 'user') + '" style="margin-left:auto">' + esc(user.role || 'user') + '</span>';
+            authSection += '</div>';
+            authSection += '<p style="font-size:12px;color:var(--text-3);margin-bottom:12px">Provider: ' + esc(user.auth_provider || 'github') + ' &middot; ID: ' + esc((user.id || '').slice(0, 12)) + '</p>';
+            authSection += '<button class="btn btn-s btn-d" onclick="Auth.logout()">Sign Out</button>';
+        } else {
+            authSection += '<p style="font-size:13px;color:var(--text-2);margin-bottom:8px">Not signed in</p>';
+            authSection += '<button class="btn btn-s btn-p" onclick="navigate(\'login\')">Sign In</button>';
+        }
+        authSection += '</div>';
+    } else {
+        authSection = '<div class="card"><div class="card-hd">Authentication</div><p style="font-size:13px;color:var(--text-2)">Auth is disabled. Running in <span class="demo-badge">DEMO MODE</span></p><p style="font-size:11px;color:var(--text-3);margin-top:6px">Set EIDOS_AUTH_ENABLED=true on the backend to enable login and RBAC.</p></div>';
+    }
+
     html('main', '<div class="page-head"><h1>Settings</h1><p>Configure connection, AI, auth, and system</p></div>' +
+
+        authSection +
+
+        '<div class="card" id="apikeys-card"><div class="card-hd">API Keys</div>' +
+        (Auth.isAuthEnabled() && Auth.isLoggedIn()
+            ? '<p style="font-size:13px;color:var(--text-2);margin-bottom:12px">Create keys for CI/CD pipelines and programmatic access. Keys are shown <b>once</b> at creation.</p>' +
+              '<div id="apikeys-form" class="row g-8 flex-wrap" style="margin-bottom:14px">' +
+              '<input class="inp" id="ak-name" placeholder="Key name (e.g. CI Pipeline)" style="flex:1;min-width:160px">' +
+              '<input class="inp" id="ak-scopes" placeholder="Scopes: * or read:repos,write:repos" style="flex:1;min-width:180px" value="*">' +
+              '<select class="inp" id="ak-expiry" style="width:130px"><option value="">No expiry</option><option value="7">7 days</option><option value="30">30 days</option><option value="90">90 days</option><option value="365">1 year</option></select>' +
+              '<button class="btn btn-s btn-p" onclick="createApiKey()">Create Key</button></div>' +
+              '<div id="apikeys-list"><div class="loader"><span class="spin"></span> Loading keys...</div></div>'
+            : '<p style="font-size:13px;color:var(--text-3)">Sign in to manage API keys.</p>') +
+        '</div>' +
 
         '<div class="card"><div class="card-hd">API Connection</div><div class="field"><label>Backend URL</label><input class="inp" id="su" value="' + esc(API.base) + '"></div><div class="row g-8"><button class="btn btn-p" onclick="saveUrl()">Save & Test</button></div><div id="ss" class="mt"></div></div>' +
 
@@ -2575,9 +4003,124 @@ function pgSettings() {
 
         '<div id="cfg"><div class="loader"><span class="spin"></span> Loading configuration...</div></div>');
 
+    if (Auth.isAuthEnabled() && Auth.isLoggedIn()) loadApiKeys();
     loadCfg();
 
 }
+
+// =================== API KEY MANAGEMENT ===================
+
+function loadApiKeys() {
+    API.get('/auth/api-keys').then(function(keys) {
+        var el = document.getElementById('apikeys-list');
+        if (!el) return;
+        if (!keys || keys.length === 0) {
+            el.innerHTML = '<p style="font-size:13px;color:var(--text-3)">No API keys yet. Create one above.</p>';
+            return;
+        }
+        var h = '<table class="tbl"><thead><tr><th>Name</th><th>Prefix</th><th>Scopes</th><th>Expires</th><th>Last Used</th><th>Uses</th><th></th></tr></thead><tbody>';
+        for (var i = 0; i < keys.length; i++) {
+            var k = keys[i];
+            var exp = k.expires_at ? new Date(k.expires_at).toLocaleDateString() : '<span style="color:var(--text-3)">Never</span>';
+            var lastUsed = k.last_used_at ? _timeAgo(new Date(k.last_used_at)) : '<span style="color:var(--text-3)">Never</span>';
+            var scopes = (k.scopes || ['*']).join(', ');
+            h += '<tr>';
+            h += '<td><b style="color:var(--text-0)">' + esc(k.name) + '</b></td>';
+            h += '<td><code style="font-size:11px;color:var(--accent)">' + esc(k.prefix) + '...</code></td>';
+            h += '<td style="font-size:11px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + esc(scopes) + '">' + esc(scopes) + '</td>';
+            h += '<td style="font-size:12px">' + exp + '</td>';
+            h += '<td style="font-size:12px">' + lastUsed + '</td>';
+            h += '<td style="font-size:12px">' + (k.usage_count || 0) + '</td>';
+            h += '<td><button class="btn btn-xs btn-d" onclick="revokeApiKey(\'' + esc(k.id) + '\',\'' + esc(k.name) + '\')">Revoke</button></td>';
+            h += '</tr>';
+        }
+        h += '</tbody></table>';
+        el.innerHTML = h;
+    }).catch(function(e) {
+        var el = document.getElementById('apikeys-list');
+        if (el) el.innerHTML = '<p style="font-size:12px;color:var(--red)">Could not load API keys: ' + esc(e.message) + '</p>';
+    });
+}
+
+function createApiKey() {
+    var nameEl = document.getElementById('ak-name');
+    var scopesEl = document.getElementById('ak-scopes');
+    var expiryEl = document.getElementById('ak-expiry');
+    var name = (nameEl && nameEl.value || '').trim();
+    if (!name) { toast('Please enter a key name', false); return; }
+    var scopes = (scopesEl && scopesEl.value || '*').trim();
+    var expiry = expiryEl && expiryEl.value ? parseInt(expiryEl.value) : null;
+
+    var url = '/auth/api-keys?name=' + encodeURIComponent(name) + '&scopes=' + encodeURIComponent(scopes);
+    if (expiry) url += '&expires_in_days=' + expiry;
+
+    API.post(url).then(function(data) {
+        // Show the raw key once in a prominent way
+        var listEl = document.getElementById('apikeys-list');
+        var keyHtml = '<div class="apikey-created-banner">' +
+            '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+            '<svg width="18" height="18" fill="none" stroke="var(--green)" stroke-width="2" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>' +
+            '<b style="color:var(--text-0)">Key created! Copy it now — it won\'t be shown again.</b></div>' +
+            '<div class="apikey-raw-display">' +
+            '<code id="ak-raw-value">' + esc(data.key) + '</code>' +
+            '<button class="btn btn-xs btn-g" onclick="copyApiKey()" title="Copy to clipboard">Copy</button>' +
+            '</div></div>';
+        if (listEl) listEl.innerHTML = keyHtml;
+
+        // Clear form
+        if (nameEl) nameEl.value = '';
+        if (expiryEl) expiryEl.value = '';
+
+        toast('API key "' + name + '" created');
+
+        // Reload the key list after a moment
+        setTimeout(loadApiKeys, 2500);
+    }).catch(function(e) {
+        toast(e.message || 'Failed to create API key', false);
+    });
+}
+
+function copyApiKey() {
+    var code = document.getElementById('ak-raw-value');
+    if (!code) return;
+    var text = code.textContent || code.innerText;
+    if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(function() { toast('Copied to clipboard'); });
+    } else {
+        // Fallback
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Copied to clipboard');
+    }
+}
+
+function revokeApiKey(id, name) {
+    if (!confirm('Revoke API key "' + name + '"? This cannot be undone.')) return;
+    API.del('/auth/api-keys/' + id).then(function() {
+        toast('Key "' + name + '" revoked');
+        loadApiKeys();
+    }).catch(function(e) {
+        toast(e.message || 'Failed to revoke key', false);
+    });
+}
+
+function _timeAgo(date) {
+    var seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (seconds < 60) return 'just now';
+    var minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return minutes + 'm ago';
+    var hours = Math.floor(minutes / 60);
+    if (hours < 24) return hours + 'h ago';
+    var days = Math.floor(hours / 24);
+    if (days < 30) return days + 'd ago';
+    return date.toLocaleDateString();
+}
+
+// =================== SETTINGS CONFIG ===================
 
 function loadCfg() {
 

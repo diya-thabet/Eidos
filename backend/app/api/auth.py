@@ -20,6 +20,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -201,6 +202,143 @@ async def google_callback(
 
 
 # ---------------------------------------------------------------------------
+# Local (email + password) authentication
+# ---------------------------------------------------------------------------
+
+
+class SignupRequest(BaseModel):
+    email: str
+    password: str
+    name: str = ""
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+@router.post("/signup", summary="Register with email and password")
+async def local_signup(
+    body: SignupRequest,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Create a new local user with email and password.
+
+    The password is hashed with bcrypt before storage.
+    Returns a JWT access token on success.
+    """
+    import hashlib
+    import uuid
+
+    from app.auth.password import hash_password
+
+    if not body.email or not body.password:
+        raise HTTPException(status_code=422, detail="Email and password are required")
+
+    if len(body.password) < 6:
+        raise HTTPException(status_code=422, detail="Password must be at least 6 characters")
+
+    # Check if email already exists
+    login_key = f"local:{body.email.lower().strip()}"
+    result = await db.execute(select(User).where(User.github_login == login_key))
+    existing = result.scalar_one_or_none()
+    if existing:
+        raise HTTPException(status_code=409, detail="Email already registered")
+
+    user_id = f"lo-{uuid.uuid4().hex[:16]}"
+    pw_hash = hash_password(body.password)
+
+    # Determine role: superadmin if email matches config or if first user ever
+    from sqlalchemy import func
+
+    from app.storage.models import UserRole
+
+    role = UserRole.user
+    email_lower = body.email.lower().strip()
+    if settings.superadmin_email and email_lower == settings.superadmin_email.lower().strip():
+        role = UserRole.superadmin
+    else:
+        # First user in the system becomes superadmin (bootstrap)
+        user_count = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
+        if user_count == 0:
+            role = UserRole.superadmin
+
+    user = User(
+        id=user_id,
+        auth_provider="local",
+        github_login=login_key,
+        name=body.name or body.email.split("@")[0],
+        email=email_lower,
+        avatar_url="",
+        password_hash=pw_hash,
+        role=role,
+    )
+    db.add(user)
+    await db.commit()
+
+    access_token = create_access_token(user.id)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "login": user.github_login,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "avatar_url": user.avatar_url,
+        },
+    }
+
+
+@router.post("/login", summary="Login with email and password")
+async def local_login(
+    body: LoginRequest,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    """Authenticate with email and password. Returns a JWT access token."""
+    from app.auth.password import verify_password
+
+    if not body.email or not body.password:
+        raise HTTPException(status_code=422, detail="Email and password are required")
+
+    login_key = f"local:{body.email.lower().strip()}"
+    result = await db.execute(select(User).where(User.github_login == login_key))
+    user = result.scalar_one_or_none()
+
+    if user is None or not user.password_hash:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    if not verify_password(body.password, user.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+
+    # Auto-promote to superadmin if email matches config
+    from app.storage.models import UserRole
+
+    if (
+        settings.superadmin_email
+        and user.email.lower() == settings.superadmin_email.lower().strip()
+        and user.role != UserRole.superadmin
+    ):
+        user.role = UserRole.superadmin
+        await db.commit()
+
+    access_token = create_access_token(user.id)
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {
+            "id": user.id,
+            "login": user.github_login,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "avatar_url": user.avatar_url,
+        },
+    }
+
+
+# ---------------------------------------------------------------------------
 # Common
 # ---------------------------------------------------------------------------
 
@@ -210,10 +348,12 @@ async def get_me(user: User = Depends(get_current_user)) -> Any:
     """Return the currently authenticated user."""
     return {
         "id": user.id,
-        "login": user.github_login,
+        "github_login": user.github_login,
+        "auth_provider": user.auth_provider,
         "name": user.name,
         "email": user.email,
         "avatar_url": user.avatar_url,
+        "role": user.role,
     }
 
 

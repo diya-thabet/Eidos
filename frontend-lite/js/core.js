@@ -1,3 +1,217 @@
+// ══════════════════════════════════════════════════════════════
+// Auth & Token Management (RBAC Integration)
+// ══════════════════════════════════════════════════════════════
+
+var Auth = {
+    _tokenKey: 'eidos_token',
+    _userKey: 'eidos_user',
+    _modeKey: 'eidos_auth_mode',
+    _user: null,
+    _authEnabled: null,
+
+    // --- Token ---
+    getToken: function() {
+        return localStorage.getItem(this._tokenKey) || null;
+    },
+
+    setToken: function(token) {
+        if (token) {
+            localStorage.setItem(this._tokenKey, token);
+        } else {
+            localStorage.removeItem(this._tokenKey);
+        }
+    },
+
+    clearToken: function() {
+        localStorage.removeItem(this._tokenKey);
+        localStorage.removeItem(this._userKey);
+        this._user = null;
+    },
+
+    isLoggedIn: function() {
+        return !!this.getToken();
+    },
+
+    // --- Token Decode (without verification, for expiry check) ---
+    decodePayload: function(token) {
+        if (!token) return null;
+        try {
+            var parts = token.split('.');
+            if (parts.length !== 3) return null;
+            var payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+            var decoded = atob(payload);
+            return JSON.parse(decoded);
+        } catch (e) {
+            return null;
+        }
+    },
+
+    isTokenExpired: function() {
+        var token = this.getToken();
+        if (!token) return true;
+        var payload = this.decodePayload(token);
+        if (!payload || !payload.exp) return false; // No exp = never expires (or can't check)
+        var now = Math.floor(Date.now() / 1000);
+        return now >= payload.exp;
+    },
+
+    // --- User ---
+    getUser: function() {
+        if (this._user) return this._user;
+        try {
+            var stored = localStorage.getItem(this._userKey);
+            if (stored) {
+                this._user = JSON.parse(stored);
+                return this._user;
+            }
+        } catch (e) {}
+        return null;
+    },
+
+    setUser: function(user) {
+        this._user = user;
+        if (user) {
+            localStorage.setItem(this._userKey, JSON.stringify(user));
+        } else {
+            localStorage.removeItem(this._userKey);
+        }
+    },
+
+    getUserRole: function() {
+        var u = this.getUser();
+        return u ? (u.role || 'user') : 'user';
+    },
+
+    // --- Auth Mode Detection ---
+    isAuthEnabled: function() {
+        if (this._authEnabled !== null) return this._authEnabled;
+        var stored = localStorage.getItem(this._modeKey);
+        if (stored !== null) {
+            this._authEnabled = stored === 'true';
+            return this._authEnabled;
+        }
+        return false; // Default to demo mode until detected
+    },
+
+    setAuthEnabled: function(enabled) {
+        this._authEnabled = enabled;
+        localStorage.setItem(this._modeKey, enabled ? 'true' : 'false');
+    },
+
+    // Detect auth mode from backend
+    detectAuthMode: function() {
+        var self = this;
+        return fetch(API.base + '/auth/me', {
+            headers: self.getToken() ? { 'Authorization': 'Bearer ' + self.getToken() } : {}
+        }).then(function(r) {
+            if (r.status === 401) {
+                // Auth is enabled but we're not logged in
+                self.setAuthEnabled(true);
+                return { authEnabled: true, user: null };
+            }
+            if (r.ok) {
+                return r.json().then(function(user) {
+                    // If user.id === 'anonymous', auth is disabled (demo mode)
+                    var isDemo = user.id === 'anonymous' || user.github_login === 'anonymous';
+                    self.setAuthEnabled(!isDemo);
+                    if (!isDemo) {
+                        self.setUser(user);
+                    } else {
+                        self.setUser({ id: 'anonymous', name: 'Anonymous', role: 'superadmin', github_login: 'anonymous', avatar_url: '' });
+                    }
+                    return { authEnabled: !isDemo, user: user };
+                });
+            }
+            // 501 = auth not configured, treat as demo
+            if (r.status === 501) {
+                self.setAuthEnabled(false);
+                self.setUser({ id: 'anonymous', name: 'Anonymous', role: 'superadmin', github_login: 'anonymous', avatar_url: '' });
+                return { authEnabled: false, user: null };
+            }
+            self.setAuthEnabled(false);
+            return { authEnabled: false, user: null };
+        }).catch(function() {
+            // Backend unreachable — keep current state
+            return { authEnabled: self.isAuthEnabled(), user: self.getUser() };
+        });
+    },
+
+    // Fetch and cache current user from backend
+    fetchMe: function() {
+        var self = this;
+        return API.get('/auth/me').then(function(user) {
+            self.setUser(user);
+            return user;
+        }).catch(function(e) {
+            // If 401, token is invalid
+            if (e.message && e.message.indexOf('401') !== -1) {
+                self.clearToken();
+            }
+            return null;
+        });
+    },
+
+    // --- Logout ---
+    logout: function() {
+        this.clearToken();
+        this._user = null;
+        toast('Logged out');
+        navigate('login');
+    },
+
+    // --- Scopes (derived from role) ---
+    _roleScopes: {
+        superadmin: ['*'],
+        admin: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export','admin:users','admin:plans','admin:audit'],
+        employee: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export'],
+        support: ['read:repos','read:snapshots','read:analysis','read:coverage','read:gates','read:export','admin:audit'],
+        user: ['read:repos','write:repos','read:snapshots','write:snapshots','delete:snapshots','read:analysis','read:coverage','write:coverage','read:gates','write:gates','write:reviews','write:docs','read:export']
+    },
+
+    hasScope: function(scope) {
+        if (!this.isAuthEnabled()) return true; // Demo mode = all access
+        var role = this.getUserRole();
+        var scopes = this._roleScopes[role] || this._roleScopes.user;
+        if (scopes.indexOf('*') !== -1) return true;
+        return scopes.indexOf(scope) !== -1;
+    },
+
+    hasRole: function(role) {
+        if (!this.isAuthEnabled()) return true; // Demo mode
+        var hierarchy = { user: 0, support: 1, employee: 2, admin: 3, superadmin: 4 };
+        var current = hierarchy[this.getUserRole()] || 0;
+        var required = hierarchy[role] || 0;
+        return current >= required;
+    },
+
+    // --- OAuth URL builders ---
+    getGitHubLoginUrl: function() {
+        return API.base + '/auth/login';
+    },
+
+    getGoogleLoginUrl: function() {
+        return API.base + '/auth/google/login';
+    },
+
+    // --- Handle OAuth callback token ---
+    handleCallback: function() {
+        // Check URL params for token (returned from backend callback)
+        var params = new URLSearchParams(window.location.search);
+        var token = params.get('token');
+        if (token) {
+            this.setToken(token);
+            // Clean URL
+            window.history.replaceState({}, '', window.location.pathname + window.location.hash);
+            return true;
+        }
+        return false;
+    }
+};
+
+// ══════════════════════════════════════════════════════════════
+// API Object (with auth interceptor)
+// ══════════════════════════════════════════════════════════════
+
 var API = {
 
     base: localStorage.getItem('eidos_url') || 'http://localhost:8000',
@@ -8,9 +222,33 @@ var API = {
 
         var opts = { method: method || 'GET', headers: { 'Content-Type': 'application/json' } };
 
+        // Attach auth token if available
+        var token = Auth.getToken();
+        if (token) {
+            opts.headers['Authorization'] = 'Bearer ' + token;
+        }
+
         if (body) opts.body = JSON.stringify(body);
 
         return fetch(this.base + path, opts).then(function(r) {
+
+            // Global 401 handler: token expired or invalid
+            if (r.status === 401 && Auth.isAuthEnabled()) {
+                Auth.clearToken();
+                toast('Session expired. Please log in again.', false);
+                navigate('login');
+                return Promise.reject(new Error('Unauthorized'));
+            }
+
+            // Global 403 handler: permission denied
+            if (r.status === 403) {
+                return r.text().then(function(t) {
+                    var msg = 'Permission denied';
+                    try { var parsed = JSON.parse(t); msg = parsed.detail || msg; } catch(e) {}
+                    toast(msg, false);
+                    return Promise.reject(new Error(msg));
+                });
+            }
 
             if (!r.ok) return r.text().then(function(t) { throw new Error(t || 'HTTP ' + r.status); });
 
@@ -28,13 +266,31 @@ var API = {
 
     post: function(p, b) { return this.req(p, 'POST', b); },
 
+    put: function(p, b) { return this.req(p, 'PUT', b); },
+
     patch: function(p, b) { return this.req(p, 'PATCH', b); },
 
     del: function(p) { return this.req(p, 'DELETE'); },
 
     download: function(path, name) {
 
-        return fetch(this.base + path).then(function(r) {
+        var headers = {};
+        var token = Auth.getToken();
+        if (token) headers['Authorization'] = 'Bearer ' + token;
+
+        return fetch(this.base + path, { headers: headers }).then(function(r) {
+
+            if (r.status === 401 && Auth.isAuthEnabled()) {
+                Auth.clearToken();
+                toast('Session expired', false);
+                navigate('login');
+                return Promise.reject(new Error('Unauthorized'));
+            }
+
+            if (r.status === 403) {
+                toast('Permission denied', false);
+                return Promise.reject(new Error('Forbidden'));
+            }
 
             if (!r.ok) throw new Error('HTTP ' + r.status);
 
@@ -75,23 +331,95 @@ var S = {
 function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 function toast(m, ok) {
+    var icon = ok !== false ? '\u2705' : '\u274C';
+    Notif.push(icon, m);
+}
 
-    var c = document.getElementById('toasts');
+// ══════════════════════════════════════════════════════════════
+// Permission-Aware UI Helpers
+// ══════════════════════════════════════════════════════════════
 
-    var d = document.createElement('div');
+// Scope-to-page mapping for sidebar nav buttons
+var _navScopes = {
+    repos: 'read:repos',
+    overview: 'read:analysis',
+    symbols: 'read:analysis',
+    health: 'read:analysis',
+    graph: 'read:analysis',
+    deadcode: 'read:analysis',
+    coupling: 'read:analysis',
+    deps: 'read:analysis',
+    clones: 'read:analysis',
+    cycles: 'read:analysis',
+    hotspots: 'read:analysis',
+    ask: 'read:analysis',
+    review: 'write:reviews',
+    docs: 'write:docs',
+    search: 'read:analysis',
+    exports: 'read:export',
+    admin: 'admin:users',
+    settings: null // always visible
+};
 
-    d.className = 'toast ' + (ok !== false ? 'toast-ok' : 'toast-err');
+/**
+ * Apply permission-based visibility to sidebar nav items.
+ * Called after login and on every navigate() to keep UI in sync.
+ */
+function applyPermissions() {
+    // Skip in demo mode — everything visible
+    if (!Auth.isAuthEnabled()) {
+        document.querySelectorAll('.nav-btn').forEach(function(btn) {
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+        });
+        return;
+    }
 
-    d.textContent = m; c.appendChild(d);
+    document.querySelectorAll('.nav-btn[data-p]').forEach(function(btn) {
+        var page = btn.getAttribute('data-p');
+        var scope = _navScopes[page];
+        if (scope === null || scope === undefined) {
+            // Always visible (settings, etc.)
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+            return;
+        }
+        if (Auth.hasScope(scope)) {
+            btn.classList.remove('perm-hidden', 'perm-disabled');
+            btn.removeAttribute('aria-disabled');
+            btn.title = '';
+        } else {
+            btn.classList.add('perm-disabled');
+            btn.setAttribute('aria-disabled', 'true');
+            btn.title = 'Insufficient permissions';
+        }
+    });
+}
 
-    setTimeout(function() {
+/**
+ * Returns HTML for a button only if the user has the required scope.
+ * If not permitted, returns a disabled button with a lock icon.
+ * @param {string} scope - Required scope (e.g. 'write:repos')
+ * @param {string} html - Button HTML to render if permitted
+ * @param {string} [label] - Optional label for the disabled state
+ */
+function guardBtn(scope, btnHtml, label) {
+    if (!Auth.isAuthEnabled() || Auth.hasScope(scope)) return btnHtml;
+    var lbl = label || 'No permission';
+    return '<button class="btn btn-s btn-g perm-locked" disabled title="' + esc(lbl) + '"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></button>';
+}
 
-        d.classList.add('toast-exit');
-
-        setTimeout(function() { d.remove(); }, 180);
-
-    }, 3800);
-
+/**
+ * Check if the current user can access a page. If not, show a permission denied screen.
+ * Returns true if access is allowed, false if blocked.
+ * @param {string} scope - Required scope
+ */
+function guardPage(scope) {
+    if (!Auth.isAuthEnabled() || Auth.hasScope(scope)) return true;
+    html('main', '<div class="empty perm-denied-page"><div class="perm-denied-icon"><svg viewBox="0 0 24 24" width="48" height="48" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg></div><h3>Access Restricted</h3><p>You don\'t have permission to view this page.</p><p class="perm-denied-detail">Required: <code>' + esc(scope) + '</code><br>Your role: <code>' + esc(Auth.getUserRole()) + '</code></p><button class="btn btn-p" onclick="navigate(\'repos\')">Go to Repositories</button></div>');
+    return false;
 }
 
 function $(id) { return document.getElementById(id); }
@@ -367,6 +695,14 @@ var CMD = {
             { group: 'Actions', title: 'Clear Active Snapshot', icon: '\uD83D\uDDD1\uFE0F', action: function() { S.set(null, null); toast('Cleared selection'); navigate('repos'); } },
             { group: 'Actions', title: 'Clear Recent History', icon: '\uD83E\uDDF9', action: function() { Recents.clear(); toast('Recents cleared'); } }
         ];
+        // Auth actions
+        if (Auth.isAuthEnabled()) {
+            if (Auth.isLoggedIn()) {
+                cmds.push({ group: 'Account', title: 'Sign Out', icon: '\uD83D\uDEAA', action: function() { Auth.logout(); } });
+            } else {
+                cmds.push({ group: 'Account', title: 'Sign In', icon: '\uD83D\uDD11', action: function() { navigate('login'); } });
+            }
+        }
         // Add recents
         var recents = Recents.get();
         recents.forEach(function(r) {
@@ -581,6 +917,93 @@ function updateStatusBar() {
     }
     repo.textContent = S.repo ? S.repo.slice(0, 12) : 'none';
     snap.textContent = S.snap ? S.snap.slice(0, 8) : 'none';
+
+    // Update user badge in sidebar
+    _renderAuthBadge();
+}
+
+function _renderAuthBadge() {
+    var container = $('auth-badge');
+    if (!container) return;
+    var user = Auth.getUser();
+    if (!user || user.id === 'anonymous') {
+        if (!Auth.isAuthEnabled()) {
+            container.innerHTML = '<div class="auth-badge-wrap"><div class="demo-badge"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg> DEMO MODE</div></div>';
+        } else {
+            container.innerHTML = '<div class="auth-badge-wrap auth-badge-signin"><a href="#" onclick="navigate(\'login\');return false" class="auth-signin-link"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg> Sign in</a></div>';
+        }
+        return;
+    }
+    var avatarHtml = '';
+    if (user.avatar_url) {
+        avatarHtml = '<div class="auth-avatar"><img src="' + esc(user.avatar_url) + '" alt=""></div>';
+    } else {
+        var initials = (user.name || user.github_login || 'U').split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+        avatarHtml = '<div class="auth-avatar">' + initials + '</div>';
+    }
+    var roleClass = 'role-' + (user.role || 'user');
+    var provider = user.auth_provider || 'oauth';
+    var providerIcon = provider === 'local' ? '<svg viewBox="0 0 24 24" width="10" height="10" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>'
+        : provider === 'google' ? '<svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>';
+    var emailLine = user.email ? '<div class="auth-email">' + esc(user.email) + '</div>' : '';
+    var h = '<div class="auth-badge-wrap">';
+    h += '<div class="auth-user-badge" onclick="_toggleProfileMenu()">';
+    h += avatarHtml;
+    h += '<div class="auth-info">';
+    h += '<div class="auth-name">' + esc(user.name || user.github_login) + '</div>';
+    h += emailLine;
+    h += '</div>';
+    h += '<svg class="auth-chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>';
+    h += '</div>';
+    h += '<div class="auth-profile-menu" id="auth-profile-menu">';
+    h += '<div class="apm-header">';
+    h += '<span class="auth-role-badge ' + roleClass + '">' + esc(user.role || 'user') + '</span>';
+    h += '<span class="apm-provider">' + providerIcon + ' ' + esc(provider) + '</span>';
+    h += '</div>';
+    h += '<button class="apm-item" onclick="navigate(\'settings\');_closeProfileMenu()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33"/></svg> Settings</button>';
+    h += '<button class="apm-item apm-signout" onclick="Auth.logout()"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Sign Out</button>';
+    h += '</div>';
+    h += '</div>';
+    container.innerHTML = h;
+}
+
+function _toggleProfileMenu() {
+    var menu = document.getElementById('auth-profile-menu');
+    if (!menu) return;
+    var isOpen = menu.classList.contains('apm-visible');
+    if (isOpen) {
+        _closeProfileMenu();
+        return;
+    }
+    // Position the menu above the badge
+    var badge = document.querySelector('.auth-user-badge');
+    if (!badge) return;
+    var rect = badge.getBoundingClientRect();
+    menu.style.left = rect.left + 'px';
+    menu.style.bottom = (window.innerHeight - rect.top + 6) + 'px';
+    menu.style.top = 'auto';
+    menu.classList.add('apm-visible');
+    document.querySelector('.auth-badge-wrap').classList.add('open');
+    setTimeout(function() {
+        document.addEventListener('click', _profileOutsideClick);
+    }, 0);
+}
+
+function _closeProfileMenu() {
+    var menu = document.getElementById('auth-profile-menu');
+    if (menu) menu.classList.remove('apm-visible');
+    var wrap = document.querySelector('.auth-badge-wrap');
+    if (wrap) wrap.classList.remove('open');
+    document.removeEventListener('click', _profileOutsideClick);
+}
+
+function _profileOutsideClick(e) {
+    var menu = document.getElementById('auth-profile-menu');
+    var badge = document.querySelector('.auth-user-badge');
+    if (menu && !menu.contains(e.target) && badge && !badge.contains(e.target)) {
+        _closeProfileMenu();
+    }
 }
 
 // -- Risk Radar SVG Builder -----------------------------------
@@ -1633,5 +2056,14 @@ var Presence = {
     setTimeout(function() {
         Ambient.init();
     }, 300);
+
+    // Periodic token expiry check (every 60s)
+    setInterval(function() {
+        if (Auth.isAuthEnabled() && Auth.isLoggedIn() && Auth.isTokenExpired()) {
+            Auth.clearToken();
+            toast('Session expired. Please sign in again.', false);
+            navigate('login');
+        }
+    }, 60000);
 })();
 

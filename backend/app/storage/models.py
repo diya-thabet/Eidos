@@ -42,13 +42,14 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(48), primary_key=True)
-    auth_provider: Mapped[str] = mapped_column(String(16), default="github")  # github | google
+    auth_provider: Mapped[str] = mapped_column(String(16), default="github")  # github | google | local
     github_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
     github_login: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(512), default="")
     email: Mapped[str] = mapped_column(String(512), default="")
     avatar_url: Mapped[str] = mapped_column(Text, default="")
     github_token_enc: Mapped[str] = mapped_column(Text, default="")
+    password_hash: Mapped[str] = mapped_column(Text, default="")  # bcrypt hash for local auth
     role: Mapped[str] = mapped_column(String(32), default=UserRole.user)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)

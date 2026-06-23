@@ -35,6 +35,7 @@ class UserOut(BaseModel):
     name: str
     email: str
     role: str
+    auth_provider: str = "local"
     created_at: str
 
     model_config = {"from_attributes": True}
@@ -76,6 +77,10 @@ class SystemInfo(BaseModel):
     edition: str
     version: str
     auth_enabled: bool
+    demo_mode: bool = False
+    rate_limit_enabled: bool = False
+    superadmin_email: str = ""
+    python_version: str = ""
     parsers: int
     users: int
     repos: int
@@ -92,6 +97,8 @@ class SystemInfo(BaseModel):
     dependencies=[Depends(require_role("superadmin"))],
 )
 async def system_info(db: AsyncSession = Depends(get_db)) -> Any:
+    import sys
+
     from app.analysis.parser_registry import supported_languages
     from app.storage.models import Repo
 
@@ -101,6 +108,10 @@ async def system_info(db: AsyncSession = Depends(get_db)) -> Any:
         edition=settings.edition,
         version=settings.version,
         auth_enabled=settings.auth_enabled,
+        demo_mode=getattr(settings, 'demo_mode', False),
+        rate_limit_enabled=getattr(settings, 'rate_limit_enabled', False),
+        superadmin_email=getattr(settings, 'superadmin_email', '') or '',
+        python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
         parsers=len(supported_languages()),
         users=user_count,
         repos=repo_count,
@@ -127,6 +138,7 @@ async def list_users(db: AsyncSession = Depends(get_db)) -> Any:
             name=u.name,
             email=u.email,
             role=u.role,
+            auth_provider=getattr(u, 'auth_provider', 'local') or 'local',
             created_at=u.created_at.isoformat(),
         )
         for u in users
@@ -158,6 +170,7 @@ async def update_user_role(
         name=user.name,
         email=user.email,
         role=user.role,
+        auth_provider=getattr(user, 'auth_provider', 'local') or 'local',
         created_at=user.created_at.isoformat(),
     )
 
@@ -271,3 +284,24 @@ async def list_usage(
         )
         for r in result.scalars().all()
     ]
+
+
+# -------------------------------------------------------------------
+# Delete user (superadmin only)
+# -------------------------------------------------------------------
+
+
+@router.delete(
+    "/users/{user_id}",
+    dependencies=[Depends(require_role("superadmin"))],
+)
+async def delete_user(
+    user_id: str,
+    db: AsyncSession = Depends(get_db),
+) -> Any:
+    user = await db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="User not found")
+    await db.delete(user)
+    await db.commit()
+    return {"status": "ok", "deleted": user_id}

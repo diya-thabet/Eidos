@@ -1,0 +1,13 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 64" fill="none">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#1a1a2e"/>
+  <path d="M12 32C12 32 20 21 32 21s20 11 20 11-8 11-20 11S12 32 12 32z" stroke="#7c6aff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="32" cy="32" r="7" stroke="#6246ea" stroke-width="2" fill="none"/>
+  <circle cx="32" cy="32" r="3" fill="#7c6aff"/>
+  <circle cx="31" cy="31" r="1" fill="#fff" opacity="0.5"/>
+  <circle cx="18" cy="28" r="1.5" fill="#6246ea" opacity="0.7"/>
+  <circle cx="18" cy="36" r="1.5" fill="#6246ea" opacity="0.7"/>
+  <circle cx="46" cy="28" r="1.5" fill="#6246ea" opacity="0.7"/>
+  <circle cx="46" cy="36" r="1.5" fill="#6246ea" opacity="0.7"/>
+  <text x="72" y="37" font-family="Inter,-apple-system,system-ui,sans-serif" font-size="24" font-weight="700" letter-spacing="-0.5" fill="#1a1a2e">Eidos</text>
+  <text x="72" y="51" font-family="Inter,-apple-system,system-ui,sans-serif" font-size="10" fill="#8d96aa">code intelligence</text>
+</svg>

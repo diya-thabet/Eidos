@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Eidos</title>
+<link rel="icon" type="image/svg+xml" href="images/logo-favicon.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="images/logo-32.png">
 <link rel="stylesheet" href="css/variables.css">
 <link rel="stylesheet" href="css/sidebar.css">
@@ -21,12 +22,93 @@
 <link rel="stylesheet" href="css/graph-view.css">
 </head>
 <body>
+<!-- Splash screen — shows instantly while app loads -->
+<div id="splash" class="splash-overlay">
+  <div class="splash-content">
+    <div class="splash-logo">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" width="72" height="72">
+        <defs>
+          <linearGradient id="sIG" x1="22" y1="22" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#7c6aff"/><stop offset="100%" stop-color="#6246ea"/>
+          </linearGradient>
+          <radialGradient id="sPG" cx="32" cy="32" r="5" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#9b8aff"/><stop offset="70%" stop-color="#7c6aff"/><stop offset="100%" stop-color="#5538d4"/>
+          </radialGradient>
+        </defs>
+        <ellipse cx="32" cy="32" rx="24" ry="15" stroke="#6246ea" stroke-width="1.8" opacity="0.25" class="s-draw s-orbit"/>
+        <path d="M8 32C8 32 18 17 32 17s24 15 24 15-10 15-24 15S8 32 8 32z" stroke="#7c6aff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="rgba(124,106,255,0.04)" class="s-draw s-eye s-fill"/>
+        <circle cx="32" cy="32" r="10" stroke="url(#sIG)" stroke-width="2.5" fill="none" class="s-draw s-iris s-glow"/>
+        <circle cx="32" cy="32" r="4.5" fill="url(#sPG)" class="s-pop s-p1"/>
+        <circle cx="30.5" cy="30.5" r="1.5" fill="#fff" opacity="0.55" class="s-pop s-p2"/>
+        <circle cx="14" cy="28" r="1.8" fill="#6246ea" opacity="0.8" class="s-pop s-n1"/>
+        <circle cx="14" cy="36" r="1.8" fill="#6246ea" opacity="0.8" class="s-pop s-n2"/>
+        <circle cx="50" cy="28" r="1.8" fill="#6246ea" opacity="0.8" class="s-pop s-n3"/>
+        <circle cx="50" cy="36" r="1.8" fill="#6246ea" opacity="0.8" class="s-pop s-n4"/>
+        <circle cx="32" cy="18.5" r="1.6" fill="#7c6aff" opacity="0.7" class="s-pop s-n5"/>
+        <circle cx="32" cy="45.5" r="1.6" fill="#7c6aff" opacity="0.7" class="s-pop s-n6"/>
+      </svg>
+    </div>
+    <div class="splash-title"><span class="s-l" style="--d:0">E</span><span class="s-l" style="--d:1">i</span><span class="s-l" style="--d:2">d</span><span class="s-l" style="--d:3">o</span><span class="s-l" style="--d:4">s</span></div>
+    <div class="splash-sub"><span class="s-w" style="--wd:0">code</span> <span class="s-w" style="--wd:1">intelligence</span></div>
+    <div class="splash-loader"><div class="splash-bar"></div></div>
+  </div>
+</div>
+<style>
+.splash-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0d0f14;transition:opacity .4s ease,visibility .4s ease}
+.splash-overlay.hide{opacity:0;visibility:hidden;pointer-events:none}
+.splash-content{text-align:center;animation:splashIn .5s ease-out}
+@keyframes splashIn{from{opacity:0;transform:scale(.92) translateY(8px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+.splash-title{font-family:Inter,-apple-system,system-ui,sans-serif;font-size:28px;font-weight:700;color:#f0f2f7;letter-spacing:-.5px;margin-bottom:4px;display:flex;justify-content:center;gap:1px}
+.s-l{display:inline-block;opacity:0;transform:translateY(12px) scale(.7);animation:letterIn .4s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:calc(1.2s + var(--d) * .09s)}
+@keyframes letterIn{to{opacity:1;transform:translateY(0) scale(1)}}
+.splash-sub{font-family:Inter,-apple-system,system-ui,sans-serif;font-size:12px;color:#5a6379;letter-spacing:.5px;margin-bottom:24px}
+.s-w{display:inline-block;opacity:0;transform:translateY(6px);animation:wordIn .4s ease forwards;animation-delay:calc(1.75s + var(--wd) * .15s)}
+@keyframes wordIn{to{opacity:1;transform:translateY(0)}}
+.splash-loader{width:120px;height:3px;background:#1c2030;border-radius:3px;overflow:hidden;margin:0 auto}
+.splash-bar{width:40%;height:100%;background:linear-gradient(90deg,#6246ea,#7c6aff);border-radius:3px;animation:splashProgress 1.2s ease-in-out infinite}
+@keyframes splashProgress{0%{transform:translateX(-100%)}50%{transform:translateX(150%)}100%{transform:translateX(-100%)}}
+.s-draw{stroke-dasharray:200;stroke-dashoffset:200;animation:strokeDraw 1.4s cubic-bezier(.4,.0,.2,1) forwards}
+.s-orbit{stroke-dasharray:130;stroke-dashoffset:130;animation-duration:1.6s}
+.s-eye{stroke-dasharray:160;stroke-dashoffset:160;animation-delay:.1s}
+.s-iris{stroke-dasharray:63;stroke-dashoffset:63;animation-delay:.3s;animation-duration:1s}
+@keyframes strokeDraw{to{stroke-dashoffset:0}}
+.s-fill{fill:rgba(124,106,255,0.04);animation:strokeDraw 1.4s cubic-bezier(.4,0,.2,1) forwards,eyeFill .6s ease forwards 1.5s}
+@keyframes eyeFill{from{fill:rgba(124,106,255,0.04)}to{fill:rgba(124,106,255,0.1)}}
+.s-glow{filter:drop-shadow(0 0 0px transparent);animation:strokeDraw 1s cubic-bezier(.4,0,.2,1) forwards .3s,irisGlow .8s ease forwards 1.3s}
+@keyframes irisGlow{from{filter:drop-shadow(0 0 0px rgba(124,106,255,0))}to{filter:drop-shadow(0 0 6px rgba(124,106,255,0.6))}}
+.splash-logo{margin-bottom:18px;display:inline-flex;padding:10px;background:#1a1a2e;border-radius:18px;box-shadow:0 8px 32px rgba(98,70,234,.2);animation:logoGlow 1.5s ease forwards 1.2s}
+@keyframes logoGlow{0%{box-shadow:0 8px 32px rgba(98,70,234,.2)}50%{box-shadow:0 8px 40px rgba(98,70,234,.45),0 0 20px rgba(124,106,255,.2)}100%{box-shadow:0 8px 32px rgba(98,70,234,.3),0 0 12px rgba(124,106,255,.12)}}
+.s-pop{opacity:0;transform-origin:center;animation:nodePop .35s cubic-bezier(.2,.8,.2,1) forwards}
+.s-p1{animation-delay:.5s}.s-p2{animation-delay:.65s}
+.s-n1{animation-delay:.7s}.s-n2{animation-delay:.78s}.s-n3{animation-delay:.86s}.s-n4{animation-delay:.94s}.s-n5{animation-delay:1s}.s-n6{animation-delay:1.08s}
+@keyframes nodePop{from{opacity:0;transform:scale(0)}60%{transform:scale(1.3)}to{opacity:1;transform:scale(1)}}
+[data-theme="light"] .splash-overlay{background:#f8f9fb}
+[data-theme="light"] .splash-title{color:#111318}
+[data-theme="light"] .splash-sub{color:#8d96aa}
+[data-theme="light"] .splash-loader{background:#e8ebf0}
+[data-theme="light"] .splash-logo{background:#f0eef9;box-shadow:0 8px 32px rgba(98,70,234,.1)}
+[data-theme="light"] .splash-bar{background:linear-gradient(90deg,#6246ea,#9b8aff)}
+[data-theme="light"] .s-draw{stroke:#6246ea}
+[data-theme="light"] .s-eye{stroke:#5538d4}
+[data-theme="light"] .s-glow{stroke:#6246ea}
+[data-theme="light"] .s-pop{fill:#6246ea}
+[data-theme="light"] .s-p1{fill:#5538d4}
+[data-theme="light"] .s-p2{fill:#6246ea;opacity:.3}
+@keyframes logoGlowLight{0%{box-shadow:0 8px 32px rgba(98,70,234,.1)}50%{box-shadow:0 8px 36px rgba(98,70,234,.25),0 0 16px rgba(124,106,255,.1)}100%{box-shadow:0 8px 32px rgba(98,70,234,.15),0 0 8px rgba(124,106,255,.08)}}
+[data-theme="light"] .splash-logo{animation-name:logoGlowLight}
+@keyframes eyeFillLight{from{fill:rgba(98,70,234,0.03)}to{fill:rgba(98,70,234,0.08)}}
+[data-theme="light"] .s-fill{fill:rgba(98,70,234,0.03);animation:strokeDraw 1.4s cubic-bezier(.4,0,.2,1) forwards,eyeFillLight .6s ease forwards 1.5s}
+@keyframes irisGlowLight{from{filter:drop-shadow(0 0 0px rgba(98,70,234,0))}to{filter:drop-shadow(0 0 5px rgba(98,70,234,0.4))}}
+[data-theme="light"] .s-glow{animation:strokeDraw 1s cubic-bezier(.4,0,.2,1) forwards .3s,irisGlowLight .8s ease forwards 1.3s}
+@media(prefers-reduced-motion:reduce){.splash-overlay{transition:none}.splash-overlay.hide{transition:none}.splash-content{animation:none}.splash-logo{animation:none;box-shadow:0 8px 32px rgba(98,70,234,.3),0 0 12px rgba(124,106,255,.12)}.s-draw{animation:none;stroke-dashoffset:0;stroke-dasharray:none}.s-fill{animation:none;fill:rgba(124,106,255,.1)}.s-glow{animation:none;stroke-dashoffset:0;stroke-dasharray:none;filter:drop-shadow(0 0 6px rgba(124,106,255,.5))}.s-pop{animation:none;opacity:1;transform:none}.s-l{animation:none;opacity:1;transform:none}.s-w{animation:none;opacity:1;transform:none}.splash-bar{animation:none;transform:none;width:100%;opacity:.6}}
+</style>
 <a href="#main" class="skip-link">Skip to main content</a>
 <div aria-live="polite" aria-atomic="true" id="aria-live"></div>
 <button class="mobile-nav-toggle" id="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="Toggle navigation"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
 <div class="ambient-border" id="ambient-border" data-risk="neutral"></div>
 <aside class="sidebar" role="navigation" aria-label="Main navigation">
-<div class="sidebar-brand"><img src="images/logo-64.png" alt="Eidos" class="brand-logo"><div><span class="brand-label">Eidos</span><span class="brand-sub">code intelligence</span></div></div>
+<div class="sidebar-brand"><img src="images/logo.svg" alt="Eidos" class="brand-logo"><div><span class="brand-label">Eidos</span><span class="brand-sub">code intelligence</span></div></div>
 <nav class="sidebar-nav" aria-label="Pages">
 <div class="nav-group">Workspace</div>
 <button class="nav-btn active" data-p="repos" onclick="navigate('repos')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/></svg><span>Repositories</span></button>
@@ -49,8 +131,10 @@
 <div class="nav-group">Export</div>
 <button class="nav-btn" data-p="exports" onclick="navigate('exports')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg><span>Exports</span></button>
 <div class="nav-group">System</div>
+<button class="nav-btn" data-p="admin" onclick="navigate('admin')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg><span>Admin</span></button>
 <button class="nav-btn" data-p="settings" onclick="navigate('settings')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09"/></svg><span>Settings</span></button>
 </nav>
+<div id="auth-badge"></div>
 <div class="sidebar-bottom">
 <div class="conn-badge"><span class="conn-dot off" id="cd"></span><span id="ct">Offline</span></div>
 <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle dark/light theme">&#x263D;</button>
@@ -76,13 +160,64 @@
 var t=localStorage.getItem('eidos_theme')||'dark';
 document.documentElement.setAttribute('data-theme',t);
 document.getElementById('theme-btn').textContent=t==='dark'?'\u2600':'\u263D';
-checkConn();
-// Phase 9: Restore deep-link state or navigate to repos
-if(!DeepLink.restore()) navigate('repos');
-setInterval(checkConn,25000);
-setInterval(updateStatusBar, 2000); updateStatusBar();
-Notif.init(); Perf.init();
-if(!localStorage.getItem('eidos_onboarded')) setTimeout(function(){Tour.start();},800);
+
+// Splash dismiss logic
+var _prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+var _splashReady = false;
+var _splashMinTime = Date.now() + (_prefersReducedMotion ? 400 : 2000);
+var _splashDismissed = false;
+
+function dismissSplash() {
+    if (_splashDismissed) return;
+    _splashReady = true;
+    var now = Date.now();
+    var remaining = _splashMinTime - now;
+    if (remaining > 0) {
+        setTimeout(_doSplashDismiss, remaining);
+    } else {
+        _doSplashDismiss();
+    }
+}
+
+function _doSplashDismiss() {
+    if (_splashDismissed) return;
+    _splashDismissed = true;
+    var s = document.getElementById('splash');
+    if (!s) return;
+    s.classList.add('hide');
+    var delay = _prefersReducedMotion ? 50 : 600;
+    setTimeout(function() { if (s.parentNode) s.parentNode.removeChild(s); }, delay);
+}
+
+// Safety: never block more than 6s even if app init hangs
+setTimeout(function() { _splashMinTime = 0; dismissSplash(); }, _prefersReducedMotion ? 2000 : 6000);
+
+// Handle OAuth callback token in URL
+Auth.handleCallback();
+
+// Detect auth mode and initialize
+Auth.detectAuthMode().then(function(result) {
+    checkConn();
+    if (result.authEnabled && !Auth.isLoggedIn()) {
+        navigate('login');
+    } else if (!DeepLink.restore()) {
+        navigate('repos');
+    }
+    setInterval(checkConn, 25000);
+    setInterval(updateStatusBar, 2000); updateStatusBar();
+    Notif.init(); Perf.init();
+    if(!localStorage.getItem('eidos_onboarded')) setTimeout(function(){Tour.start();},800);
+    dismissSplash();
+}).catch(function() {
+    // Fallback: if detection fails, proceed in demo mode
+    checkConn();
+    if (!DeepLink.restore()) navigate('repos');
+    setInterval(checkConn, 25000);
+    setInterval(updateStatusBar, 2000); updateStatusBar();
+    Notif.init(); Perf.init();
+    dismissSplash();
+});
+
 document.addEventListener('click',function(e){var p=document.getElementById('notif-panel');var b=document.getElementById('notif-bell');if(p&&p.classList.contains('open')&&!p.contains(e.target)&&!b.contains(e.target))p.classList.remove('open');});
 })();
 </script>

@@ -6,7 +6,7 @@
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    overflow-y: auto;
+    overflow: visible;
     position: relative;
     z-index: 50;
 }
@@ -41,7 +41,7 @@
 .brand-label { font-size: 17px; font-weight: 700; color: var(--text-0); letter-spacing: -0.3px; }
 .brand-sub { font-size: 10px; color: var(--text-3); display: block; margin-top: 1px; }
 
-.sidebar-nav { flex: 1; padding: 0 10px; }
+.sidebar-nav { flex: 1; padding: 0 10px; overflow-y: auto; min-height: 0; }
 
 .nav-group { padding: 14px 10px 5px; font-size: 10px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-3); }
 
