@@ -247,20 +247,13 @@ async def local_signup(
     user_id = f"lo-{uuid.uuid4().hex[:16]}"
     pw_hash = hash_password(body.password)
 
-    # Determine role: superadmin if email matches config or if first user ever
-    from sqlalchemy import func
-
+    # Determine role: superadmin only if email matches explicit config.
     from app.storage.models import UserRole
 
     role = UserRole.user
     email_lower = body.email.lower().strip()
     if settings.superadmin_email and email_lower == settings.superadmin_email.lower().strip():
         role = UserRole.superadmin
-    else:
-        # First user in the system becomes superadmin (bootstrap)
-        user_count = (await db.execute(select(func.count()).select_from(User))).scalar() or 0
-        if user_count == 0:
-            role = UserRole.superadmin
 
     user = User(
         id=user_id,
@@ -347,6 +340,7 @@ async def get_me(user: User = Depends(get_current_user)) -> Any:
     """Return the currently authenticated user."""
     return {
         "id": user.id,
+        "login": user.github_login,
         "github_login": user.github_login,
         "auth_provider": user.auth_provider,
         "name": user.name,

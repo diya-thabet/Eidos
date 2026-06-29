@@ -18,11 +18,13 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 # Override settings BEFORE importing app
 os.environ["EIDOS_IN_MEMORY_DB"] = "true"
-os.environ["EIDOS_AUTH_ENABLED"] = "true"
 os.environ["EIDOS_SECRET_KEY"] = "test-secret-key-for-jwt-32chars!"
 os.environ["EIDOS_DATABASE_URL"] = "sqlite+aiosqlite://"
 
+from app.auth import dependencies as auth_dependencies  # noqa: E402
 from app.main import app  # noqa: E402
+from app.api import auth as auth_api  # noqa: E402
+from app.core.config import settings  # noqa: E402
 from app.storage.database import get_db  # noqa: E402
 from app.storage.models import Base  # noqa: E402
 
@@ -37,17 +39,23 @@ async def _override_get_db():
         yield session
 
 
-app.dependency_overrides[get_db] = _override_get_db
+def _install_db_overrides() -> None:
+    app.dependency_overrides[get_db] = _override_get_db
+    app.dependency_overrides[auth_api.get_db] = _override_get_db
+    app.dependency_overrides[auth_dependencies.get_db] = _override_get_db
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     """Create tables before each test and drop after."""
+    settings.auth_enabled = True
+    _install_db_overrides()
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     yield
     async with _test_engine.begin() as conn:
         await conn.run_sync(Base.metadata.drop_all)
+    settings.auth_enabled = False
 
 
 @pytest_asyncio.fixture
