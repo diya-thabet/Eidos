@@ -26,7 +26,7 @@ def hash_password(password: str) -> str:
     """
     if _HAS_BCRYPT:
         salt = bcrypt.gensalt(rounds=12)
-        hashed = bcrypt.hashpw(password.encode("utf-8"), salt)
+        hashed: bytes = bcrypt.hashpw(password.encode("utf-8"), salt)
         return hashed.decode("utf-8")
     else:
         # Fallback: PBKDF2-SHA256
@@ -55,7 +55,8 @@ def verify_password(password: str, hashed: str) -> bool:
 
     if _HAS_BCRYPT:
         try:
-            return bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+            is_valid: bool = bcrypt.checkpw(password.encode("utf-8"), hashed.encode("utf-8"))
+            return is_valid
         except (ValueError, TypeError):
             return False
 

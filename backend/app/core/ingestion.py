@@ -96,7 +96,7 @@ def _force_remove_tree(dest: Path) -> None:
     """Remove a directory tree, handling Windows read-only .git files."""
     import stat
 
-    def _on_rm_error(_func, path, _exc_info):  # noqa: ANN001
+    def _on_rm_error(_func: Any, path: str, _exc_info: Any) -> None:
         # Clear read-only flag and retry
         try:
             os.chmod(path, stat.S_IWRITE | stat.S_IREAD)
@@ -110,7 +110,7 @@ def _force_remove_tree(dest: Path) -> None:
     try:
         shutil.rmtree(dest)
     except (PermissionError, OSError):
-        shutil.rmtree(dest, onexc=_on_rm_error)
+        shutil.rmtree(dest, onerror=_on_rm_error)
 
 
 def clone_repo(
