@@ -1,69 +1,59 @@
 """
 Tests for local authentication (signup + login).
 
-Uses SQLite in-memory database � no PostgreSQL needed.
+Uses the shared conftest in-memory SQLite engine -- no PostgreSQL needed.
 Run with: pytest backend/tests/test_local_auth.py -v
 """
 
-# ruff: noqa: E402,I001
-
 from __future__ import annotations
 
-import os
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Override settings BEFORE importing app
-os.environ["EIDOS_IN_MEMORY_DB"] = "true"
-os.environ["EIDOS_SECRET_KEY"] = "test-secret-key-for-jwt-32chars!"
-os.environ["EIDOS_DATABASE_URL"] = "sqlite+aiosqlite://"
+from app.core.config import settings
+from app.main import app
+from app.storage.database import get_db
+from tests.conftest import create_tables, drop_tables, override_get_db
 
-from app.auth import dependencies as auth_dependencies  # noqa: E402
-from app.main import app  # noqa: E402
-from app.api import auth as auth_api  # noqa: E402
-from app.core.config import settings  # noqa: E402
-from app.storage.database import get_db  # noqa: E402
-from app.storage.models import Base  # noqa: E402
-
-
-# Use in-memory SQLite for tests
-_test_engine = create_async_engine("sqlite+aiosqlite://", echo=False)
-_test_session = async_sessionmaker(_test_engine, class_=AsyncSession, expire_on_commit=False)
-
-
-async def _override_get_db():
-    async with _test_session() as session:
-        yield session
-
-
-def _install_db_overrides() -> None:
-    app.dependency_overrides[get_db] = _override_get_db
-    app.dependency_overrides[auth_api.get_db] = _override_get_db
-    app.dependency_overrides[auth_dependencies.get_db] = _override_get_db
+app.dependency_overrides[get_db] = override_get_db
 
 
 @pytest_asyncio.fixture(autouse=True)
 async def setup_db():
     """Create tables before each test and drop after."""
-    settings.auth_enabled = True
-    _install_db_overrides()
-    async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await drop_tables()
+    await create_tables()
     yield
-    async with _test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    settings.auth_enabled = False
+    await drop_tables()
 
 
 @pytest_asyncio.fixture
 async def client():
-    """Async HTTP test client."""
-    transport = ASGITransport(app=app)
-    async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        yield ac
+    """Async HTTP test client with auth enabled for local auth tests."""
+    with (
+        patch("app.auth.dependencies.settings") as dep_settings,
+        patch("app.api.auth.settings") as api_settings,
+        patch("app.api.repos.run_ingestion", new_callable=AsyncMock),
+    ):
+        # Enable auth in the dependencies used by the endpoints under test
+        dep_settings.auth_enabled = True
+        dep_settings.edition = settings.edition
+        dep_settings.secret_key = settings.secret_key
+        dep_settings.superadmin_email = ""
+        dep_settings.github_client_id = ""
+        dep_settings.google_client_id = ""
+
+        api_settings.auth_enabled = True
+        api_settings.github_client_id = ""
+        api_settings.google_client_id = ""
+        api_settings.superadmin_email = ""
+
+        transport = ASGITransport(app=app)
+        async with AsyncClient(transport=transport, base_url="http://test") as ac:
+            yield ac
 
 
 # ---------------------------------------------------------------------------

@@ -8,7 +8,14 @@ used by all API tests. Ensures consistent DB state across test modules.
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.config import settings
 from app.storage.models import Base
+
+# ---- Global test defaults ------------------------------------------------
+# The .env may set EIDOS_AUTH_ENABLED=true for local development.
+# Tests expect auth to be *off* by default (anonymous mode); individual test
+# files that need auth enable it via a local fixture or mock.
+settings.auth_enabled = False
 
 TEST_DB_URL = "sqlite+aiosqlite://"
 
