@@ -227,7 +227,6 @@ async def local_signup(
     The password is hashed with bcrypt before storage.
     Returns a JWT access token on success.
     """
-    import hashlib
     import uuid
 
     from app.auth.password import hash_password

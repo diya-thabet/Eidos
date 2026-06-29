@@ -42,7 +42,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(48), primary_key=True)
-    auth_provider: Mapped[str] = mapped_column(String(16), default="github")  # github | google | local
+    # github | google | local
+    auth_provider: Mapped[str] = mapped_column(String(16), default="github")
     github_id: Mapped[int | None] = mapped_column(Integer, unique=True, nullable=True)
     github_login: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
     name: Mapped[str] = mapped_column(String(512), default="")

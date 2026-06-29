@@ -5,7 +5,11 @@ Uses SQLite in-memory database � no PostgreSQL needed.
 Run with: pytest backend/tests/test_local_auth.py -v
 """
 
+# ruff: noqa: E402,I001
+
 from __future__ import annotations
+
+import os
 
 import pytest
 import pytest_asyncio
@@ -13,15 +17,14 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # Override settings BEFORE importing app
-import os
 os.environ["EIDOS_IN_MEMORY_DB"] = "true"
 os.environ["EIDOS_AUTH_ENABLED"] = "true"
 os.environ["EIDOS_SECRET_KEY"] = "test-secret-key-for-jwt-32chars!"
 os.environ["EIDOS_DATABASE_URL"] = "sqlite+aiosqlite://"
 
-from app.storage.models import Base  # noqa: E402
-from app.storage.database import engine, get_db  # noqa: E402
 from app.main import app  # noqa: E402
+from app.storage.database import get_db  # noqa: E402
+from app.storage.models import Base  # noqa: E402
 
 
 # Use in-memory SQLite for tests
