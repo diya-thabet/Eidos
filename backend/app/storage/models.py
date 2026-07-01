@@ -7,6 +7,7 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     Enum,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -702,4 +703,30 @@ class Dependency(Base):
     __table_args__ = (
         Index("ix_deps_snapshot", "snapshot_id"),
         Index("ix_deps_snapshot_eco", "snapshot_id", "ecosystem"),
+    )
+
+
+class LLMProvider(Base):
+    """A configured LLM provider (Fanar, OpenAI, Ollama, etc.)."""
+
+    __tablename__ = "llm_providers"
+
+    id: Mapped[str] = mapped_column(String(48), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    base_url: Mapped[str] = mapped_column(String(512), nullable=False)
+    api_key_enc: Mapped[str] = mapped_column(Text, default="")
+    default_model: Mapped[str] = mapped_column(String(128), default="")
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_default: Mapped[bool] = mapped_column(Boolean, default=False)
+    max_tokens: Mapped[int] = mapped_column(Integer, default=2048)
+    temperature: Mapped[float] = mapped_column(Float, default=0.1)
+    timeout: Mapped[int] = mapped_column(Integer, default=60)
+    rate_limit_rpm: Mapped[int] = mapped_column(Integer, default=50)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(UTC),
+        onupdate=lambda: datetime.now(UTC),
     )

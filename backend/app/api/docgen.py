@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.api.llm_providers import get_llm_config_from_provider
 from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.docgen.models import DocType
@@ -41,6 +42,8 @@ async def generate_docs(
     body: GenerateDocsRequest | None = None,
     db: AsyncSession = Depends(get_db),
     _snap: RepoSnapshot = Depends(verify_snapshot),
+    provider_id: str | None = Query(None, description="LLM provider ID to use"),
+    model: str | None = Query(None, description="Model override"),
 ) -> Any:
     """
     Generate documentation from the analysed codebase.
@@ -50,9 +53,9 @@ async def generate_docs(
     - ``scope_id`` is required for ``module`` and ``flow`` types.
 
     Documents are persisted and can be retrieved via GET.
-    Works with or without an LLM.
+    Works with or without an LLM. Supports dynamic provider/model selection.
     """
-    llm = _make_llm()
+    llm = await _make_llm_dynamic(db, provider_id=provider_id, model_override=model)
     body = body or GenerateDocsRequest()
 
     if body.doc_type is None:
@@ -217,11 +220,6 @@ def _export_filename(doc_type: str, scope_id: str | None, ext: str) -> str:
     return name.replace(".", "-").replace("/", "-").replace(" ", "-") + ext
 
 
-# -------------------------------------------------------------------
-# Changelog
-# -------------------------------------------------------------------
-
-
 @router.get(
     "/{repo_id}/snapshots/{snapshot_id}/docs/{doc_id}",
     response_model=GeneratedDocOut,
@@ -254,14 +252,6 @@ async def get_doc(
         markdown=doc.markdown,
         llm_narrative=doc.llm_narrative,
     )
-
-
-# -------------------------------------------------------------------
-# Export (multi-format)
-# -------------------------------------------------------------------
-
-
-
 
 
 @router.post(
@@ -379,17 +369,34 @@ async def generate_changelog_endpoint(
 # -------------------------------------------------------------------
 
 
+async def _make_llm_dynamic(
+    db: AsyncSession,
+    provider_id: str | None = None,
+    model_override: str | None = None,
+) -> Any:
+    """Create LLM client using DB provider first, then env fallback."""
+    config = await get_llm_config_from_provider(
+        db, provider_id=provider_id, model_override=model_override
+    )
+    if config is None:
+        config = _make_llm_config()
+    return create_llm_client(config)
+
+
+def _make_llm_config() -> LLMConfig | None:
+    """Build LLM config from env settings."""
+    if settings.llm_base_url:
+        return LLMConfig(
+            base_url=settings.llm_base_url,
+            api_key=settings.llm_api_key,
+            model=settings.llm_model,
+            temperature=settings.llm_temperature,
+            max_tokens=settings.llm_max_tokens,
+            timeout=settings.llm_timeout,
+        )
+    return None
+
 
 def _make_llm() -> Any:
-    if settings.llm_base_url:
-        return create_llm_client(
-            LLMConfig(
-                base_url=settings.llm_base_url,
-                api_key=settings.llm_api_key,
-                model=settings.llm_model,
-                temperature=settings.llm_temperature,
-                max_tokens=settings.llm_max_tokens,
-                timeout=settings.llm_timeout,
-            )
-        )
-    return create_llm_client(None)
+    """Legacy sync helper - kept for backward compat."""
+    return create_llm_client(_make_llm_config())

@@ -26,7 +26,23 @@ Eidos is a code intelligence platform that analyzes codebases across 9 programmi
 | **Code health rules** | 66 (across 13 category modules) |
 | **Export formats** | 5 (JSON, .eidos, CSV/ZIP, SARIF, Markdown) |
 | **Real repos validated** | 18 (pallets/click, fmtlib/fmt, java-design-patterns, ...) |
-| **Documentation files** | 30 |
+| **Documentation files** | 30+ |
+| **LLM providers** | Dynamic multi-provider registry (Fanar, OpenAI, Ollama, etc.) |
+
+---
+
+## Recent: Fanar LLM Integration (Phase 1 — Complete)
+
+The backend now supports **dynamic LLM provider management**:
+
+- **Admin API** at `/admin/llm-providers` for CRUD, connectivity testing, and default switching
+- **Per-request provider/model selection** on Q&A, reviews, and docgen endpoints
+- **Encrypted API key storage** (AES/Fernet)
+- **54 dedicated backend tests** covering all provider operations
+- **Config resolution**: DB provider ? env fallback ? stub client
+- Compatible with any OpenAI-compatible API (Fanar, OpenAI, Ollama, local models)
+
+See `docs/LLM_PROVIDER_API.md` for full API reference.
 
 ---
 

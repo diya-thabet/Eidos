@@ -189,6 +189,45 @@ Check readiness:
 http://127.0.0.1:8000/health/ready
 ```
 
+---
+
+## 5. LLM Provider Configuration
+
+Both demo and real modes support **dynamic LLM provider management**. You can configure LLM providers in two ways:
+
+### Option A: Environment Variables (Simple)
+
+```bash
+EIDOS_LLM_BASE_URL=https://api.fanar.qa/v1
+EIDOS_LLM_API_KEY=your-api-key
+EIDOS_LLM_MODEL=Fanar-C-2-27B
+```
+
+### Option B: Admin API (Recommended for Production)
+
+Register providers at runtime without restart:
+
+```bash
+# Register Fanar
+curl -X POST http://localhost:8000/admin/llm-providers \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Fanar","base_url":"https://api.fanar.qa/v1","api_key":"YOUR_KEY","default_model":"Fanar-C-2-27B"}'
+
+# Set as default
+curl -X POST http://localhost:8000/admin/llm-providers/{id}/set-default
+
+# Test connectivity
+curl -X POST http://localhost:8000/admin/llm-providers/{id}/test
+```
+
+See `docs/LLM_PROVIDER_API.md` for full API reference.
+
+### Config Resolution Order
+
+1. DB-registered default provider (if active)
+2. Environment variables (`EIDOS_LLM_*`)
+3. No LLM (deterministic analysis only)
+
 Open Swagger UI:
 
 ```text

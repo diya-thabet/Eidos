@@ -11,11 +11,12 @@ import json
 from dataclasses import asdict
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.api.llm_providers import get_llm_config_from_provider
 from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.reasoning.llm_client import LLMConfig, create_llm_client
@@ -44,6 +45,8 @@ async def review_pr(
     body: ReviewRequest,
     db: AsyncSession = Depends(get_db),
     _snap: RepoSnapshot = Depends(verify_snapshot),
+    provider_id: str | None = Query(None, description="LLM provider ID to use"),
+    model: str | None = Query(None, description="Model override"),
 ) -> Any:
     """
     Submit a unified diff for review.
@@ -56,11 +59,15 @@ async def review_pr(
     5. Computes a risk score
     6. Optionally enriches with LLM summary
 
-    Works with or without an LLM.
+    Works with or without an LLM. Supports dynamic provider/model selection.
     """
 
-    # Create LLM client (or stub)
-    llm_config = _get_llm_config()
+    # Create LLM client (or stub) - try DB provider first, then env fallback
+    llm_config = await get_llm_config_from_provider(
+        db, provider_id=provider_id, model_override=model
+    )
+    if llm_config is None:
+        llm_config = _get_llm_config()
     llm = create_llm_client(llm_config)
 
     report = await review_diff(db, snapshot_id, body.diff, llm=llm, max_hops=body.max_hops)
@@ -134,8 +141,8 @@ async def list_reviews(
     return reviews
 
 
-
 def _get_llm_config() -> LLMConfig | None:
+    """Build LLM config from env settings (fallback)."""
     if settings.llm_base_url:
         return LLMConfig(
             base_url=settings.llm_base_url,

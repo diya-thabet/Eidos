@@ -359,10 +359,34 @@ alembic upgrade head
 
 ### New LLM Provider
 
-All LLM access goes through `reasoning/llm_client.py`. The `create_llm_client()` factory creates an OpenAI-compatible client. To add a non-OpenAI provider:
+Eidos has a **dynamic provider registry**. You can add new providers at runtime via the Admin API without writing code:
 
-1. Create a new class implementing the same interface as `LLMClient`
+```bash
+# Register a new provider
+curl -X POST http://localhost:8000/admin/llm-providers \
+  -H "Content-Type: application/json" \
+  -d '{"name": "MyProvider", "base_url": "http://...", "api_key": "..."}'
+```
+
+For providers that are **OpenAI-compatible** (most are), no code changes are needed.
+
+For truly custom providers (non-OpenAI API format):
+
+1. Create a new class implementing `LLMClient` in `reasoning/llm_client.py`
 2. Add a condition in `create_llm_client()` based on config
+3. Register it in the DB via `POST /admin/llm-providers`
+
+**Key files**:
+- `app/api/llm_providers.py` — Admin CRUD + `get_llm_config_from_provider()` helper
+- `app/reasoning/llm_client.py` — `LLMConfig`, `OpenAICompatibleClient`, factory
+- `app/storage/models.py` — `LLMProvider` ORM model
+- `tests/test_llm_providers.py`, `tests/test_llm_dynamic_integration.py` — 54 tests
+
+**Config resolution order**: DB default ? env vars ? stub client.
+
+All LLM-consuming endpoints (`ask`, `review`, `docs`) accept optional `?provider_id=` and `?model=` query params for per-request switching.
+
+See `docs/LLM_PROVIDER_API.md` for the full API reference.
 
 ### New Vector Database
 

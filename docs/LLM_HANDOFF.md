@@ -557,6 +557,56 @@ Applied `require_scope()` to all 104 endpoints:
 - **Router-level** scopes on 14 simple routers (analysis, search, diagrams, trends, deps, blame, call_cycles, dead_code, clones, coupling, exports, sbom, health_score)
 - **Per-endpoint** scopes on 8 mixed routers (repos, coverage, quality_gates, tags, bulk, incremental_health, portable, indexing)
 - All GET endpoints: `read:*` scopes; POST/PATCH: `write:*`; DELETE: `delete:*` or `write:*`; Admin: `admin:*`
+
+---
+
+## 45. Fanar LLM Integration — Phase 1: Dynamic Provider Registry
+
+### What Was Done
+
+Implemented a full **multi-provider LLM registry** with:
+
+1. **New ORM model** `LLMProvider` in `app/storage/models.py` — stores name, base_url, encrypted API key, default model, temperature, max_tokens, timeout, rate limits, active/default flags.
+
+2. **Admin API** in `app/api/llm_providers.py`:
+   - `POST /admin/llm-providers` — register provider
+   - `GET /admin/llm-providers` — list all
+   - `GET /admin/llm-providers/{id}` — get details
+   - `PATCH /admin/llm-providers/{id}` — update
+   - `DELETE /admin/llm-providers/{id}` — remove
+   - `POST /admin/llm-providers/{id}/set-default` — make system default
+   - `POST /admin/llm-providers/{id}/test` — test connectivity (calls `/models`)
+   - `GET /admin/llm-providers/status` — current LLM status overview
+
+3. **Dynamic wiring** into all LLM consumers:
+   - `app/api/reasoning.py` — `ask` endpoint uses `get_llm_config_from_provider()`
+   - `app/api/reviews.py` — `review` endpoint uses dynamic provider
+   - `app/api/docgen.py` — `docs` endpoint uses dynamic provider
+   - All accept `?provider_id=` and `?model=` query params
+
+4. **Config resolution**: DB default ? env vars ? stub (graceful degradation)
+
+5. **54 backend tests** in `tests/test_llm_providers.py` and `tests/test_llm_dynamic_integration.py`
+
+### Key Lessons
+
+- **Static routes before dynamic**: `/llm-providers/status` must be declared before `/{provider_id}` to avoid FastAPI treating "status" as a provider ID.
+- **httpx mock pattern**: Use `mock_cls.return_value.__aenter__` + a regular `async def` for `instance.get`, not `AsyncMock()` directly (avoids coroutine-never-awaited warnings).
+- **Encryption round-trip**: Test that `decrypt(encrypt(key)) == key` and that a corrupted `api_key_enc` doesn't crash but returns empty string.
+
+### Files Changed
+
+| File | Change |
+|------|--------|
+| `app/storage/models.py` | Added `LLMProvider` model |
+| `app/api/llm_providers.py` | New: full admin CRUD + helper |
+| `app/api/reasoning.py` | Wired dynamic provider + query params |
+| `app/api/reviews.py` | Wired dynamic provider + query params |
+| `app/api/docgen.py` | Wired dynamic provider + query params |
+| `app/main.py` | Registered router under `/admin` |
+| `tests/test_llm_providers.py` | 31 tests |
+| `tests/test_llm_dynamic_integration.py` | 23 tests |
+| `docs/LLM_PROVIDER_API.md` | Full API reference |
 - Auth endpoints (`/auth/*`) have no scope requirement
 - New doc: `docs/PERMISSIONS.md` — full endpoint?scope matrix
 - 19 new integration tests verifying scope enforcement with real API keys

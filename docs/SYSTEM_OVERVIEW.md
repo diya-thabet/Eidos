@@ -15,6 +15,7 @@ Eidos is a tool that helps developers understand their code. You give it a Git r
 5. **Reviews code changes** for risks before you merge them
 6. **Answers questions** about your codebase in plain English
 7. **Scores code health** with 66 rules checking for common problems
+8. **Manages LLM providers** dynamically (Fanar, OpenAI, Ollama, etc.) with encrypted API keys and per-request model selection
 
 You interact with Eidos through a REST API. No frontend is needed - you can use it from your terminal, CI/CD pipeline, or any HTTP client.
 

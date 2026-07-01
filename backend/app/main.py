@@ -24,6 +24,7 @@ from app.api import exports as exports_api
 from app.api import health_score as health_score_api
 from app.api import incremental_health as incremental_health_api
 from app.api import indexing as indexing_api
+from app.api import llm_providers as llm_providers_api
 from app.api import permissions as permissions_api
 from app.api import portable as portable_api
 from app.api import quality_gates as quality_gates_api
@@ -220,6 +221,7 @@ app.include_router(permissions_api.router, prefix="/repos", tags=["permissions"]
 app.include_router(teams_api.router, prefix="/teams", tags=["teams"])
 app.include_router(webhook_api.router, tags=["webhooks"])
 app.include_router(admin_api.router, prefix="/admin", tags=["admin"])
+app.include_router(llm_providers_api.router, prefix="/admin", tags=["llm"])
 app.include_router(metrics_router, tags=["monitoring"])
 app.add_middleware(MetricsMiddleware)
 

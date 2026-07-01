@@ -9,11 +9,12 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
+from app.api.llm_providers import get_llm_config_from_provider
 from app.auth.scopes import require_scope
 from app.core.config import settings
 from app.reasoning.answer_builder import build_answer
@@ -89,6 +90,8 @@ async def ask_question(
     body: AskRequest,
     db: AsyncSession = Depends(get_db),
     _snap: RepoSnapshot = Depends(verify_snapshot),
+    provider_id: str | None = Query(None, description="LLM provider ID to use"),
+    model: str | None = Query(None, description="Model override"),
 ) -> Any:
     """
     Ask a natural-language question about a snapshot of the codebase.
@@ -100,6 +103,8 @@ async def ask_question(
 
     Works with or without an LLM. Without LLM, returns deterministic
     answers based on code graph analysis.
+
+    Supports dynamic provider/model selection via query params.
     """
 
     # Build structured question
@@ -110,8 +115,12 @@ async def ask_question(
     # Retrieve context
     context = await retrieve_context(db, question)
 
-    # Create LLM client (or stub)
-    llm_config = _get_llm_config()
+    # Create LLM client (or stub) - try DB provider first, then env fallback
+    llm_config = await get_llm_config_from_provider(
+        db, provider_id=provider_id, model_override=model
+    )
+    if llm_config is None:
+        llm_config = _get_llm_config()
     llm = create_llm_client(llm_config)
 
     # Build answer
@@ -170,9 +179,8 @@ async def classify_question_endpoint(
 # ---------------------------------------------------------------------------
 
 
-
 def _get_llm_config() -> LLMConfig | None:
-    """Build LLM config from settings."""
+    """Build LLM config from env settings (fallback)."""
     if settings.llm_base_url:
         return LLMConfig(
             base_url=settings.llm_base_url,
