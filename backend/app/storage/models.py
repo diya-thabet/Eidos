@@ -722,6 +722,7 @@ class LLMProvider(Base):
     temperature: Mapped[float] = mapped_column(Float, default=0.1)
     timeout: Mapped[int] = mapped_column(Integer, default=60)
     rate_limit_rpm: Mapped[int] = mapped_column(Integer, default=50)
+    skip_tls_verify: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )

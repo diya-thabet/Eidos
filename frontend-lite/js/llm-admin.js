@@ -170,6 +170,7 @@ function _llmShowAddForm() {
     h += '<input class="inp" id="llm-add-temp" placeholder="Temperature" type="number" step="0.1" value="0.1" style="width:100px">';
     h += '<input class="inp" id="llm-add-timeout" placeholder="Timeout (s)" type="number" value="60" style="width:100px">';
     h += '<input class="inp" id="llm-add-rpm" placeholder="Rate limit RPM" type="number" value="50" style="width:120px">';
+    h += '<label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)"><input type="checkbox" id="llm-add-tls" checked> Skip TLS verify (for self-signed certs)</label>';
     h += '</div>';
     h += '<div class="row g-8"><button class="btn btn-s btn-p" onclick="_llmAddProvider()">Register Provider</button><button class="btn btn-s btn-g" onclick="document.getElementById(\'llm-add-form\').style.display=\'none\'">Cancel</button></div>';
     h += '</div>';
@@ -198,7 +199,8 @@ function _llmAddProvider() {
         max_tokens: tokens,
         temperature: temp,
         timeout: timeout,
-        rate_limit_rpm: rpm
+        rate_limit_rpm: rpm,
+        skip_tls_verify: !!(document.getElementById('llm-add-tls') || {}).checked
     }).then(function(data) {
         toast('Provider "' + data.name + '" registered');
         _llmProviders.push(data);

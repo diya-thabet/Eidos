@@ -38,6 +38,7 @@ class LLMConfig:
     temperature: float = 0.1
     max_tokens: int = 2048
     timeout: int = DEFAULT_TIMEOUT
+    skip_tls_verify: bool = False
 
 
 class LLMClient(ABC):
@@ -100,7 +101,10 @@ class OpenAICompatibleClient(LLMClient):
             headers["Authorization"] = f"Bearer {self._config.api_key}"
 
         url = f"{self._base_url}/chat/completions"
-        async with httpx.AsyncClient(timeout=self._config.timeout) as client:
+        async with httpx.AsyncClient(
+            timeout=self._config.timeout,
+            verify=not self._config.skip_tls_verify,
+        ) as client:
             response = await client.post(url, json=payload, headers=headers)
             response.raise_for_status()
             return response.json()  # type: ignore[no-any-return]

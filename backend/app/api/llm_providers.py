@@ -85,6 +85,7 @@ def _provider_to_dict(p: LLMProvider) -> dict[str, Any]:
         "timeout": p.timeout,
         "rate_limit_rpm": p.rate_limit_rpm,
         "has_api_key": bool(p.api_key_enc),
+        "skip_tls_verify": p.skip_tls_verify,
         "created_at": p.created_at.isoformat() if p.created_at else None,
         "updated_at": p.updated_at.isoformat() if p.updated_at else None,
     }
@@ -235,7 +236,9 @@ async def list_all_models(
 
         url = f"{p.base_url}/models"
         try:
-            async with httpx.AsyncClient(timeout=min(p.timeout, 15)) as client:
+            async with httpx.AsyncClient(
+                    timeout=min(p.timeout, 15), verify=not p.skip_tls_verify,
+                ) as client:
                 resp = await client.get(url, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
@@ -314,7 +317,10 @@ async def list_provider_models(
 
     url = f"{provider.base_url}/models"
     try:
-        async with httpx.AsyncClient(timeout=provider.timeout) as client:
+        async with httpx.AsyncClient(
+                timeout=provider.timeout,
+                verify=not provider.skip_tls_verify,
+            ) as client:
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
@@ -486,7 +492,10 @@ async def test_provider(
 
     url = f"{provider.base_url}/models"
     try:
-        async with httpx.AsyncClient(timeout=provider.timeout) as client:
+        async with httpx.AsyncClient(
+                timeout=provider.timeout,
+                verify=not provider.skip_tls_verify,
+            ) as client:
             resp = await client.get(url, headers=headers)
             resp.raise_for_status()
             data = resp.json()
