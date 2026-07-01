@@ -229,7 +229,7 @@ def _build_deterministic_answer(question: Question, context: RetrievalContext) -
         namespaces = sorted(
             {str(s.get("namespace", "")) for s in context.symbols if s.get("namespace")}
         )
-        kinds = {}
+        kinds: dict[str, int] = {}
         for sym in context.symbols:
             kind = str(sym.get("kind", "unknown"))
             kinds[kind] = kinds.get(kind, 0) + 1
@@ -499,9 +499,18 @@ def _parse_llm_verification(raw: object) -> list[VerificationItem]:
 
 
 def _safe_int(value: object) -> int:
-    try:
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
         return int(value)
-    except (TypeError, ValueError):
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    try:
+        return int(str(value))
+    except ValueError:
         return 0
 
 

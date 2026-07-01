@@ -2711,6 +2711,7 @@ function pgDocs() {
 
     _llmLoadProviders().then(function() {
         html('main', '<div class="page-head"><h1>Documentation</h1><p>Auto-generate from code graph</p></div><div class="row g-8" style="margin-bottom:8px"><button class="btn btn-p" onclick="genDocs()">Generate</button><button class="btn btn-g" onclick="loadDocs()">Load Existing</button></div>' + _llmSelectorHTML('docs') + '<div id="dc" style="margin-top:12px"></div>');
+        restoreDocsIfAvailable();
     });
 
 }
@@ -2719,23 +2720,154 @@ function genDocs() { html('dc', '<div class="loader"><span class="spin"></span><
 
 function loadDocs() { html('dc', '<div class="loader"><span class="spin"></span></div>'); API.get(S.path() + '/docs').then(function(d) { showDocs(d.documents || d.items || []); }).catch(function(e) { html('dc', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); }); }
 
+var _docGraphDocs = [];
+var _docGraphActive = 0;
+var _docGraphQuery = '';
+var _docGraphSearchTimer = null;
+var _docGraphPath = '';
+
 function showDocs(docs) {
     if (!docs.length) { html('dc', '<div class="empty"><p>No docs. Generate first.</p></div>'); return; }
+    _docGraphDocs = docs;
+    _docGraphPath = S.path();
+    _docGraphActive = 0;
+    _docGraphQuery = '';
+    saveDocsCache();
+    renderDocGraphWorkspace();
+}
+
+function restoreDocsIfAvailable() {
+    var currentPath = S.path();
+    if (_docGraphDocs.length && _docGraphPath === currentPath) {
+        renderDocGraphWorkspace();
+        return;
+    }
+    var cached = loadDocsCache(currentPath);
+    if (cached && cached.length) {
+        _docGraphDocs = cached;
+        _docGraphPath = currentPath;
+        _docGraphActive = Math.min(_docGraphActive || 0, cached.length - 1);
+        renderDocGraphWorkspace();
+        return;
+    }
+    html('dc', '<div class="empty"><p>No docs loaded yet. Generate or load existing documentation.</p></div>');
+}
+
+function docsCacheKey(path) { return 'eidos_docs_cache:' + (path || S.path()); }
+
+function saveDocsCache() {
+    try { sessionStorage.setItem(docsCacheKey(_docGraphPath), JSON.stringify(_docGraphDocs)); } catch(e) {}
+}
+
+function loadDocsCache(path) {
+    try { return JSON.parse(sessionStorage.getItem(docsCacheKey(path)) || '[]'); } catch(e) { return []; }
+}
+
+function renderDocGraphWorkspace() {
+    var docs = _docGraphFiltered();
+    if (!docs.length) { html('dc', '<div class="empty"><p>No docs match this search.</p><button class="btn btn-s btn-g" onclick="docGraphSearch(\'\', false)">Clear</button></div>'); return; }
+    if (_docGraphActive >= _docGraphDocs.length) _docGraphActive = 0;
+    var active = _docGraphDocs[_docGraphActive] || docs[0];
     var byType = {};
-    docs.forEach(function(d) { byType[d.doc_type || 'doc'] = (byType[d.doc_type || 'doc'] || 0) + 1; });
+    _docGraphDocs.forEach(function(d) { byType[d.doc_type || 'doc'] = (byType[d.doc_type || 'doc'] || 0) + 1; });
     var h = '<div class="ch-kpi">';
-    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + docs.length + '</div><div class="ch-kpi-lbl">Documents</div></div>';
-    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + Object.keys(byType).length + '</div><div class="ch-kpi-lbl">Doc Types</div></div>';
-    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + docs.filter(function(d) { return (d.llm_narrative || '').trim(); }).length + '</div><div class="ch-kpi-lbl">Fanar Narratives</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + _docGraphDocs.length + '</div><div class="ch-kpi-lbl">Doc Nodes</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + Object.keys(byType).length + '</div><div class="ch-kpi-lbl">Types</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + _docGraphDocs.filter(function(d) { return (d.llm_narrative || '').trim(); }).length + '</div><div class="ch-kpi-lbl">Fanar Narratives</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + docs.length + '</div><div class="ch-kpi-lbl">Visible</div></div>';
     h += '</div>';
-    docs.forEach(function(d) {
-        h += '<div class="card"><div class="row between" style="margin-bottom:10px"><div><div class="card-hd" style="margin:0">' + esc(d.title || d.doc_type) + '</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">Graph-aware generated documentation</div></div><span class="badge b-blue">' + esc(d.doc_type) + '</span></div>';
-        if (d.llm_narrative) h += '<div style="border-left:3px solid var(--accent);padding:8px 10px;background:var(--bg-2);border-radius:8px;margin-bottom:10px;white-space:pre-wrap">' + esc(d.llm_narrative) + '</div>';
-        h += renderDocMarkdown(d.markdown || '');
-        h += '</div>';
-    });
+    h += '<div class="card" style="margin-bottom:12px"><div class="row g-8" style="align-items:center"><input class="inp" id="docGraphSearch" value="' + esc(_docGraphQuery) + '" placeholder="Search docs, modules, flows, nodes..." oninput="docGraphSearchInput(this)" style="flex:1"><button class="btn btn-g" onclick="docGraphSearch(\'\', false)">Clear</button><button class="btn btn-g" onclick="copyActiveDoc()">Copy Doc</button><button class="btn btn-p" onclick="askActiveDoc()">Ask About Node</button></div></div>';
+    h += '<div style="display:grid;grid-template-columns:minmax(360px,1.05fr) minmax(360px,1fr);gap:12px;align-items:start">';
+    h += '<div class="card"><div class="row between" style="margin-bottom:10px"><div><div class="card-hd" style="margin:0">Documentation Graph</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">Click a node to read its generated documentation.</div></div><span class="badge b-blue">interactive</span></div>';
+    h += docGraphSvg(docs);
+    h += docGraphLegend(byType);
+    h += '</div>';
+    h += '<div id="docNodePanel">' + renderDocNodePanel(active) + '</div>';
+    h += '</div>';
     html('dc', h);
 }
+
+function _docGraphFiltered() {
+    var q = (_docGraphQuery || '').toLowerCase();
+    return _docGraphDocs.map(function(d, i) { d._docIndex = i; return d; }).filter(function(d) {
+        if (!q) return true;
+        return ((d.title || '') + ' ' + (d.doc_type || '') + ' ' + (d.scope_id || '') + ' ' + (d.markdown || '')).toLowerCase().indexOf(q) >= 0;
+    });
+}
+
+function docGraphSearchInput(el) {
+    _docGraphQuery = el.value || '';
+    var pos = el.selectionStart || _docGraphQuery.length;
+    if (_docGraphSearchTimer) clearTimeout(_docGraphSearchTimer);
+    _docGraphSearchTimer = setTimeout(function() {
+        renderDocGraphWorkspace();
+        restoreDocGraphSearchFocus(pos);
+    }, 140);
+}
+
+function docGraphSearch(q, keepFocus) {
+    _docGraphQuery = q || '';
+    if (_docGraphSearchTimer) clearTimeout(_docGraphSearchTimer);
+    renderDocGraphWorkspace();
+    if (keepFocus) restoreDocGraphSearchFocus(_docGraphQuery.length);
+}
+
+function restoreDocGraphSearchFocus(pos) {
+    setTimeout(function() {
+        var el = $('docGraphSearch');
+        if (!el) return;
+        el.focus();
+        if (el.setSelectionRange) el.setSelectionRange(pos, pos);
+    }, 0);
+}
+
+function docGraphSelect(idx) { _docGraphActive = idx; renderDocGraphWorkspace(); }
+
+function docGraphSvg(docs) {
+    var cx = 450, cy = 205, r = Math.min(165, 70 + docs.length * 5);
+    var center = docs.find(function(d) { return d.doc_type === 'architecture'; }) || docs.find(function(d) { return d.doc_type === 'readme'; }) || docs[0];
+    var h = '<svg viewBox="0 0 900 420" style="width:100%;height:420px;border:1px solid var(--border);border-radius:14px;background:radial-gradient(circle at center,var(--bg-2),var(--bg-1))">';
+    docs.forEach(function(d, i) {
+        if (d === center) return;
+        var p = docGraphPos(i, docs.length, cx, cy, r);
+        h += '<line x1="' + cx + '" y1="' + cy + '" x2="' + p.x + '" y2="' + p.y + '" stroke="var(--border)" stroke-width="1.2" opacity="0.75" />';
+    });
+    docs.forEach(function(d, i) {
+        var p = d === center ? { x: cx, y: cy } : docGraphPos(i, docs.length, cx, cy, r);
+        var active = d._docIndex === _docGraphActive;
+        var color = docTypeColor(d.doc_type);
+        h += '<g onclick="docGraphSelect(' + d._docIndex + ')" style="cursor:pointer">';
+        h += '<circle cx="' + p.x + '" cy="' + p.y + '" r="' + (active ? 24 : 19) + '" fill="' + color + '" opacity="' + (active ? '1' : '0.82') + '" stroke="' + (active ? 'white' : 'var(--border)') + '" stroke-width="' + (active ? 3 : 1) + '"></circle>';
+        h += '<text x="' + p.x + '" y="' + (p.y + 4) + '" text-anchor="middle" fill="white" font-size="12" font-weight="700">' + esc(docTypeShort(d.doc_type)) + '</text>';
+        h += '<text x="' + p.x + '" y="' + (p.y + 38) + '" text-anchor="middle" fill="var(--text-1)" font-size="11">' + esc(shortDocTitle(d.title || d.doc_type)) + '</text>';
+        h += '</g>';
+    });
+    h += '</svg>';
+    return h;
+}
+
+function docGraphPos(i, total, cx, cy, r) { var a = (Math.PI * 2 * i / Math.max(total, 1)) - Math.PI / 2; return { x: Math.round(cx + Math.cos(a) * r), y: Math.round(cy + Math.sin(a) * r) }; }
+function docTypeColor(t) { return t === 'architecture' ? '#7c3aed' : t === 'readme' ? '#2563eb' : t === 'module' ? '#16a34a' : t === 'flow' ? '#dc2626' : t === 'runbook' ? '#ca8a04' : '#64748b'; }
+function docTypeShort(t) { return (t || 'D').slice(0, 1).toUpperCase(); }
+function shortDocTitle(t) { return (t || '').replace('Module: ', '').replace('Flow: ', '').split('.').slice(-2).join('.').slice(0, 24); }
+
+function docGraphLegend(byType) { var h = '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'; Object.keys(byType).sort().forEach(function(t) { h += '<span class="badge b-blue" style="background:' + docTypeColor(t) + ';color:white">' + esc(t) + ' ' + byType[t] + '</span>'; }); return h + '</div>'; }
+
+function renderDocNodePanel(d) {
+    var h = '<div class="card"><div class="row between" style="margin-bottom:10px"><div><div class="card-hd" style="margin:0">' + esc(d.title || d.doc_type) + '</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">' + esc(d.scope_id || 'whole snapshot') + '</div></div><span class="badge b-blue">' + esc(d.doc_type || 'doc') + '</span></div>';
+    if (d.llm_narrative) h += '<div style="border-left:3px solid var(--accent);padding:8px 10px;background:var(--bg-2);border-radius:8px;margin-bottom:10px;white-space:pre-wrap">' + esc(d.llm_narrative) + '</div>';
+    h += '<div class="card" style="background:var(--bg-2);margin-bottom:10px"><div style="font-size:11px;color:var(--text-3);margin-bottom:6px">Ask Fanar about this documentation node</div><div class="row g-8"><input class="inp" id="docNodeAsk" placeholder="e.g. explain this node like I am new to the project" onkeydown="if(event.key===\'Enter\')askActiveDocCustom()" style="flex:1"><button class="btn btn-s btn-p" onclick="askActiveDocCustom()">Ask</button></div></div>';
+    h += '<div class="row g-8" style="margin-bottom:10px"><button class="btn btn-s btn-p" onclick="askActiveDoc()">Quick explain node</button><button class="btn btn-s btn-g" onclick="copyActiveDoc()">Copy markdown</button></div>';
+    h += renderDocMarkdown(d.markdown || '');
+    h += '</div>';
+    return h;
+}
+
+function copyActiveDoc() { var d = _docGraphDocs[_docGraphActive]; if (!d) return; navigator.clipboard.writeText(d.markdown || ''); toast('Documentation copied'); }
+
+function askActiveDoc() { var d = _docGraphDocs[_docGraphActive]; if (!d) return; var q = 'Explain this documentation node in human language: ' + (d.title || d.doc_type) + (d.scope_id ? ' (' + d.scope_id + ')' : ''); navigate('ask'); setTimeout(function() { var ai = $('ai'); if (ai) { ai.value = q; sendQ(); } }, 180); }
+
+function askActiveDocCustom() { var d = _docGraphDocs[_docGraphActive]; if (!d) return; var input = $('docNodeAsk'); var custom = input ? input.value.trim() : ''; var q = custom || 'Explain this documentation node in human language'; q += ': ' + (d.title || d.doc_type) + (d.scope_id ? ' (' + d.scope_id + ')' : ''); navigate('ask'); setTimeout(function() { var ai = $('ai'); if (ai) { ai.value = q; sendQ(); } }, 180); }
 
 function renderDocMarkdown(md) {
     var parts = md.split(/```mermaid\n|```mermaid\r\n/);
