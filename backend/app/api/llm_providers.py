@@ -3,15 +3,21 @@ Admin API for managing LLM providers.
 
 Allows dynamic registration, update, deletion and testing of LLM providers
 (Fanar, OpenAI, Ollama, etc.) without backend restart.
+
+Phase 1: Provider registry, CRUD, set-default, connectivity test, status.
+Phase 2: Model listing, per-request selection (already wired), chat endpoint.
+Phase 3: Auto-validation on key update, key rotation support.
 """
 
 from __future__ import annotations
 
+import asyncio
+import logging
 import uuid
 from typing import Any
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,9 +25,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.auth.crypto import decrypt, encrypt
 from app.auth.dependencies import get_current_user, require_role
 from app.core.config import settings
-from app.reasoning.llm_client import LLMConfig
+from app.reasoning.llm_client import LLMConfig, create_llm_client
 from app.storage.database import get_db
 from app.storage.models import LLMProvider, User
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -53,6 +61,15 @@ class LLMProviderUpdate(BaseModel):
     timeout: int | None = None
     rate_limit_rpm: int | None = None
     is_active: bool | None = None
+
+
+class ChatRequest(BaseModel):
+    """Direct LLM chat request for testing/playground."""
+
+    message: str
+    system_prompt: str = "You are a helpful assistant."
+    provider_id: str | None = None
+    model: str | None = None
 
 
 def _provider_to_dict(p: LLMProvider) -> dict[str, Any]:
@@ -132,6 +149,7 @@ async def list_providers(
     return [_provider_to_dict(p) for p in providers]
 
 
+# Static routes BEFORE dynamic /{provider_id} routes
 @router.get(
     "/llm-providers/status",
     summary="Get current LLM configuration status",
@@ -183,6 +201,75 @@ async def llm_status(
 
 
 @router.get(
+    "/llm-providers/models",
+    summary="List available models across all active providers",
+)
+async def list_all_models(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> Any:
+    """
+    Aggregate available models from all active providers.
+
+    Calls each provider's /models endpoint in parallel and merges results.
+    """
+    result = await db.execute(
+        select(LLMProvider).where(LLMProvider.is_active.is_(True))
+    )
+    providers = result.scalars().all()
+
+    if not providers:
+        return {"models": [], "providers": 0}
+
+    async def _fetch_models(p: LLMProvider) -> dict[str, Any]:
+        api_key = ""
+        if p.api_key_enc:
+            try:
+                api_key = decrypt(p.api_key_enc)
+            except ValueError:
+                pass
+
+        headers: dict[str, str] = {"Content-Type": "application/json"}
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+
+        url = f"{p.base_url}/models"
+        try:
+            async with httpx.AsyncClient(timeout=min(p.timeout, 15)) as client:
+                resp = await client.get(url, headers=headers)
+                resp.raise_for_status()
+                data = resp.json()
+                models = []
+                if "data" in data:
+                    for m in data["data"]:
+                        models.append({
+                            "id": m.get("id", m.get("name", "")),
+                            "provider_id": p.id,
+                            "provider_name": p.name,
+                            "is_default": (
+                                m.get("id", "") == p.default_model
+                                or m.get("name", "") == p.default_model
+                            ),
+                        })
+                return {"provider": p.name, "status": "ok", "models": models}
+        except Exception as e:
+            logger.debug("Failed to fetch models from %s: %s", p.name, e)
+            return {"provider": p.name, "status": "error", "models": []}
+
+    results = await asyncio.gather(*[_fetch_models(p) for p in providers])
+
+    all_models = []
+    for r in results:
+        all_models.extend(r["models"])
+
+    return {
+        "models": all_models,
+        "providers": len(providers),
+        "results": results,
+    }
+
+
+@router.get(
     "/llm-providers/{provider_id}",
     summary="Get LLM provider details",
     dependencies=[Depends(require_role("superadmin", "admin"))],
@@ -199,6 +286,65 @@ async def get_provider(
     return _provider_to_dict(provider)
 
 
+@router.get(
+    "/llm-providers/{provider_id}/models",
+    summary="List models for a specific provider",
+    dependencies=[Depends(require_role("superadmin", "admin"))],
+)
+async def list_provider_models(
+    provider_id: str,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> Any:
+    """List available models for a specific provider by calling its /models endpoint."""
+    provider = await db.get(LLMProvider, provider_id)
+    if not provider:
+        raise HTTPException(status_code=404, detail="Provider not found")
+
+    api_key = ""
+    if provider.api_key_enc:
+        try:
+            api_key = decrypt(provider.api_key_enc)
+        except ValueError:
+            return {"status": "error", "detail": "Failed to decrypt API key", "models": []}
+
+    headers: dict[str, str] = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    url = f"{provider.base_url}/models"
+    try:
+        async with httpx.AsyncClient(timeout=provider.timeout) as client:
+            resp = await client.get(url, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+            models = []
+            if "data" in data:
+                for m in data["data"]:
+                    models.append({
+                        "id": m.get("id", m.get("name", "")),
+                        "owned_by": m.get("owned_by", ""),
+                        "is_default": (
+                            m.get("id", "") == provider.default_model
+                            or m.get("name", "") == provider.default_model
+                        ),
+                    })
+            return {
+                "status": "ok",
+                "provider": provider.name,
+                "models": models,
+                "default_model": provider.default_model,
+            }
+    except httpx.HTTPStatusError as e:
+        return {
+            "status": "error",
+            "detail": f"HTTP {e.response.status_code}: {e.response.text[:200]}",
+            "models": [],
+        }
+    except Exception as e:
+        return {"status": "error", "detail": str(e)[:200], "models": []}
+
+
 @router.patch(
     "/llm-providers/{provider_id}",
     summary="Update an LLM provider",
@@ -207,13 +353,35 @@ async def get_provider(
 async def update_provider(
     provider_id: str,
     body: LLMProviderUpdate,
+    validate_key: bool = Query(False, description="Auto-validate API key on update"),
     db: AsyncSession = Depends(get_db),
     _user: User = Depends(get_current_user),
 ) -> Any:
-    """Update an LLM provider's configuration."""
+    """Update an LLM provider's configuration.
+
+    If validate_key=true and api_key is being updated, tests the new key
+    against the provider's /models endpoint before saving.
+    """
     provider = await db.get(LLMProvider, provider_id)
     if not provider:
         raise HTTPException(status_code=404, detail="Provider not found")
+
+    # Phase 3: Auto-validate API key before saving
+    if validate_key and body.api_key is not None and body.api_key:
+        base_url = (body.base_url or provider.base_url).strip().rstrip("/")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {body.api_key}",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=15) as client:
+                resp = await client.get(f"{base_url}/models", headers=headers)
+                resp.raise_for_status()
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"API key validation failed: {str(e)[:200]}",
+            )
 
     if body.name is not None:
         provider.name = body.name.strip()
@@ -337,6 +505,51 @@ async def test_provider(
         }
     except Exception as e:
         return {"status": "error", "detail": str(e)[:200]}
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: Direct Chat Endpoint (Playground / Testing)
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/llm-providers/chat",
+    summary="Send a direct chat message to the LLM",
+)
+async def direct_chat(
+    body: ChatRequest,
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> Any:
+    """
+    Direct LLM chat endpoint for testing and playground use.
+
+    Uses the specified provider/model or falls back to default.
+    Returns the raw LLM response.
+    """
+    config = await get_llm_config_from_provider(
+        db, provider_id=body.provider_id, model_override=body.model
+    )
+    if config is None:
+        raise HTTPException(
+            status_code=400,
+            detail="No LLM provider configured. Register a provider first.",
+        )
+
+    llm = create_llm_client(config)
+    try:
+        response = await llm.chat(body.system_prompt, body.message)
+        return {
+            "response": response,
+            "provider": config.base_url,
+            "model": config.model,
+        }
+    except Exception as e:
+        return {
+            "error": str(e)[:500],
+            "provider": config.base_url,
+            "model": config.model,
+        }
 
 
 # ---------------------------------------------------------------------------

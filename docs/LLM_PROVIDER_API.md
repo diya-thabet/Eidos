@@ -160,10 +160,86 @@ GET /admin/llm-providers/status
     "default_model": "Fanar-C-2-27B"
   },
   "fallback_to_env": false,
-  "total_providers": 2,
   "active_providers": 2
 }
 ```
+
+### List All Models (Aggregated)
+
+```http
+GET /admin/llm-providers/models
+```
+
+Calls each active provider's `/models` endpoint in parallel and merges results.
+
+**Response**:
+```json
+{
+  "models": [
+    {"id": "Fanar-C-2-27B", "provider_id": "abc123", "provider_name": "Fanar", "is_default": true},
+    {"id": "Fanar-Sadiq", "provider_id": "abc123", "provider_name": "Fanar", "is_default": false},
+    {"id": "gpt-4o-mini", "provider_id": "def456", "provider_name": "OpenAI", "is_default": true}
+  ],
+  "providers": 2,
+  "results": [
+    {"provider": "Fanar", "status": "ok", "models": [...]},
+    {"provider": "OpenAI", "status": "ok", "models": [...]}
+  ]
+}
+```
+
+### List Models for a Specific Provider
+
+```http
+GET /admin/llm-providers/{provider_id}/models
+```
+
+**Response**:
+```json
+{
+  "status": "ok",
+  "provider": "Fanar",
+  "default_model": "Fanar-C-2-27B",
+  "models": [
+    {"id": "Fanar-C-2-27B", "owned_by": "fanar", "is_default": true},
+    {"id": "Fanar-Sadiq", "owned_by": "fanar", "is_default": false}
+  ]
+}
+```
+
+### Direct Chat (Playground)
+
+```http
+POST /admin/llm-providers/chat
+Content-Type: application/json
+
+{
+  "message": "Explain this function",
+  "system_prompt": "You are a code expert.",
+  "provider_id": null,
+  "model": "Fanar-Sadiq"
+}
+```
+
+**Response**:
+```json
+{
+  "response": "This function does...",
+  "provider": "https://api.fanar.qa/v1",
+  "model": "Fanar-Sadiq"
+}
+```
+
+### Update with API Key Validation
+
+```http
+PATCH /admin/llm-providers/{provider_id}?validate_key=true
+Content-Type: application/json
+
+{"api_key": "new-key"}
+```
+
+When `validate_key=true`, tests the key against `/v1/models` before saving. Returns 400 if validation fails.
 
 ---
 
@@ -259,7 +335,7 @@ curl -X POST http://localhost:8000/admin/llm-providers/{id}/test
 
 ## Testing
 
-The provider system has **54 backend tests** covering:
+The provider system has **73 backend tests** covering:
 - Full CRUD lifecycle
 - Default provider switching
 - Connectivity testing (mocked)
@@ -267,10 +343,13 @@ The provider system has **54 backend tests** covering:
 - API key encryption round-trip
 - Per-request provider/model override wiring
 - Integration with reasoning, reviews, and docgen endpoints
-- Edge cases (inactive providers, bad keys, duplicates)
+- Model listing (aggregate and per-provider)
+- Direct chat endpoint
+- API key auto-validation on update
+- Edge cases (inactive providers, bad keys, duplicates, timeouts)
 
 Run tests:
 ```bash
 cd backend
-python -m pytest tests/test_llm_providers.py tests/test_llm_dynamic_integration.py -v
+python -m pytest tests/test_llm_providers.py tests/test_llm_dynamic_integration.py tests/test_llm_phase2.py -v
 ```

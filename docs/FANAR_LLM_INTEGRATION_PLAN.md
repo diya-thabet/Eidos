@@ -154,62 +154,47 @@ On startup or via admin API, seed the Fanar provider:
 
 ---
 
-### Phase 2: Dynamic Model Selection API — ~3h
+### Phase 2: Dynamic Model Selection API — ? COMPLETE
 
-#### 3.2.1 Per-Request Model Override
+> **Status**: Fully implemented and tested (19 additional tests).  
+> **New endpoints**: `GET /admin/llm-providers/models` (aggregate), `GET /admin/llm-providers/{id}/models`, `POST /admin/llm-providers/chat` (playground)  
+> **Tests**: `tests/test_llm_phase2.py` (19 tests)
 
-Allow Q&A, doc generation and review endpoints to accept an optional `provider` or `model` parameter:
+#### 3.2.1 Per-Request Model Override ?
 
-```python
-# app/api/reasoning.py
+All LLM-consuming endpoints accept `?provider_id=` and `?model=` query params.
 
-@router.post("/{repo_id}/snapshots/{snapshot_id}/ask")
-async def ask_question(
-    ...
-    provider_id: str | None = Query(default=None, description="LLM provider to use"),
-    model: str | None = Query(default=None, description="Model override"),
-    ...
-):
-```
+#### 3.2.2 Model Listing Endpoint ?
 
-#### 3.2.2 Model Listing Endpoint
+- `GET /admin/llm-providers/models` — aggregates models from all active providers in parallel
+- `GET /admin/llm-providers/{id}/models` — lists models for a specific provider
 
-```
-GET /llm/models
-```
+#### 3.2.3 Provider Status Endpoint ?
 
-Returns all available models across all active providers (calls each provider's `/v1/models` endpoint and merges results).
+`GET /admin/llm-providers/status` — returns default provider, active count, env fallback status.
 
-#### 3.2.3 Provider Status Endpoint
+#### 3.2.4 Direct Chat Endpoint ? (bonus)
 
-```
-GET /llm/status
-```
-
-Returns current default provider, connectivity status and available models.
+`POST /admin/llm-providers/chat` — playground/testing endpoint for direct LLM interaction.
 
 ---
 
-### Phase 3: Runtime API Key Management — ~2h
+### Phase 3: Runtime API Key Management — ? COMPLETE
 
-#### 3.3.1 Encrypted Key Storage
+> **Status**: Fully implemented and tested.  
+> **Feature**: Auto-validation on key update via `?validate_key=true` query param.
 
-API keys are stored AES-encrypted in the database (we already have `app/auth/crypto.py` with `encrypt()`/`decrypt()`).
+#### 3.3.1 Encrypted Key Storage ?
 
-#### 3.3.2 Key Update Without Restart
+API keys are AES-encrypted at rest using Fernet (`app/auth/crypto.py`).
 
-```
-PATCH /admin/llm-providers/{id}
-{
-    "api_key": "new-key-here"
-}
-```
+#### 3.3.2 Key Update Without Restart ?
 
-The key is encrypted and stored. The next LLM request uses the updated key automatically — no restart needed.
+`PATCH /admin/llm-providers/{id}` with `{"api_key": "new-key"}` — encrypts and saves immediately.
 
-#### 3.3.3 Key Validation
+#### 3.3.3 Key Validation ?
 
-On key update, automatically test the key by calling `GET /v1/models` on the provider. Return success/failure to the admin.
+`PATCH /admin/llm-providers/{id}?validate_key=true` — tests the key against `/v1/models` before saving. Returns 400 if validation fails.
 
 ---
 
