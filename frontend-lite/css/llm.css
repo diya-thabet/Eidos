@@ -1,0 +1,28 @@
+/* LLM Admin Panel Styles */
+
+.llm-provider-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.llm-provider-card {
+    transition: border-color 0.15s ease;
+}
+
+.llm-provider-card:hover {
+    border-color: var(--accent) !important;
+}
+
+#llm-chat-result {
+    margin-top: 12px;
+}
+
+#llm-chat-result div {
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -2574,7 +2574,9 @@ function pgAsk() {
 
     if (!S.ok()) { html('main', noSnap()); return; }
 
-    html('main', '<div class="page-head"><h1>Ask</h1><p>Natural language questions about the code</p></div><div class="card"><div class="chat-box" id="cb"></div><div class="row g-8"><input class="inp" id="ai" placeholder="What does this codebase do?" onkeydown="if(event.key===\'Enter\')sendQ()"><button class="btn btn-p" onclick="sendQ()">Ask</button></div></div>');
+    _llmLoadProviders().then(function() {
+        html('main', '<div class="page-head"><h1>Ask</h1><p>Natural language questions about the code</p></div><div class="card"><div class="chat-box" id="cb"></div><div class="row g-8"><input class="inp" id="ai" placeholder="What does this codebase do?" onkeydown="if(event.key===\'Enter\')sendQ()"><button class="btn btn-p" onclick="sendQ()">Ask</button></div>' + _llmSelectorHTML('ask') + '</div>');
+    });
 
 }
 
@@ -2592,7 +2594,9 @@ function sendQ() {
 
     cb.scrollTop = cb.scrollHeight;
 
-    API.post(S.path() + '/ask', { question: q }).then(function(d) {
+    var llmParams = _llmGetParams('ask');
+
+    API.post(S.path() + '/ask' + llmParams, { question: q }).then(function(d) {
 
         var el = $('al'); if (el) el.remove();
 
@@ -2620,7 +2624,9 @@ function pgReview() {
 
     if (!S.ok()) { html('main', noSnap()); return; }
 
-    html('main', '<div class="page-head"><h1>PR Review</h1><p>Paste a unified diff for risk analysis</p></div><div class="card"><div class="field"><label>Diff</label><textarea class="inp" id="rd" placeholder="--- a/file.py\n+++ b/file.py\n@@ ...\n-old\n+new"></textarea></div><button class="btn btn-p" onclick="doReview()">Analyze</button></div><div id="rr"></div>');
+    _llmLoadProviders().then(function() {
+        html('main', '<div class="page-head"><h1>PR Review</h1><p>Paste a unified diff for risk analysis</p></div><div class="card"><div class="field"><label>Diff</label><textarea class="inp" id="rd" placeholder="--- a/file.py\n+++ b/file.py\n@@ ...\n-old\n+new"></textarea></div>' + _llmSelectorHTML('review') + '<button class="btn btn-p" style="margin-top:8px" onclick="doReview()">Analyze</button></div><div id="rr"></div>');
+    });
 
 }
 
@@ -2630,7 +2636,9 @@ function doReview() {
 
     html('rr', '<div class="loader"><span class="spin"></span></div>');
 
-    API.post(S.path() + '/review', { diff: diff }).then(function(d) {
+    var llmParams = _llmGetParams('review');
+
+    API.post(S.path() + '/review' + llmParams, { diff: diff }).then(function(d) {
 
         var col = d.risk_level === 'high' || d.risk_level === 'critical' ? 'var(--red)' : d.risk_level === 'medium' ? 'var(--yellow)' : 'var(--green)';
 
@@ -2656,11 +2664,13 @@ function pgDocs() {
 
     if (!S.ok()) { html('main', noSnap()); return; }
 
-    html('main', '<div class="page-head"><h1>Documentation</h1><p>Auto-generate from code graph</p></div><div class="row g-8" style="margin-bottom:16px"><button class="btn btn-p" onclick="genDocs()">Generate</button><button class="btn btn-g" onclick="loadDocs()">Load Existing</button></div><div id="dc"></div>');
+    _llmLoadProviders().then(function() {
+        html('main', '<div class="page-head"><h1>Documentation</h1><p>Auto-generate from code graph</p></div><div class="row g-8" style="margin-bottom:8px"><button class="btn btn-p" onclick="genDocs()">Generate</button><button class="btn btn-g" onclick="loadDocs()">Load Existing</button></div>' + _llmSelectorHTML('docs') + '<div id="dc" style="margin-top:12px"></div>');
+    });
 
 }
 
-function genDocs() { html('dc', '<div class="loader"><span class="spin"></span></div>'); API.post(S.path() + '/docs', {}).then(function(d) { showDocs(d.documents || []); }).catch(function(e) { html('dc', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); }); }
+function genDocs() { html('dc', '<div class="loader"><span class="spin"></span></div>'); var llmParams = _llmGetParams('docs'); API.post(S.path() + '/docs' + llmParams, {}).then(function(d) { showDocs(d.documents || []); }).catch(function(e) { html('dc', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); }); }
 
 function loadDocs() { html('dc', '<div class="loader"><span class="spin"></span></div>'); API.get(S.path() + '/docs').then(function(d) { showDocs(d.documents || d.items || []); }).catch(function(e) { html('dc', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); }); }
 
@@ -2771,6 +2781,7 @@ function pgAdmin() {
     h += '<button class="admin-tab" onclick="adminTab(\'teams\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg> Teams <span class="admin-tab-badge" id="admin-tab-teams-count">…</span></button>';
     h += '<button class="admin-tab" onclick="adminTab(\'audit\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg> Audit Log</button>';
     h += '<button class="admin-tab" onclick="adminTab(\'system\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15H3a2 2 0 110-4h.09"/></svg> System</button>';
+    h += '<button class="admin-tab" onclick="adminTab(\'llm\',this)"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg> LLM</button>';
     h += '</div>';
 
     h += '<div id="admin-content"><div class="loader"><span class="spin"></span> Loading...</div></div>';
@@ -2802,7 +2813,7 @@ function adminTab(tab, btn) {
     } else {
         // Auto-select the correct tab button
         var tabs = document.querySelectorAll('.admin-tab');
-        var tabNames = ['users', 'plans', 'teams', 'audit', 'system'];
+        var tabNames = ['users', 'plans', 'teams', 'audit', 'system', 'llm'];
         for (var i = 0; i < tabs.length; i++) {
             tabs[i].classList.toggle('active', tabNames[i] === tab);
         }
@@ -2816,6 +2827,7 @@ function adminTab(tab, btn) {
     else if (tab === 'teams') _adminTeams(el);
     else if (tab === 'audit') _adminAudit(el);
     else if (tab === 'system') _adminSystem(el);
+    else if (tab === 'llm') _adminLLM(el);
 }
 
 function _adminUsers(el) {

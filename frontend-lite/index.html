@@ -20,6 +20,7 @@
 <link rel="stylesheet" href="css/phase8.css">
 <link rel="stylesheet" href="css/phase9.css">
 <link rel="stylesheet" href="css/graph-view.css">
+<link rel="stylesheet" href="css/llm.css">
 </head>
 <body>
 <!-- Splash screen — shows instantly while app loads -->
@@ -151,6 +152,7 @@
 <script src="js/charts.js"></script>
 <script src="js/graph.js"></script>
 <script src="js/pages.js"></script>
+<script src="js/llm-admin.js"></script>
 <div class="status-bar" id="status-bar"><div class="sb-item"><span class="sb-dot off" id="sb-dot"></span><span id="sb-conn">Offline</span></div><div class="sb-sep"></div><div class="sb-item">Repo: <span class="sb-accent" id="sb-repo">none</span></div><div class="sb-sep"></div><div class="sb-item">Snap: <span class="sb-accent" id="sb-snap">none</span></div><div class="sb-right"><div class="presence-group" id="presence-group"></div><span class="notif-bell" id="notif-bell" onclick="Notif.toggle()"><span class="bell-icon">&#128276;</span><span class="notif-count" id="notif-count">0</span></span><span class="sb-item"><span class="sb-kbd">Ctrl+K</span> palette</span><span class="sb-item">v1.0</span></div></div>
 <div class="notif-panel" id="notif-panel"><div class="np-header"><span>Notifications</span><span class="np-clear" onclick="Notif.clear()">Clear all</span></div><div class="np-list" id="notif-list"><div class="np-empty">No notifications yet</div></div></div>
 <div class="tour-overlay" id="tour-overlay" onclick="Tour.skip()"></div>

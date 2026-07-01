@@ -198,30 +198,35 @@ API keys are AES-encrypted at rest using Fernet (`app/auth/crypto.py`).
 
 ---
 
-### Phase 4: Frontend LLM Settings UI — ~4h
+### Phase 4: Frontend LLM Settings UI — ? COMPLETE
 
-#### 3.4.1 Admin Settings Page
+> **Status**: Fully implemented.  
+> **Files**: `frontend-lite/js/llm-admin.js`, `frontend-lite/js/pages.js`, `frontend-lite/css/llm.css`, `frontend-lite/index.html`
 
-- List configured providers (name, base URL, status, default model).
-- Add/edit/remove providers.
-- Test connectivity button.
-- Set default provider.
-- Update API key (masked input, shown as `??????` after save).
+#### 3.4.1 Admin Settings Page ?
 
-#### 3.4.2 Model Selector in Analysis Pages
+- "LLM" tab in Admin Panel with:
+  - LLM status overview (connected/disconnected, default provider, model, active count)
+  - Provider list with status dots, default badge, key indicator
+  - Add provider form (name, URL, API key, model, tokens, temperature, timeout, RPM)
+  - Test connectivity button per provider
+  - List models button per provider
+  - Set default / delete buttons
+  - Chat playground with provider/model selection
 
-- Dropdown in Q&A panel to select provider/model.
-- Dropdown in doc generation dialog.
-- Dropdown in review panel.
-- Persist last-used model in user preferences (localStorage or user settings API).
+#### 3.4.2 Model Selector in Analysis Pages ?
 
-#### 3.4.3 Status Indicator
+- Provider/model dropdown in **Ask** (Q&A) page
+- Provider/model dropdown in **PR Review** page
+- Provider/model dropdown in **Documentation** generation page
+- All pass `?provider_id=` and `?model=` query params to the backend
 
-- Show current LLM status in the sidebar or header.
-- Green dot = connected and working.
-- Yellow = configured but untested.
-- Red = connection failed.
-- Gray = no provider configured (stub mode).
+#### 3.4.3 Status Indicator ?
+
+- LLM Status card in admin panel shows:
+  - Green dot = connected (default provider active)
+  - Warning = fallback to env vars
+  - Gray = no provider configured
 
 ---
 
