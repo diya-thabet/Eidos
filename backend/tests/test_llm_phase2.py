@@ -371,6 +371,41 @@ class TestDirectChat:
         assert "error" in data
         assert "timeout" in data["error"]
 
+    @pytest.mark.asyncio
+    async def test_chat_respects_provider_rate_limit(self, client):
+        resp = await client.post("/admin/llm-providers", json={
+            "name": "RateLimited",
+            "base_url": "https://api.fanar.qa/v1",
+            "api_key": "test-key",
+            "default_model": "Fanar-C-2-27B",
+            "rate_limit_rpm": 1,
+        })
+        pid = resp.json()["id"]
+        await client.post(f"/admin/llm-providers/{pid}/set-default")
+
+        with patch("app.api.llm_providers.create_llm_client") as mock_create:
+            mock_llm = AsyncMock()
+            mock_llm.chat.return_value = "ok"
+            mock_create.return_value = mock_llm
+            first = await client.post("/admin/llm-providers/chat", json={"message": "one"})
+            second = await client.post("/admin/llm-providers/chat", json={"message": "two"})
+
+        assert first.status_code == 200
+        assert second.status_code == 429
+
+    @pytest.mark.asyncio
+    async def test_validation_readiness_reports_default_provider(self, client):
+        pid = await _create_provider(client)
+        await client.post(f"/admin/llm-providers/{pid}/set-default")
+
+        resp = await client.get("/admin/llm-providers/validation/readiness")
+        data = resp.json()
+
+        assert resp.status_code == 200
+        assert data["status"] == "ready"
+        assert data["checks"]["has_default_provider"] is True
+        assert data["checks"]["rate_limit_configured"] is True
+
 
 # ---------------------------------------------------------------------------
 # API Key Auto-Validation on Update (Phase 3)

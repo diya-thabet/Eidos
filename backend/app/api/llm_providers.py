@@ -7,13 +7,16 @@ Allows dynamic registration, update, deletion and testing of LLM providers
 Phase 1: Provider registry, CRUD, set-default, connectivity test, status.
 Phase 2: Model listing, per-request selection (already wired), chat endpoint.
 Phase 3: Auto-validation on key update, key rotation support.
+Phase 6: Readiness reporting and lightweight provider RPM enforcement.
 """
 
 from __future__ import annotations
 
 import asyncio
 import logging
+import time
 import uuid
+from collections import defaultdict, deque
 from typing import Any
 
 import httpx
@@ -32,6 +35,7 @@ from app.storage.models import LLMProvider, User
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+_provider_request_times: dict[str, deque[float]] = defaultdict(deque)
 
 
 # ---------------------------------------------------------------------------
@@ -49,6 +53,7 @@ class LLMProviderCreate(BaseModel):
     timeout: int = 60
     rate_limit_rpm: int = 50
     is_active: bool = True
+    skip_tls_verify: bool = False
 
 
 class LLMProviderUpdate(BaseModel):
@@ -61,6 +66,7 @@ class LLMProviderUpdate(BaseModel):
     timeout: int | None = None
     rate_limit_rpm: int | None = None
     is_active: bool | None = None
+    skip_tls_verify: bool | None = None
 
 
 class ChatRequest(BaseModel):
@@ -128,6 +134,7 @@ async def create_provider(
         temperature=body.temperature,
         timeout=body.timeout,
         rate_limit_rpm=body.rate_limit_rpm,
+        skip_tls_verify=body.skip_tls_verify,
     )
     db.add(provider)
     await db.commit()
@@ -380,7 +387,15 @@ async def update_provider(
             "Authorization": f"Bearer {body.api_key}",
         }
         try:
-            async with httpx.AsyncClient(timeout=15) as client:
+            skip_tls = (
+                body.skip_tls_verify
+                if body.skip_tls_verify is not None
+                else provider.skip_tls_verify
+            )
+            async with httpx.AsyncClient(
+                timeout=15,
+                verify=not skip_tls,
+            ) as client:
                 resp = await client.get(f"{base_url}/models", headers=headers)
                 resp.raise_for_status()
         except Exception as e:
@@ -407,6 +422,8 @@ async def update_provider(
         provider.rate_limit_rpm = body.rate_limit_rpm
     if body.is_active is not None:
         provider.is_active = body.is_active
+    if body.skip_tls_verify is not None:
+        provider.skip_tls_verify = body.skip_tls_verify
 
     await db.commit()
     await db.refresh(provider)
@@ -545,6 +562,7 @@ async def direct_chat(
             detail="No LLM provider configured. Register a provider first.",
         )
 
+    await _enforce_provider_rate_limit(db, body.provider_id)
     llm = create_llm_client(config)
     try:
         response = await llm.chat(body.system_prompt, body.message)
@@ -561,9 +579,68 @@ async def direct_chat(
         }
 
 
+@router.get(
+    "/llm-providers/validation/readiness",
+    summary="Validate LLM readiness for Phase 6",
+    dependencies=[Depends(require_role("superadmin", "admin"))],
+)
+async def llm_validation_readiness(
+    db: AsyncSession = Depends(get_db),
+    _user: User = Depends(get_current_user),
+) -> Any:
+    """Return a lightweight readiness report without making external LLM calls."""
+    result = await db.execute(select(LLMProvider).where(LLMProvider.is_active.is_(True)))
+    providers = list(result.scalars().all())
+    default = next((p for p in providers if p.is_default), None)
+    return {
+        "status": "ready" if default else "not_ready",
+        "active_provider_count": len(providers),
+        "default_provider": _provider_to_dict(default) if default else None,
+        "checks": {
+            "has_active_provider": bool(providers),
+            "has_default_provider": default is not None,
+            "has_default_model": bool(default and default.default_model),
+            "has_api_key": bool(default and default.api_key_enc),
+            "rate_limit_configured": bool(default and default.rate_limit_rpm > 0),
+            "tls_mode": "skip_verify" if default and default.skip_tls_verify else "verify",
+        },
+    }
+
+
 # ---------------------------------------------------------------------------
 # Helper: get LLM config from DB provider
 # ---------------------------------------------------------------------------
+
+
+async def _enforce_provider_rate_limit(
+    db: AsyncSession,
+    provider_id: str | None,
+) -> None:
+    """Enforce a simple per-process provider RPM limit."""
+    provider = None
+    if provider_id:
+        provider = await db.get(LLMProvider, provider_id)
+    if provider is None:
+        result = await db.execute(
+            select(LLMProvider).where(
+                LLMProvider.is_default.is_(True),
+                LLMProvider.is_active.is_(True),
+            )
+        )
+        provider = result.scalar_one_or_none()
+    if provider is None or provider.rate_limit_rpm <= 0:
+        return
+
+    now = time.monotonic()
+    bucket = _provider_request_times[provider.id]
+    while bucket and now - bucket[0] >= 60:
+        bucket.popleft()
+    if len(bucket) >= provider.rate_limit_rpm:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Provider rate limit exceeded ({provider.rate_limit_rpm} rpm)",
+        )
+    bucket.append(now)
 
 
 async def get_llm_config_from_provider(

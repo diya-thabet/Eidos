@@ -20,6 +20,12 @@ _PATTERNS: list[tuple[QuestionType, list[str]]] = [
         QuestionType.ARCHITECTURE,
         [
             r"\barchitect",
+            r"\bcodebase\b",
+            r"\brepository\b",
+            r"\bproject\b",
+            r"\bapplication\b",
+            r"\bapp\b",
+            r"\bsystem\b",
             r"\bstructur",
             r"\borganiz",
             r"\blayer",
@@ -86,6 +92,9 @@ def classify_question(text: str) -> QuestionType:
     Falls back to GENERAL if no pattern matches.
     """
     lower = text.lower()
+    if _is_codebase_overview_question(lower):
+        return QuestionType.ARCHITECTURE
+
     scores: dict[QuestionType, int] = {}
     for qtype, patterns in _PATTERNS:
         for pattern in patterns:
@@ -94,6 +103,38 @@ def classify_question(text: str) -> QuestionType:
     if not scores:
         return QuestionType.GENERAL
     return max(scores, key=lambda k: scores[k])
+
+
+def _is_codebase_overview_question(lower: str) -> bool:
+    """Detect broad questions about the whole indexed repository."""
+    has_scope = any(
+        word in lower
+        for word in (
+            "codebase",
+            "repository",
+            "repo",
+            "project",
+            "application",
+            "app",
+            "system",
+            "software",
+        )
+    )
+    has_overview_intent = any(
+        phrase in lower
+        for phrase in (
+            "what does",
+            "what do",
+            "what is",
+            "explain",
+            "describe",
+            "overview",
+            "purpose",
+            "exactly",
+            "about",
+        )
+    )
+    return has_scope and has_overview_intent
 
 
 def extract_target_symbol(text: str) -> str:

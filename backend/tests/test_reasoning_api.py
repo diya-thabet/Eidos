@@ -13,6 +13,8 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
 from app.main import app
+from app.reasoning.answer_builder import build_answer
+from app.reasoning.models import Question, QuestionType, RetrievalContext
 from app.storage.database import get_db
 from app.storage.models import Edge, Repo, RepoSnapshot, SnapshotStatus, Summary, Symbol
 from tests.conftest import create_tables, drop_tables, override_get_db, test_sessionmaker
@@ -41,6 +43,10 @@ async def _seed():
             namespace="MyApp",
             modifiers="public",
             signature="public class OrderService",
+            source_code=(
+                "public class OrderService { "
+                "public Order CreateOrder(int userId) { return new Order(); } }"
+            ),
         )
         db.add(s)
         await db.flush()
@@ -57,6 +63,10 @@ async def _seed():
             parent_fq_name="MyApp.OrderService",
             modifiers="public",
             signature="public Order CreateOrder(int userId)",
+            source_code=(
+                "public Order CreateOrder(int userId) { "
+                "Validate(userId); return new Order(); }"
+            ),
         )
         db.add(m)
         await db.flush()
@@ -136,6 +146,20 @@ class TestAskEndpoint:
         assert "confidence" in data
         assert "verification" in data
         assert "related_symbols" in data
+        assert "rag_context" in data
+
+    @pytest.mark.asyncio
+    async def test_ask_returns_advanced_rag_context(self, client):
+        resp = await client.post(
+            "/repos/r-qa/snapshots/s-qa/ask",
+            json={"question": "Explain OrderService CreateOrder flow"},
+        )
+        data = resp.json()
+        ctx = data["rag_context"]
+        assert ctx["summary"]["target_symbol"]
+        assert ctx["summary"]["snippet_count"] > 0
+        assert ctx["snippets"]
+        assert "source_snippets" in ctx["summary"]["confidence_signals"]
 
     @pytest.mark.asyncio
     async def test_ask_with_target_symbol(self, client):
@@ -163,6 +187,29 @@ class TestAskEndpoint:
         assert data["question_type"] == "architecture"
 
     @pytest.mark.asyncio
+    async def test_ask_codebase_overview_question_uses_architecture_context(self, client):
+        resp = await client.post(
+            "/repos/r-qa/snapshots/s-qa/ask",
+            json={"question": "explain me what this codebase do exactly"},
+        )
+        data = resp.json()
+        assert data["question_type"] == "architecture"
+        assert data["confidence"] != "low"
+        assert "OrderService" in data["answer_text"]
+        assert data["rag_context"]["summary"]["symbol_count"] > 0
+
+    @pytest.mark.asyncio
+    async def test_ask_generic_code_explanation_is_human_readable(self, client):
+        resp = await client.post(
+            "/repos/r-qa/snapshots/s-qa/ask",
+            json={"question": "hi can u explain the code here ?"},
+        )
+        data = resp.json()
+        assert "Plain-English explanation" in data["answer_text"]
+        assert "What the main parts do" in data["answer_text"]
+        assert "declared in" not in data["answer_text"]
+
+    @pytest.mark.asyncio
     async def test_ask_has_evidence(self, client):
         resp = await client.post(
             "/repos/r-qa/snapshots/s-qa/ask",
@@ -180,6 +227,44 @@ class TestAskEndpoint:
         )
         data = resp.json()
         assert len(data["verification"]) > 0
+
+    @pytest.mark.asyncio
+    async def test_llm_string_evidence_does_not_crash(self):
+        mock_llm = AsyncMock()
+        mock_llm.chat_json.return_value = {
+            "answer": "OrderService creates orders after validation.",
+            "confidence": "medium",
+            "evidence": ["OrderService.cs shows the class and CreateOrder method."],
+            "verification": ["Open OrderService.cs and inspect CreateOrder."],
+        }
+        context = RetrievalContext(
+            symbols=[
+                {
+                    "fq_name": "MyApp.OrderService",
+                    "kind": "class",
+                    "file_path": "OrderService.cs",
+                    "start_line": 5,
+                    "end_line": 50,
+                }
+            ]
+        )
+
+        answer = await build_answer(
+            Question(
+                text="Explain OrderService",
+                snapshot_id="s-qa",
+                question_type=QuestionType.COMPONENT,
+            ),
+            context,
+            mock_llm,
+        )
+
+        assert answer.answer_text == "OrderService creates orders after validation."
+        assert (
+            answer.evidence[0].relevance
+            == "OrderService.cs shows the class and CreateOrder method."
+        )
+        assert answer.verification[0].description == "Open OrderService.cs and inspect CreateOrder."
 
     @pytest.mark.asyncio
     async def test_ask_snapshot_not_found(self, client):

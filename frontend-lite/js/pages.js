@@ -2639,6 +2639,14 @@ function renderRagAnswer(d) {
         h += '</div></div>';
     }
 
+    if (ctx.snippets && ctx.snippets.length) {
+        h += '<div style="margin-top:10px"><strong style="font-size:11px;color:var(--text-2)">Source snippets retrieved</strong><ul style="font-size:11px;color:var(--text-3);padding-left:16px;margin-top:4px">';
+        ctx.snippets.slice(0, 5).forEach(function(s) {
+            h += '<li><code>' + esc(shortSym(s.symbol_fq_name || '')) + '</code> — ' + esc(s.file_path || '') + '#L' + (s.start_line || 0) + '</li>';
+        });
+        h += '</ul></div>';
+    }
+
     if (d.evidence && d.evidence.length) {
         h += '<div style="margin-top:10px"><strong style="font-size:11px;color:var(--text-2)">Evidence</strong><ul style="font-size:11px;color:var(--text-3);padding-left:16px;margin-top:4px">';
         d.evidence.slice(0, 5).forEach(function(e) { h += '<li>' + esc(e.file_path || '') + (e.symbol_fq_name ? ' — <code>' + esc(shortSym(e.symbol_fq_name)) + '</code>' : '') + '</li>'; });
