@@ -77,6 +77,7 @@ def generate_readme(
         "total_edges": len(edges),
         "total_modules": len(modules),
     }
+    doc.sections.append(_module_graph_section(modules))
     return doc
 
 
@@ -108,6 +109,8 @@ def generate_architecture(
                 metrics=metrics,
             )
         )
+    doc.sections.append(_module_graph_section(modules))
+    doc.sections.append(_edge_summary_section(edges))
     return doc
 
 
@@ -195,6 +198,8 @@ def generate_module_doc(
 
         doc.sections.append(section)
 
+    doc.sections.append(_module_local_graph_section(module_name, dependencies))
+
     return doc
 
 
@@ -218,6 +223,8 @@ def generate_flow_doc(
     for e in edges:
         if e.get("edge_type") == "calls":
             callees[e["source_fq_name"]].append(e["target_fq_name"])
+
+    doc.sections.append(_flow_graph_section(entry_fq_name, callees))
 
     # BFS trace
     steps: list[tuple[int, str]] = []
@@ -456,6 +463,96 @@ def _build_section(
             section.body = "No high-risk symbols detected."
 
     return section
+
+
+def _module_graph_section(modules: list[dict[str, Any]]) -> DocSection:
+    """Create a Mermaid module dependency graph section."""
+    section = DocSection(heading="Interactive Module Graph")
+    lines = ["```mermaid", "flowchart LR"]
+    module_names = [m.get("name", "") for m in modules if m.get("name")]
+    for name in module_names[:40]:
+        lines.append(f"    {_mermaid_id(name)}[\"{_escape_mermaid(name)}\"]")
+    for mod in modules[:40]:
+        src = mod.get("name", "")
+        for dep in mod.get("dependencies", [])[:8]:
+            if dep in module_names:
+                lines.append(f"    {_mermaid_id(src)} --> {_mermaid_id(dep)}")
+    lines.append("```")
+    section.body = "\n".join(lines) if module_names else "No module graph available."
+    return section
+
+
+def _module_local_graph_section(module_name: str, dependencies: list[str]) -> DocSection:
+    """Create a focused graph for one module."""
+    section = DocSection(heading="Module Dependency Graph")
+    if not dependencies:
+        section.body = "No module dependencies detected."
+        return section
+    lines = [
+        "```mermaid",
+        "flowchart LR",
+        f"    {_mermaid_id(module_name)}[\"{_escape_mermaid(module_name)}\"]",
+    ]
+    for dep in sorted(dependencies)[:20]:
+        lines.append(
+            f"    {_mermaid_id(module_name)} --> "
+            f"{_mermaid_id(dep)}[\"{_escape_mermaid(dep)}\"]"
+        )
+    lines.append("```")
+    section.body = "\n".join(lines)
+    return section
+
+
+def _flow_graph_section(entry_fq_name: str, callees: dict[str, list[str]]) -> DocSection:
+    """Create a Mermaid call graph for a flow document."""
+    section = DocSection(heading="Call Flow Graph")
+    lines = ["```mermaid", "flowchart TD"]
+    seen = {entry_fq_name}
+    frontier = [entry_fq_name]
+    for _ in range(3):
+        next_frontier = []
+        for src in frontier[:12]:
+            for dst in callees.get(src, [])[:6]:
+                lines.append(
+                    f"    {_mermaid_id(src)}[\"{_escape_mermaid(_short_name(src))}\"] --> "
+                    f"{_mermaid_id(dst)}[\"{_escape_mermaid(_short_name(dst))}\"]"
+                )
+                if dst not in seen:
+                    seen.add(dst)
+                    next_frontier.append(dst)
+        frontier = next_frontier
+        if not frontier:
+            break
+    lines.append("```")
+    section.body = "\n".join(lines) if len(lines) > 3 else "No call graph available."
+    return section
+
+
+def _edge_summary_section(edges: list[dict[str, Any]]) -> DocSection:
+    """Summarize relationship types as a compact architecture section."""
+    section = DocSection(heading="Relationship Inventory")
+    counts = Counter(e.get("edge_type", "unknown") for e in edges)
+    if not counts:
+        section.body = "No relationships detected."
+        return section
+    section.body = "\n".join(
+        f"- **{edge_type}**: {count} relationships"
+        for edge_type, count in counts.most_common()
+    )
+    return section
+
+
+def _mermaid_id(value: str) -> str:
+    safe = "".join(ch if ch.isalnum() else "_" for ch in value)
+    return "n_" + safe[:80]
+
+
+def _escape_mermaid(value: str) -> str:
+    return value.replace('"', "'").replace("\n", " ")
+
+
+def _short_name(value: str) -> str:
+    return value.rsplit(".", 1)[-1] if value else value
 
 
 def _find_summary(summaries: list[dict[str, Any]], scope_type: str, scope_id: str) -> str:

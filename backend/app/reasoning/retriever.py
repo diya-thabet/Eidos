@@ -53,6 +53,12 @@ async def retrieve_context(
     # Step 2: Direct symbol lookup (if target symbol specified)
     if question.target_symbol:
         ctx.symbols = await _lookup_symbol(db, question.snapshot_id, question.target_symbol)
+    else:
+        ctx.symbols = await _search_symbols_from_question(
+            db, question.snapshot_id, question.text
+        )
+        if ctx.symbols:
+            question.target_symbol = ctx.symbols[0]["fq_name"]
 
     # Step 3: Graph expansion (based on question type)
     if question.target_symbol:
@@ -87,11 +93,22 @@ async def retrieve_context(
             fq_names.add(e["source_fq_name"])
             fq_names.add(e["target_fq_name"])
         ctx.graph_neighborhood = sorted(fq_names)
+        ctx.graph_paths = _build_graph_paths(ctx.edges, question.target_symbol)
 
     # Step 4: For architecture questions, also pull module summaries
     if question.question_type == QuestionType.ARCHITECTURE:
         module_summaries = await _get_module_summaries(db, question.snapshot_id)
         ctx.summaries.extend(module_summaries)
+
+    ctx.retrieval_summary = {
+        "strategy": question.question_type.value,
+        "target_symbol": question.target_symbol,
+        "summary_count": len(ctx.summaries),
+        "symbol_count": len(ctx.symbols),
+        "edge_count": len(ctx.edges),
+        "neighbor_count": len(ctx.graph_neighborhood),
+        "path_count": len(ctx.graph_paths),
+    }
 
     logger.info(
         "Retrieved context: %d summaries, %d symbols, %d edges, %d neighbors",
@@ -164,6 +181,54 @@ async def _lookup_symbol(db: AsyncSession, snapshot_id: str, target: str) -> lis
     return [_symbol_to_dict(s) for s in result.scalars().all()]
 
 
+async def _search_symbols_from_question(
+    db: AsyncSession,
+    snapshot_id: str,
+    question_text: str,
+) -> list[dict[str, Any]]:
+    """Find likely target symbols from natural-language question terms."""
+    terms = [
+        t.strip("`'\".,:;()[]{}<>!?/")
+        for t in question_text.split()
+        if len(t.strip("`'\".,:;()[]{}<>!?/")) >= 3
+    ]
+    terms = sorted(set(terms), key=len, reverse=True)[:8]
+    if not terms:
+        return []
+
+    conditions = []
+    for term in terms:
+        conditions.append(Symbol.fq_name.contains(term))
+        conditions.append(Symbol.name.contains(term))
+        conditions.append(Symbol.file_path.contains(term))
+
+    result = await db.execute(
+        select(Symbol)
+        .where(Symbol.snapshot_id == snapshot_id, or_(*conditions))
+        .limit(MAX_GRAPH_SYMBOLS)
+    )
+    symbols = [_symbol_to_dict(s) for s in result.scalars().all()]
+    return sorted(
+        symbols,
+        key=lambda s: _symbol_question_score(s, terms),
+        reverse=True,
+    )
+
+
+def _symbol_question_score(symbol: dict[str, Any], terms: list[str]) -> int:
+    text = " ".join(
+        str(symbol.get(k, ""))
+        for k in ("fq_name", "name", "file_path", "signature", "namespace")
+    ).lower()
+    score = 0
+    symbol_name = str(symbol.get("name", "")).lower()
+    for term in terms:
+        lower_term = term.lower()
+        if lower_term in text:
+            score += 3 if lower_term == symbol_name else 1
+    return score
+
+
 async def _get_call_edges(
     db: AsyncSession,
     snapshot_id: str,
@@ -214,6 +279,26 @@ async def _get_call_edges(
         frontier = next_frontier
 
     return visited_edges[:MAX_EDGES]
+
+
+def _build_graph_paths(edges: list[dict[str, Any]], target: str) -> list[dict[str, Any]]:
+    """Create compact first-hop path metadata for the UI and LLM prompt."""
+    paths = []
+    for edge in edges[:15]:
+        src = edge.get("source_fq_name", "")
+        dst = edge.get("target_fq_name", "")
+        direction = "outbound" if src == target else "inbound" if dst == target else "neighbor"
+        paths.append(
+            {
+                "source": src,
+                "target": dst,
+                "edge_type": edge.get("edge_type", ""),
+                "direction": direction,
+                "file_path": edge.get("file_path", ""),
+                "line": edge.get("line", 0),
+            }
+        )
+    return paths
 
 
 async def _get_module_summaries(db: AsyncSession, snapshot_id: str) -> list[dict[str, Any]]:

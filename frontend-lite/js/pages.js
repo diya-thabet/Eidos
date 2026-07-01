@@ -2600,19 +2600,56 @@ function sendQ() {
 
         var el = $('al'); if (el) el.remove();
 
-        var ans = d.answer_text || '<em>No LLM configured. Evidence below.</em>';
-
-        var ev = '';
-
-        if (d.evidence && d.evidence.length) { ev = '<br><strong style="font-size:10px;color:var(--text-3)">Evidence:</strong><ul style="font-size:11px;color:var(--text-3);padding-left:14px;margin-top:3px">'; d.evidence.slice(0, 4).forEach(function(e) { ev += '<li>' + esc(e.file_path) + '</li>'; }); ev += '</ul>'; }
-
-        cb.innerHTML += '<div class="bubble bubble-b">' + ans + ev + '<br><span class="badge ' + (d.confidence === 'high' ? 'b-green' : d.confidence === 'medium' ? 'b-yellow' : 'b-red') + '" style="margin-top:6px">' + (d.confidence || 'low') + '</span></div>';
+        cb.innerHTML += '<div class="bubble bubble-b">' + renderRagAnswer(d) + '</div>';
 
         cb.scrollTop = cb.scrollHeight;
 
     }).catch(function(e) { var el = $('al'); if (el) el.remove(); cb.innerHTML += '<div class="bubble bubble-b" style="color:var(--red)">' + esc(e.message) + '</div>'; });
 
 }
+
+function renderRagAnswer(d) {
+
+    var conf = d.confidence || 'low';
+    var h = '<div style="white-space:pre-wrap">' + esc(d.answer_text || 'No answer returned.') + '</div>';
+    h += '<div style="margin-top:8px"><span class="badge ' + (conf === 'high' ? 'b-green' : conf === 'medium' ? 'b-yellow' : 'b-red') + '">' + esc(conf) + '</span>';
+    h += '<span class="badge b-blue" style="margin-left:6px">' + esc(d.question_type || 'rag') + '</span></div>';
+
+    var ctx = d.rag_context || {};
+    var summary = ctx.summary || {};
+    if (summary.edge_count || summary.symbol_count || summary.neighbor_count) {
+        h += '<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px">';
+        h += ragMetric('Symbols', summary.symbol_count || 0);
+        h += ragMetric('Edges', summary.edge_count || 0);
+        h += ragMetric('Neighbors', summary.neighbor_count || 0);
+        h += ragMetric('Paths', summary.path_count || 0);
+        h += '</div>';
+    }
+
+    if (ctx.paths && ctx.paths.length) {
+        h += '<div style="margin-top:10px"><strong style="font-size:11px;color:var(--text-2)">Graph paths used by Fanar</strong>';
+        h += '<div style="margin-top:6px;display:flex;flex-direction:column;gap:5px">';
+        ctx.paths.slice(0, 6).forEach(function(p) {
+            h += '<div style="font-size:11px;border:1px solid var(--border);border-radius:8px;padding:6px;background:var(--bg-2)">';
+            h += '<span class="badge b-blue">' + esc(p.direction || 'edge') + '</span> ';
+            h += '<code>' + esc(shortSym(p.source || '')) + '</code> &rarr; <code>' + esc(shortSym(p.target || '')) + '</code>';
+            if (p.file_path) h += '<div style="color:var(--text-3);margin-top:3px">' + esc(p.file_path) + (p.line ? '#L' + p.line : '') + '</div>';
+            h += '</div>';
+        });
+        h += '</div></div>';
+    }
+
+    if (d.evidence && d.evidence.length) {
+        h += '<div style="margin-top:10px"><strong style="font-size:11px;color:var(--text-2)">Evidence</strong><ul style="font-size:11px;color:var(--text-3);padding-left:16px;margin-top:4px">';
+        d.evidence.slice(0, 5).forEach(function(e) { h += '<li>' + esc(e.file_path || '') + (e.symbol_fq_name ? ' — <code>' + esc(shortSym(e.symbol_fq_name)) + '</code>' : '') + '</li>'; });
+        h += '</ul></div>';
+    }
+    return h;
+}
+
+function ragMetric(label, value) { return '<div style="border:1px solid var(--border);border-radius:8px;padding:7px;text-align:center;background:var(--bg-2)"><div style="font-weight:700;color:var(--accent)">' + value + '</div><div style="font-size:10px;color:var(--text-3)">' + label + '</div></div>'; }
+
+function shortSym(v) { return (v || '').split('.').slice(-2).join('.'); }
 
 
 
@@ -2674,7 +2711,41 @@ function genDocs() { html('dc', '<div class="loader"><span class="spin"></span><
 
 function loadDocs() { html('dc', '<div class="loader"><span class="spin"></span></div>'); API.get(S.path() + '/docs').then(function(d) { showDocs(d.documents || d.items || []); }).catch(function(e) { html('dc', '<p style="color:var(--red)">' + esc(e.message) + '</p>'); }); }
 
-function showDocs(docs) { if (!docs.length) { html('dc', '<div class="empty"><p>No docs. Generate first.</p></div>'); return; } var h = ''; docs.forEach(function(d) { h += '<div class="card"><div class="row between" style="margin-bottom:10px"><div class="card-hd" style="margin:0">' + esc(d.title || d.doc_type) + '</div><span class="badge b-blue">' + esc(d.doc_type) + '</span></div><div class="code">' + esc(d.markdown || '') + '</div></div>'; }); html('dc', h); }
+function showDocs(docs) {
+    if (!docs.length) { html('dc', '<div class="empty"><p>No docs. Generate first.</p></div>'); return; }
+    var byType = {};
+    docs.forEach(function(d) { byType[d.doc_type || 'doc'] = (byType[d.doc_type || 'doc'] || 0) + 1; });
+    var h = '<div class="ch-kpi">';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + docs.length + '</div><div class="ch-kpi-lbl">Documents</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + Object.keys(byType).length + '</div><div class="ch-kpi-lbl">Doc Types</div></div>';
+    h += '<div class="ch-kpi-item"><div class="ch-kpi-num">' + docs.filter(function(d) { return (d.llm_narrative || '').trim(); }).length + '</div><div class="ch-kpi-lbl">Fanar Narratives</div></div>';
+    h += '</div>';
+    docs.forEach(function(d) {
+        h += '<div class="card"><div class="row between" style="margin-bottom:10px"><div><div class="card-hd" style="margin:0">' + esc(d.title || d.doc_type) + '</div><div style="font-size:11px;color:var(--text-3);margin-top:3px">Graph-aware generated documentation</div></div><span class="badge b-blue">' + esc(d.doc_type) + '</span></div>';
+        if (d.llm_narrative) h += '<div style="border-left:3px solid var(--accent);padding:8px 10px;background:var(--bg-2);border-radius:8px;margin-bottom:10px;white-space:pre-wrap">' + esc(d.llm_narrative) + '</div>';
+        h += renderDocMarkdown(d.markdown || '');
+        h += '</div>';
+    });
+    html('dc', h);
+}
+
+function renderDocMarkdown(md) {
+    var parts = md.split(/```mermaid\n|```mermaid\r\n/);
+    if (parts.length === 1) return '<div class="code">' + esc(md) + '</div>';
+    var h = '<div class="doc-render">';
+    h += '<div class="code">' + esc(parts[0]) + '</div>';
+    for (var i = 1; i < parts.length; i++) {
+        var end = parts[i].indexOf('```');
+        var graph = end >= 0 ? parts[i].slice(0, end) : parts[i];
+        var rest = end >= 0 ? parts[i].slice(end + 3) : '';
+        h += '<div style="border:1px solid var(--border);border-radius:12px;padding:12px;margin:10px 0;background:linear-gradient(135deg,var(--bg-2),var(--bg-1))">';
+        h += '<div class="row between" style="margin-bottom:8px"><strong>Graph view</strong><button class="btn btn-s btn-g" onclick="navigator.clipboard.writeText(this.parentElement.nextElementSibling.textContent);toast(\'Graph copied\')">Copy</button></div>';
+        h += '<pre class="code" style="margin:0;max-height:220px;overflow:auto">' + esc(graph.trim()) + '</pre></div>';
+        if (rest.trim()) h += '<div class="code">' + esc(rest) + '</div>';
+    }
+    h += '</div>';
+    return h;
+}
 
 
 

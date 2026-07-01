@@ -602,6 +602,7 @@ async def get_llm_config_from_provider(
             temperature=provider.temperature,
             max_tokens=provider.max_tokens,
             timeout=provider.timeout,
+            skip_tls_verify=provider.skip_tls_verify,
         )
 
     # Fallback to env

@@ -170,6 +170,7 @@ def _build_deterministic_answer(question: Question, context: RetrievalContext) -
         confidence=confidence,
         verification=verification,
         related_symbols=sorted(set(related))[:20],
+        rag_context=_rag_context_payload(context),
     )
 
 
@@ -202,6 +203,18 @@ async def _build_llm_answer(
             user_parts.append(
                 f"- `{edge['source_fq_name']}` --{edge['edge_type']}--> `{edge['target_fq_name']}`"
             )
+
+    if context.graph_paths:
+        user_parts.append("\n## Graph Retrieval Paths")
+        for path in context.graph_paths[:10]:
+            user_parts.append(
+                f"- {path['direction']}: `{path['source']}` "
+                f"--{path['edge_type']}--> `{path['target']}`"
+            )
+
+    if context.retrieval_summary:
+        user_parts.append("\n## Retrieval Summary")
+        user_parts.append(str(context.retrieval_summary))
 
     if context.summaries:
         user_parts.append("\n## Summaries")
@@ -252,7 +265,27 @@ async def _build_llm_answer(
         confidence=confidence,
         verification=verification,
         related_symbols=sorted(set(context.graph_neighborhood[:20])),
+        rag_context=_rag_context_payload(context),
     )
+
+
+def _rag_context_payload(context: RetrievalContext) -> dict[str, object]:
+    """Compact graph-aware RAG metadata for responses."""
+    return {
+        "summary": context.retrieval_summary,
+        "paths": context.graph_paths[:12],
+        "neighbors": context.graph_neighborhood[:20],
+        "symbols": [
+            {
+                "fq_name": s.get("fq_name", ""),
+                "kind": s.get("kind", ""),
+                "file_path": s.get("file_path", ""),
+                "start_line": s.get("start_line", 0),
+                "end_line": s.get("end_line", 0),
+            }
+            for s in context.symbols[:10]
+        ],
+    }
 
 
 def _assess_confidence(context: RetrievalContext) -> Confidence:

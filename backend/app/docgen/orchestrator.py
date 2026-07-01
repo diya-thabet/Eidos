@@ -1,4 +1,4 @@
-"""
+﻿"""
 Documentation generation orchestrator.
 
 Fetches all analysis data from the database, generates documents
@@ -12,7 +12,7 @@ import json
 import logging
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.docgen.generator import (
@@ -41,6 +41,11 @@ async def generate_all_docs(
 
     Returns a list of dicts with doc metadata and generated content.
     """
+    # Remove existing docs for this snapshot to avoid duplicates on regeneration
+    await db.execute(
+        delete(GeneratedDoc).where(GeneratedDoc.snapshot_id == snapshot_id)
+    )
+
     # Fetch analysis data
     data = await _fetch_analysis_data(db, snapshot_id)
 

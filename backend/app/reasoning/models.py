@@ -70,6 +70,7 @@ class Answer:
     confidence: Confidence = Confidence.MEDIUM
     verification: list[VerificationItem] = field(default_factory=list)
     related_symbols: list[str] = field(default_factory=list)
+    rag_context: dict[str, Any] = field(default_factory=dict)
     error: str = ""
 
 
@@ -82,3 +83,5 @@ class RetrievalContext:
     edges: list[dict[str, Any]] = field(default_factory=list)
     code_snippets: list[dict[str, Any]] = field(default_factory=list)
     graph_neighborhood: list[str] = field(default_factory=list)
+    retrieval_summary: dict[str, Any] = field(default_factory=dict)
+    graph_paths: list[dict[str, Any]] = field(default_factory=list)

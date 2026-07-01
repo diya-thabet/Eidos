@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import verify_snapshot
@@ -63,6 +63,7 @@ class AskResponse(BaseModel):
     confidence: str
     verification: list[VerificationOut]
     related_symbols: list[str]
+    rag_context: dict[str, Any] = Field(default_factory=dict)
     error: str = ""
 
 
@@ -147,6 +148,7 @@ async def ask_question(
             for v in answer.verification
         ],
         related_symbols=answer.related_symbols,
+        rag_context=answer.rag_context,
         error=answer.error,
     )
 
